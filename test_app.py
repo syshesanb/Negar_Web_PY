@@ -1,0 +1,119 @@
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+from fastapi.testclient import TestClient
+from main import app
+from app.infrastructure.database import init_db
+
+# Initialize database
+init_db()
+
+client = TestClient(app)
+
+def run_tests():
+    print("=== شروع تست‌های اعتبارسنجی سامانه نگار پایتون ===")
+
+    # 1. Test Login
+    print("\n1. تست احراز هویت (Login)...")
+    res = client.post("/api/Auth/login", json={"username": "admin", "password": "admin123"})
+    assert res.status_code == 200, f"Login failed: {res.text}"
+    data = res.json()
+    assert data["success"] is True
+    assert data["username"] == "admin"
+    print(" -> لاگین موفقیت‌آمیز بود. توکن دریافت شد:", data["token"])
+
+    # 2. Test Account Creation & Listing
+    print("\n2. تست ایجاد و دریافت سرفصل‌های حسابداری...")
+    account_payload = {
+        "CompanyID": 1,
+        "AccountCode": "10101",
+        "AccountName": "صندوق مرکزی",
+        "AccountType": "معین",
+        "IsActive": True,
+        "AccountNature": "بدهکار",
+    }
+    res = client.post("/api/Accounting/accounts", json=account_payload)
+    assert res.status_code == 200, f"Save account failed: {res.text}"
+    saved_acc = res.json()
+    print(" -> سرفصل ذخیره شد:", saved_acc["AccountName"], "(کد:", saved_acc["AccountCode"], ")")
+
+    res = client.get("/api/Accounting/accounts/1")
+    assert res.status_code == 200
+    accounts = res.json()
+    assert len(accounts) >= 1
+    print(f" -> تعداد سرفصل‌های دریافت شده برای شرکت 1: {len(accounts)}")
+
+    # 3. Test Sanad (Journal Entry) Creation & Balance Check
+    print("\n3. تست ثبت سند حسابداری و محاسبه توازن...")
+    sanad_payload = {
+        "CompanyID": 1,
+        "FiscalYearID": 1,
+        "Description": "سند افتتاحیه آزمایشی",
+        "SharhSanad": "ثبت اولیه سرمایه و موجودی نقد",
+        "Details": [
+            {
+                "AccountID": saved_acc["AccountID"],
+                "DebitAmount": 5000000.0,
+                "CreditAmount": 0.0,
+                "LineNumber": 1,
+                "SharhRadif": "موجودی صندوق",
+            },
+            {
+                "AccountID": saved_acc["AccountID"],
+                "DebitAmount": 0.0,
+                "CreditAmount": 5000000.0,
+                "LineNumber": 2,
+                "SharhRadif": "طرف حساب سرمایه",
+            }
+        ]
+    }
+    res = client.post("/api/Accounting/sanad", json=sanad_payload)
+    assert res.status_code == 200, f"Save sanad failed: {res.text}"
+    saved_sanad = res.json()
+    assert saved_sanad["TaeazSanad"] == "متوازن"
+    assert saved_sanad["JamBedehkar"] == 5000000.0
+    assert saved_sanad["JamBestankar"] == 5000000.0
+    print(f" -> سند شماره {saved_sanad['EntryID']} با وضعیت [{saved_sanad['TaeazSanad']}] ثبت شد.")
+
+    # 4. Test Product & Warehouse
+    print("\n4. تست تعریف انبار و کالا...")
+    wh_res = client.post("/api/Inventory/warehouses", json={
+        "CompanyID": 1,
+        "WarehouseName": "انبار مرکزی",
+        "Location": "تهران - خیابان آزادی",
+    })
+    assert wh_res.status_code == 200
+    saved_wh = wh_res.json()
+    print(" -> انبار تعریف شد:", saved_wh["WarehouseName"])
+
+    prod_res = client.post("/api/Inventory/products", json={
+        "CompanyID": 1,
+        "ProductCode": "PRD-001",
+        "ProductName": "لپ‌تاپ گیمینگ ایسوس",
+        "Unit": "دستگاه",
+        "DefaultPrice": 75000000.0,
+        "PurchasePrice": 65000000.0,
+    })
+    assert prod_res.status_code == 200
+    saved_prod = prod_res.json()
+    print(" -> کالا تعریف شد:", saved_prod["ProductName"])
+
+    # 5. Test Dashboard Summary
+    print("\n5. تست خلاصه داشبورد...")
+    dash_res = client.get("/api/Dashboard/summary")
+    assert dash_res.status_code == 200
+    dash_data = dash_res.json()
+    print(" -> خلاصه داشبورد:", dash_data)
+
+    # 6. Test Frontend and Root Route
+    print("\n6. تست بارگذاری صفحه اصلی وب...")
+    root_res = client.get("/")
+    assert root_res.status_code == 200
+    assert "نگار" in root_res.text or "<!DOCTYPE html>" in root_res.text
+    print(" -> صفحه اصلی فرانت‌اند با موفقیت لود شد.")
+
+    print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
+
+if __name__ == "__main__":
+    run_tests()
