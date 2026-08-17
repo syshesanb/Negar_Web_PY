@@ -3,6 +3,29 @@
 // Architecture: Each tile button shows its own form; Back button returns to tiles
 // =============================================================================
 
+// Immediately synchronize theme on script load
+(function syncThemeOnLoad() {
+  try {
+    const local = localStorage.getItem('negar_theme');
+    if (local) {
+      document.documentElement.setAttribute('data-theme', local);
+    }
+    fetch('/api/Dashboard/theme')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.theme && (data.theme === 'light' || data.theme === 'dark' || data.theme === 'blue')) {
+          if (!local || local !== data.theme) {
+            document.documentElement.setAttribute('data-theme', data.theme);
+            localStorage.setItem('negar_theme', data.theme);
+            document.cookie = "negar_theme=" + data.theme + "; path=/; max-age=31536000; SameSite=Lax";
+            if (typeof highlightCurrentTheme === 'function') highlightCurrentTheme(data.theme);
+          }
+        }
+      })
+      .catch(() => {});
+  } catch(e) {}
+})();
+
 // ======================================================
 // Eshkal Logger & Diagnostics System (دیباگر اختصاصی eshkal.txt)
 // ======================================================

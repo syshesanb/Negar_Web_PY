@@ -59,10 +59,25 @@ def swagger_redirect():
 static_path = settings.STATIC_DIR
 
 def get_current_app_theme(request: Request) -> str:
-    """Get active theme from request cookies or database settings."""
+    """Get active theme from app_theme.json, request cookies, or database settings."""
+    import json
+    
+    # 1. First priority: Check app_theme.json file
+    theme_file = settings.BASE_DIR / "app_theme.json"
+    if theme_file.exists():
+        try:
+            data = json.loads(theme_file.read_text(encoding="utf-8"))
+            if data.get("theme") in ("blue", "dark", "light"):
+                return data["theme"]
+        except Exception:
+            pass
+
+    # 2. Second priority: Check request cookies
     cookie_theme = request.cookies.get("negar_theme")
     if cookie_theme in ("blue", "dark", "light"):
         return cookie_theme
+
+    # 3. Third priority: Check database AppSetting
     try:
         from app.infrastructure.database import SessionLocal
         from app.domain.models import AppSetting

@@ -7,6 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 class Settings:
+    BASE_DIR: Path = BASE_DIR
     PROJECT_NAME: str = "Negar Web Application (نرم‌افزار جامع نگار)"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
