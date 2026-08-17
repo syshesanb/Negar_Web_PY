@@ -24,6 +24,14 @@ from app.config import settings
 from app.infrastructure.database import init_db
 from app.api import api_router
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+    # Startup: Initialize Database & Default Seed Data
+    init_db()
+    yield
+
 # Initialize FastAPI App
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,6 +39,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # Enable CORS for Web & Mobile Clients
@@ -41,11 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Startup Event: Initialize Database & Default Seed Data
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 # Mount API routes
 app.include_router(api_router, prefix=settings.API_PREFIX)
