@@ -8,8 +8,14 @@
   <script>
     (function() {
       try {
-        var savedTheme = localStorage.getItem('negar_theme') || 'blue';
+        var savedTheme = localStorage.getItem('negar_theme');
+        if (!savedTheme) {
+          var match = document.cookie.match(/(?:^|;\s*)negar_theme=([^;]+)/);
+          if (match && match[1]) savedTheme = match[1];
+        }
+        if (!savedTheme) savedTheme = document.documentElement.getAttribute('data-theme') || 'blue';
         document.documentElement.setAttribute('data-theme', savedTheme);
+        try { localStorage.setItem('negar_theme', savedTheme); } catch(e) {}
 
         var isFormPage = window.location.search.indexOf('form=') !== -1;
         var isLoggedIn = localStorage.getItem('negar_logged_in') === 'true';

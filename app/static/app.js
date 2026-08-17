@@ -1046,17 +1046,19 @@ function showForm(formId) {
   }
 }
 
-function highlightCurrentTheme() {
-  const currentTheme = localStorage.getItem('negar_theme') || document.documentElement.getAttribute('data-theme') || 'blue';
-  const themeItems = document.querySelectorAll('.theme-item');
-  themeItems.forEach(item => {
-    const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + currentTheme + "'") !== -1;
-    const preview = item.querySelector('.theme-preview');
-    if (preview) {
-      preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
-      preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
-    }
-  });
+function highlightCurrentTheme(themeOverride) {
+  const currentTheme = themeOverride || localStorage.getItem('negar_theme') || document.documentElement.getAttribute('data-theme') || 'blue';
+  try {
+    const themeItems = document.querySelectorAll('.theme-item');
+    themeItems.forEach(item => {
+      const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + currentTheme + "'") !== -1;
+      const preview = item.querySelector('.theme-preview');
+      if (preview) {
+        preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
+        preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
+      }
+    });
+  } catch(e) {}
 }
 
 // ============================
@@ -5408,44 +5410,34 @@ function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   try {
     localStorage.setItem('negar_theme', theme);
+    document.cookie = "negar_theme=" + theme + "; path=/; max-age=31536000; SameSite=Lax";
+  } catch(e) {}
+
+  // Save to backend database
+  try {
+    fetch('/api/Dashboard/theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: theme })
+    }).catch(() => {});
   } catch(e) {}
 
   // Highlight selected card visually
-  try {
-    const themeItems = document.querySelectorAll('.theme-item');
-    themeItems.forEach(item => {
-      const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + theme + "'") !== -1;
-      const preview = item.querySelector('.theme-preview');
-      if (preview) {
-        preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
-        preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
-      }
-    });
-  } catch(e) {}
+  highlightCurrentTheme(theme);
 
   const themeNames = {
     'blue': 'آبی تیره (Blue Dark)',
     'dark': 'تیره کامل (Full Dark)',
     'light': 'روشن (Light Mode)'
   };
-  alert(`تم «${themeNames[theme] || theme}» با موفقیت ذخیره شد و در تمامی صفحات سامانه اعمال گردید.`);
+  alert(`تم «${themeNames[theme] || theme}» با موفقیت در سیستم ذخیره شد و در تمامی منوها و صفحات اعمال گردید.`);
 }
 
 // Synchronize theme across all open browser windows and tabs instantly
 window.addEventListener('storage', function(e) {
   if (e.key === 'negar_theme' && e.newValue) {
     document.documentElement.setAttribute('data-theme', e.newValue);
-    try {
-      const themeItems = document.querySelectorAll('.theme-item');
-      themeItems.forEach(item => {
-        const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + e.newValue + "'") !== -1;
-        const preview = item.querySelector('.theme-preview');
-        if (preview) {
-          preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
-          preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
-        }
-      });
-    } catch(err) {}
+    highlightCurrentTheme(e.newValue);
   }
 });
 

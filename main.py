@@ -17,7 +17,7 @@ except Exception:
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -58,42 +58,68 @@ def swagger_redirect():
 # Static files & SPA Single Page Application Support
 static_path = settings.STATIC_DIR
 
+def get_current_app_theme(request: Request) -> str:
+    """Get active theme from request cookies or database settings."""
+    cookie_theme = request.cookies.get("negar_theme")
+    if cookie_theme in ("blue", "dark", "light"):
+        return cookie_theme
+    try:
+        from app.infrastructure.database import SessionLocal
+        from app.domain.models import AppSetting
+        db = SessionLocal()
+        try:
+            s = db.query(AppSetting).filter(AppSetting.SettingKey == "AppTheme").first()
+            if s and s.SettingValue in ("blue", "dark", "light"):
+                return s.SettingValue
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return "blue"
+
+
+def render_themed_html(request: Request) -> HTMLResponse:
+    """Render index.html with active theme pre-injected into the <html> tag."""
+    index_file = static_path / "index.html"
+    if not index_file.exists():
+        return HTMLResponse("<h1>Negar Web API running</h1>")
+    content = index_file.read_text(encoding="utf-8")
+    theme = get_current_app_theme(request)
+    # Pre-inject theme into HTML tag so page loads with zero flicker
+    import re
+    content = re.sub(r'data-theme="[^"]*"', f'data-theme="{theme}"', content, count=1)
+    response = HTMLResponse(content)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.set_cookie("negar_theme", theme, max_age=31536000, samesite="lax")
+    return response
+
+
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
     # Serve index.html for root path
     @app.get("/", include_in_schema=False)
-    async def serve_index():
-        index_file = static_path / "index.html"
-        if index_file.exists():
-            return FileResponse(
-                index_file,
-                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-            )
-        return {"message": "Negar Web API running"}
+    async def serve_index(request: Request):
+        return render_themed_html(request)
 
     # Catch-all route for static assets and SPA fallback
     @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_static_or_fallback(full_path: str):
+    async def serve_static_or_fallback(request: Request, full_path: str):
         # Don't intercept API or Docs routes
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             return None
         
         file_path = static_path / full_path
         if file_path.exists() and file_path.is_file():
+            if full_path.endswith(".html") or full_path == "index.html":
+                return render_themed_html(request)
             return FileResponse(
                 file_path,
                 headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
             )
         
         # Fallback to index.html for client-side routing
-        index_file = static_path / "index.html"
-        if index_file.exists():
-            return FileResponse(
-                index_file,
-                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-            )
-        return {"message": "Not Found"}
+        return render_themed_html(request)
 
 
 def open_browser_delayed():

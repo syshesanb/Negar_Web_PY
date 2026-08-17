@@ -60,6 +60,162 @@
   --shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
 
+/* =========================================================================
+   LIGHT THEME OVERRIDES (Sidebar, Menus, Flyout, Modals, Forms & Login)
+   ========================================================================= */
+[data-theme="light"] .app-sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%) !important;
+  border-left: 1px solid #cbd5e1 !important;
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="light"] .sidebar-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="light"] .sidebar-logo-text {
+  color: #0284c7 !important;
+}
+
+[data-theme="light"] .sidebar-nav-item {
+  color: #475569 !important;
+  border-color: transparent !important;
+}
+
+[data-theme="light"] .sidebar-nav-item:hover {
+  background: rgba(2, 132, 199, 0.08) !important;
+  color: #0284c7 !important;
+  border-color: rgba(2, 132, 199, 0.25) !important;
+}
+
+[data-theme="light"] .sidebar-nav-item.active {
+  background: linear-gradient(90deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+[data-theme="light"] .module-flyout-panel {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: -10px 10px 32px rgba(0, 0, 0, 0.14), 0 0 20px rgba(2, 132, 199, 0.1) !important;
+}
+
+[data-theme="light"] .flyout-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+[data-theme="light"] .flyout-title {
+  color: #0284c7 !important;
+}
+
+[data-theme="light"] .flyout-close-btn {
+  background: #e2e8f0 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+[data-theme="light"] .flyout-card-item {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .flyout-card-item:hover {
+  background: #e2e8f0 !important;
+  border-color: #0284c7 !important;
+}
+
+[data-theme="light"] .flyout-card-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .tile-card,
+[data-theme="light"] .form-card,
+[data-theme="light"] .hesabdari-card,
+[data-theme="light"] .card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] .form-input,
+[data-theme="light"] .form-select,
+[data-theme="light"] .form-control,
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .table-search-row th {
+  background: #e2e8f0 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .grid-search-input {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] #loginOverlay {
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 40%, #ffffff 70%, #f8fafc 100%) !important;
+}
+
+[data-theme="light"] .login-box {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="light"] .login-title { color: #0f172a !important; }
+[data-theme="light"] .login-subtitle { color: #64748b !important; }
+[data-theme="light"] .login-label { color: #334155 !important; }
+
+/* =========================================================================
+   DARK THEME OVERRIDES (Sidebar, Menus, Flyout, Modals & Forms)
+   ========================================================================= */
+[data-theme="dark"] .app-sidebar {
+  background: linear-gradient(180deg, #141414 0%, #0a0a0a 100%) !important;
+  border-left: 1px solid #242424 !important;
+}
+
+[data-theme="dark"] .sidebar-header {
+  background: #111111 !important;
+  border-bottom: 1px solid #222222 !important;
+}
+
+[data-theme="dark"] .module-flyout-panel {
+  background: #141414 !important;
+  border: 1px solid #2a2a2a !important;
+}
+
+[data-theme="dark"] .flyout-header {
+  background: #1c1c1c !important;
+  border-bottom: 1px solid #2a2a2a !important;
+}
+
+[data-theme="dark"] .flyout-card-item {
+  background: #1c1c1c !important;
+  border: 1px solid #2a2a2a !important;
+}
+
+[data-theme="dark"] #loginOverlay {
+  background: linear-gradient(135deg, #000000 0%, #080808 40%, #111111 100%) !important;
+}
+
+[data-theme="dark"] .login-box {
+  background: rgba(20, 20, 20, 0.95) !important;
+  border: 1px solid #2a2a2a !important;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; direction: rtl; }
 
 body {

@@ -110,12 +110,24 @@ def run_tests():
     dash_data = dash_res.json()
     print(" -> خلاصه داشبورد:", dash_data)
 
-    # 6. Test Frontend and Root Route
-    print("\n6. تست بارگذاری صفحه اصلی وب...")
+    # 6. Test Theme Persistence & Server Injection
+    print("\n6. تست ذخیره و اعمال تم در سرور...")
+    theme_res = client.post("/api/Dashboard/theme", json={"theme": "light"})
+    assert theme_res.status_code == 200
+    assert theme_res.json()["theme"] == "light"
+    print(" -> تم روشن در سرور ذخیره شد.")
+
+    get_theme_res = client.get("/api/Dashboard/theme")
+    assert get_theme_res.status_code == 200
+    assert get_theme_res.json()["theme"] == "light"
+    print(" -> استعلام تم فعال از سرور: light")
+
+    # 7. Test Frontend Root Route & Server-Side Theme Pre-Injection
+    print("\n7. تست بارگذاری صفحه اصلی و تزریق تم سرور...")
     root_res = client.get("/")
     assert root_res.status_code == 200
-    assert "نگار" in root_res.text or "<!DOCTYPE html>" in root_res.text
-    print(" -> صفحه اصلی فرانت‌اند با موفقیت لود شد.")
+    assert 'data-theme="light"' in root_res.text
+    print(" -> تم روشن مستقیماً در تگ html صفحه وب تزریق گردید (بدون پرش رنگ).")
 
     print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 

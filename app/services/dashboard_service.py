@@ -37,3 +37,19 @@ class DashboardService:
             totalSalesAmount=total_sales_amount,
             totalPurchaseAmount=total_purch_amount,
         )
+
+    def get_theme(self) -> str:
+        from app.domain.models import AppSetting
+        setting = self.db.query(AppSetting).filter(AppSetting.SettingKey == "AppTheme").first()
+        return setting.SettingValue if setting and setting.SettingValue else "blue"
+
+    def set_theme(self, theme: str) -> str:
+        from app.domain.models import AppSetting
+        setting = self.db.query(AppSetting).filter(AppSetting.SettingKey == "AppTheme").first()
+        if not setting:
+            setting = AppSetting(SettingKey="AppTheme", SettingValue=theme, SettingCategory="Appearance")
+            self.db.add(setting)
+        else:
+            setting.SettingValue = theme
+        self.db.commit()
+        return theme
