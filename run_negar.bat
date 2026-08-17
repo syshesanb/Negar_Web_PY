@@ -3,7 +3,6 @@ title Negar Web Application
 cd /d "C:\Negar_Web_PY"
 
 echo Starting Negar Web Application...
-start "" "http://localhost:8000"
 
 "C:\Users\Rayanegostar\AppData\Local\Programs\Python\Python310\python.exe" main.py
 
