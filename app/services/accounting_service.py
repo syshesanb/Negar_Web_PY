@@ -21,19 +21,26 @@ class AccountingService:
         )
 
     def save_account(self, account_dto: AccountCreateDTO) -> SarfaslHesab:
+        account = None
         if account_dto.AccountID and account_dto.AccountID > 0:
             account = self.db.query(SarfaslHesab).filter(SarfaslHesab.AccountID == account_dto.AccountID).first()
-            if account:
-                account.CompanyID = account_dto.CompanyID
-                account.AccountCode = account_dto.AccountCode
-                account.AccountName = account_dto.AccountName
-                account.AccountType = account_dto.AccountType
-                account.ParentAccountID = account_dto.ParentAccountID
-                account.IsActive = account_dto.IsActive
-                account.AccountNature = account_dto.AccountNature
-                self.db.commit()
-                self.db.refresh(account)
-                return account
+        if not account:
+            account = self.db.query(SarfaslHesab).filter(
+                SarfaslHesab.CompanyID == account_dto.CompanyID,
+                SarfaslHesab.AccountCode == account_dto.AccountCode
+            ).first()
+
+        if account:
+            account.CompanyID = account_dto.CompanyID
+            account.AccountCode = account_dto.AccountCode
+            account.AccountName = account_dto.AccountName
+            account.AccountType = account_dto.AccountType
+            account.ParentAccountID = account_dto.ParentAccountID
+            account.IsActive = account_dto.IsActive
+            account.AccountNature = account_dto.AccountNature
+            self.db.commit()
+            self.db.refresh(account)
+            return account
 
         # Create new account
         new_account = SarfaslHesab(

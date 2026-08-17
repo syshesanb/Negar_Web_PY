@@ -7,16 +7,13 @@ import webbrowser
 from pathlib import Path
 
 # Ensure UTF-8 encoding in Windows Console
-if sys.stdout and hasattr(sys.stdout, "buffer"):
-    try:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    except Exception:
-        pass
-if sys.stderr and hasattr(sys.stderr, "buffer"):
-    try:
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -69,7 +66,10 @@ if static_path.exists():
     async def serve_index():
         index_file = static_path / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            return FileResponse(
+                index_file,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
         return {"message": "Negar Web API running"}
 
     # Catch-all route for static assets and SPA fallback
@@ -81,12 +81,18 @@ if static_path.exists():
         
         file_path = static_path / full_path
         if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
+            return FileResponse(
+                file_path,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
         
         # Fallback to index.html for client-side routing
         index_file = static_path / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            return FileResponse(
+                index_file,
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
         return {"message": "Not Found"}
 
 
