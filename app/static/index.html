@@ -8,6 +8,9 @@
   <script>
     (function() {
       try {
+        var savedTheme = localStorage.getItem('negar_theme') || 'blue';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
         var isFormPage = window.location.search.indexOf('form=') !== -1;
         var isLoggedIn = localStorage.getItem('negar_logged_in') === 'true';
         if (isFormPage || isLoggedIn) {

@@ -1038,11 +1038,25 @@ function showForm(formId) {
   if (formId === 'form-switch-company') renderSwitchCompanyForm();
   if (formId === 'form-switch-year') renderSwitchYearOnlyForm();
   if (formId === 'form-account-levels') loadCodingSettings();
+  if (formId === 'form-theme-manager') highlightCurrentTheme();
   if (formId === 'form-hesabdari-main') {
     const activeSub = document.querySelector('.hesabdari-subtabs-bar .subtab-item.active');
     const tabId = activeSub ? activeSub.getAttribute('data-tab') : 'sanad';
     switchHesabdariTab(tabId);
   }
+}
+
+function highlightCurrentTheme() {
+  const currentTheme = localStorage.getItem('negar_theme') || document.documentElement.getAttribute('data-theme') || 'blue';
+  const themeItems = document.querySelectorAll('.theme-item');
+  themeItems.forEach(item => {
+    const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + currentTheme + "'") !== -1;
+    const preview = item.querySelector('.theme-preview');
+    if (preview) {
+      preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
+      preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
+    }
+  });
 }
 
 // ============================
@@ -5390,9 +5404,51 @@ function doRestore() {
 }
 
 function setTheme(theme) {
+  if (!theme) return;
   document.documentElement.setAttribute('data-theme', theme);
-  alert(`تم "${theme}" با موفقیت اعمال شد.`);
+  try {
+    localStorage.setItem('negar_theme', theme);
+  } catch(e) {}
+
+  // Highlight selected card visually
+  try {
+    const themeItems = document.querySelectorAll('.theme-item');
+    themeItems.forEach(item => {
+      const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + theme + "'") !== -1;
+      const preview = item.querySelector('.theme-preview');
+      if (preview) {
+        preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
+        preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
+      }
+    });
+  } catch(e) {}
+
+  const themeNames = {
+    'blue': 'آبی تیره (Blue Dark)',
+    'dark': 'تیره کامل (Full Dark)',
+    'light': 'روشن (Light Mode)'
+  };
+  alert(`تم «${themeNames[theme] || theme}» با موفقیت ذخیره شد و در تمامی صفحات سامانه اعمال گردید.`);
 }
+
+// Synchronize theme across all open browser windows and tabs instantly
+window.addEventListener('storage', function(e) {
+  if (e.key === 'negar_theme' && e.newValue) {
+    document.documentElement.setAttribute('data-theme', e.newValue);
+    try {
+      const themeItems = document.querySelectorAll('.theme-item');
+      themeItems.forEach(item => {
+        const isSelected = item.getAttribute('onclick') && item.getAttribute('onclick').indexOf("'" + e.newValue + "'") !== -1;
+        const preview = item.querySelector('.theme-preview');
+        if (preview) {
+          preview.style.boxShadow = isSelected ? '0 0 0 4px var(--accent-color, #38bdf8)' : 'none';
+          preview.style.transform = isSelected ? 'scale(1.05)' : 'none';
+        }
+      });
+    } catch(err) {}
+  }
+});
+
 
 function lockApp() {
   const pwd = document.getElementById('lockPassword')?.value;
