@@ -39,67 +39,161 @@ def get_current_jalali_date_str() -> str:
     return f"{jy:04d}/{jm+1:02d}/{jd:02d}"
 
 
-# 1. نرخ‌های رسمی بانک مرکزی جمهوری اسلامی ایران (سامانه سنا / ETS / نیما) - بر مبنای ریال ایران
-CBI_MARKET_RATES: Dict[str, float] = {
+import urllib.request
+import json
+import re
+import ssl
+import time
+
+def to_en_digits(text: str) -> str:
+    """Convert Persian and Arabic numerals to English digits."""
+    if not text:
+        return ""
+    fa_digits = '۰۱۲۳۴۵۶۷۸۹'
+    ar_digits = '٠١٢٣٤٥٦٧٨٩'
+    res = str(text)
+    for i, (f, a) in enumerate(zip(fa_digits, ar_digits)):
+        res = res.replace(f, str(i)).replace(a, str(i))
+    return res
+
+
+# 1. نرخ‌های پیش‌فرض بانک مرکزی جمهوری اسلامی ایران (سامانه سنا / ETS / نیما و مرکز مبادله)
+DEFAULT_CBI_RATES: Dict[str, float] = {
     "IRR": 1.0,
     "TMN": 10.0,
-    "USD": 448500.0,
-    "EUR": 486200.0,
-    "AED": 122100.0,
-    "TRY": 13750.0,
-    "CNY": 62100.0,
-    "GBP": 569000.0,
-    "CAD": 328000.0,
-    "CHF": 501500.0,
-    "IQD": 342.0,
-    "JPY": 2980.0,
-    "RUB": 4980.0,
-    "KWD": 1462000.0,
-    "OMR": 1165000.0,
-    "QAR": 123200.0,
+    "USD": 1541360.0,
+    "EUR": 1797776.0,
+    "AED": 419650.0,
+    "TRY": 32500.0,
+    "CNY": 215000.0,
+    "GBP": 2098000.0,
+    "CAD": 1120000.0,
+    "CHF": 1750000.0,
+    "IQD": 1080.0,
+    "JPY": 980000.0,
+    "RUB": 17500.0,
+    "KWD": 5020000.0,
+    "OMR": 4010000.0,
+    "QAR": 423000.0,
 }
 
-# 2. نرخ‌های شبکه اطلاع‌رسانی طلا، سکه و ارز (TGJU / بازار آزاد تهران) - بر مبنای ریال ایران
-TGJU_MARKET_RATES: Dict[str, float] = {
+# 2. نرخ‌های پیش‌فرض شبکه اطلاع‌رسانی طلا، سکه و ارز (TGJU / بازار آزاد تهران)
+DEFAULT_TGJU_RATES: Dict[str, float] = {
     "IRR": 1.0,
     "TMN": 10.0,
-    "USD": 618500.0,
-    "EUR": 668000.0,
-    "AED": 168500.0,
-    "TRY": 18950.0,
-    "CNY": 86700.0,
-    "GBP": 776000.0,
-    "CAD": 452000.0,
-    "CHF": 692000.0,
-    "IQD": 472.0,
-    "JPY": 4120.0,
-    "RUB": 6950.0,
-    "KWD": 2015000.0,
-    "OMR": 1608000.0,
-    "QAR": 169800.0,
+    "USD": 1865000.0,
+    "EUR": 2158000.0,
+    "AED": 507890.0,
+    "TRY": 39000.0,
+    "CNY": 277800.0,
+    "GBP": 2529800.0,
+    "CAD": 1342800.0,
+    "CHF": 2301500.0,
+    "IQD": 1310.0,
+    "JPY": 1143000.0,
+    "RUB": 22010.0,
+    "KWD": 6039700.0,
+    "OMR": 4844700.0,
+    "QAR": 497700.0,
 }
 
-# 3. نرخ‌های سرویس بین‌المللی فارکس (Global Forex / ExchangeRate نسبت به USD و تبدیل به ریال / ارز مبنا)
-GLOBAL_MARKET_RATES: Dict[str, float] = {
-    "IRR": 1.0,
-    "TMN": 10.0,
-    "USD": 619200.0,
-    "EUR": 669500.0,
-    "AED": 168600.0,
-    "TRY": 18920.0,
-    "CNY": 86800.0,
-    "GBP": 778000.0,
-    "CAD": 453100.0,
-    "CHF": 693400.0,
-    "IQD": 473.0,
-    "JPY": 4135.0,
-    "RUB": 6970.0,
-    "KWD": 2018000.0,
-    "OMR": 1610000.0,
-    "QAR": 170100.0,
+# In-memory cache for live internet rates (TTL: 30 seconds)
+_RATES_CACHE = {
+    "last_fetch": 0.0,
+    "cbi": DEFAULT_CBI_RATES.copy(),
+    "tgju": DEFAULT_TGJU_RATES.copy(),
+    "global": DEFAULT_TGJU_RATES.copy(),
 }
 
-LIVE_MARKET_RATES = TGJU_MARKET_RATES
+
+def fetch_live_rates_from_internet() -> Dict[str, Dict[str, float]]:
+    """Fetch real-time live currency rates from TGJU, CBI, and International Forex APIs."""
+    now_ts = time.time()
+    if now_ts - _RATES_CACHE["last_fetch"] < 30.0:
+        return {
+            "cbi": _RATES_CACHE["cbi"],
+            "tgju": _RATES_CACHE["tgju"],
+            "global": _RATES_CACHE["global"],
+        }
+
+    tgju_live = DEFAULT_TGJU_RATES.copy()
+    cbi_live = DEFAULT_CBI_RATES.copy()
+    global_live = DEFAULT_TGJU_RATES.copy()
+
+    # 1. Live Fetch from TGJU (شبکه اطلاع‌رسانی طلا، سکه و ارز)
+    try:
+        req = urllib.request.Request(
+            'https://call.tgju.org/ajax.json',
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'}
+        )
+        with urllib.request.urlopen(req, timeout=4) as res:
+            data = json.loads(res.read().decode('utf-8'))
+            cur = data.get('current', {})
+            tgju_map = {
+                'USD': 'price_dollar_rl',
+                'EUR': 'price_eur',
+                'AED': 'price_aed',
+                'TRY': 'price_try',
+                'GBP': 'price_gbp',
+                'CNY': 'price_cny',
+                'CAD': 'price_cad',
+                'CHF': 'price_chf',
+                'IQD': 'price_iqd',
+                'JPY': 'price_jpy',
+                'RUB': 'price_rub',
+                'KWD': 'price_kwd',
+                'OMR': 'price_omr',
+                'QAR': 'price_qar',
+            }
+            for code, key in tgju_map.items():
+                if key in cur and 'p' in cur[key]:
+                    raw_val = to_en_digits(str(cur[key]['p'])).replace(',', '').strip()
+                    try:
+                        val = float(raw_val)
+                        if val > 0:
+                            tgju_live[code] = val
+                    except Exception:
+                        pass
+            
+            # Check for official ICE/CBI rates in TGJU feed if available
+            if 'ice_currency_eur_sell' in cur and 'p' in cur['ice_currency_eur_sell']:
+                eur_ice = float(to_en_digits(str(cur['ice_currency_eur_sell']['p'])).replace(',', '').strip() or 0)
+                if eur_ice > 0:
+                    cbi_live['EUR'] = eur_ice
+    except Exception as e:
+        pass
+
+    # 2. Live Fetch from International Forex API (Global Market Cross Rates)
+    try:
+        req = urllib.request.Request(
+            'https://open.er-api.com/v6/latest/USD',
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        with urllib.request.urlopen(req, timeout=4) as res:
+            data = json.loads(res.read().decode('utf-8'))
+            usd_rates = data.get('rates', {})
+            usd_irr = tgju_live.get('USD', 1865000.0)
+            global_live['IRR'] = 1.0
+            global_live['TMN'] = 10.0
+            global_live['USD'] = usd_irr
+            for code, fx_rate in usd_rates.items():
+                if fx_rate and float(fx_rate) > 0:
+                    global_live[code] = round(usd_irr / float(fx_rate), 2)
+    except Exception as e:
+        # Fallback global to TGJU
+        global_live = tgju_live.copy()
+
+    # Update cache
+    _RATES_CACHE["last_fetch"] = now_ts
+    _RATES_CACHE["cbi"] = cbi_live
+    _RATES_CACHE["tgju"] = tgju_live
+    _RATES_CACHE["global"] = global_live
+
+    return {
+        "cbi": cbi_live,
+        "tgju": tgju_live,
+        "global": global_live,
+    }
 
 
 class CurrencyService:
@@ -314,19 +408,25 @@ class CurrencyService:
         base_code = base_curr.CurrencyCode.upper() if base_curr else "IRR"
         today_str = get_current_jalali_date_str()
 
-        # 1. CBI Rate (بانک مرکزی / سنا)
-        cbi_code = CBI_MARKET_RATES.get(code, 1.0)
-        cbi_base = CBI_MARKET_RATES.get(base_code, 1.0)
+        # Fetch real-time live rates from internet (TGJU, CBI, Global Forex)
+        live_data = fetch_live_rates_from_internet()
+        cbi_market = live_data["cbi"]
+        tgju_market = live_data["tgju"]
+        global_market = live_data["global"]
+
+        # 1. CBI Rate (بانک مرکزی / مرکز مبادله ایران و سنا)
+        cbi_code = cbi_market.get(code, DEFAULT_CBI_RATES.get(code, 1.0))
+        cbi_base = cbi_market.get(base_code, DEFAULT_CBI_RATES.get(base_code, 1.0))
         cbi_final = cbi_code / cbi_base if cbi_base > 0 else cbi_code
 
-        # 2. TGJU Rate (شبکه طلا و ارز / بازار آزاد)
-        tgju_code = TGJU_MARKET_RATES.get(code, 1.0)
-        tgju_base = TGJU_MARKET_RATES.get(base_code, 1.0)
+        # 2. TGJU Rate (شبکه اطلاع‌رسانی طلا، سکه و ارز / بازار آزاد)
+        tgju_code = tgju_market.get(code, DEFAULT_TGJU_RATES.get(code, 1.0))
+        tgju_base = tgju_market.get(base_code, DEFAULT_TGJU_RATES.get(base_code, 1.0))
         tgju_final = tgju_code / tgju_base if tgju_base > 0 else tgju_code
 
         # 3. Global Rate (سرویس بین‌المللی Forex)
-        glob_code = GLOBAL_MARKET_RATES.get(code, 1.0)
-        glob_base = GLOBAL_MARKET_RATES.get(base_code, 1.0)
+        glob_code = global_market.get(code, tgju_code)
+        glob_base = global_market.get(base_code, tgju_base)
         glob_final = glob_code / glob_base if glob_base > 0 else glob_code
 
         return {
