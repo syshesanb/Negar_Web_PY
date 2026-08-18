@@ -59,6 +59,12 @@ def update_currency(currency_id: int, dto: CurrencyUpdateDTO, db: Session = Depe
     return updated
 
 
+@router.get("/transaction-status")
+def get_transaction_status(db: Session = Depends(get_db)):
+    service = CurrencyService(db)
+    return service.get_financial_transactions_status()
+
+
 @router.delete("/{currency_id}")
 def delete_currency(currency_id: int, db: Session = Depends(get_db)):
     service = CurrencyService(db)
@@ -68,10 +74,20 @@ def delete_currency(currency_id: int, db: Session = Depends(get_db)):
     return {"message": "ارز با موفقیت حذف گردید.", "success": True}
 
 
-@router.post("/{currency_id}/set-base", response_model=CurrencyDTO)
-def set_base_currency(currency_id: int, db: Session = Depends(get_db)):
+@router.post("/{currency_id}/set-base")
+def set_base_currency(
+    currency_id: int, 
+    user_role: str = Query("SuperAdmin"),
+    force_confirm: bool = Query(False),
+    db: Session = Depends(get_db)
+):
     service = CurrencyService(db)
-    updated = service.set_as_base(currency_id)
-    if not updated:
-        raise HTTPException(status_code=404, detail="ارز یافت نشد.")
-    return updated
+    result = service.set_as_base(currency_id, user_role=user_role, force_confirm=force_confirm)
+    if not result.get("success"):
+        if result.get("error") == "permission_denied":
+            raise HTTPException(status_code=403, detail=result.get("message"))
+        elif result.get("error") == "transactions_exist":
+            return result
+        elif result.get("error") == "not_found":
+            raise HTTPException(status_code=404, detail=result.get("message"))
+    return result

@@ -2794,14 +2794,17 @@
         
         <!-- Base Currency Info & Top Actions Banner -->
         <div style="background:rgba(2, 132, 199, 0.08); border:1px solid rgba(2, 132, 199, 0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
             <span style="font-size:1.1rem;">⭐</span>
             <span style="font-size:0.88rem; font-weight:bold; color:var(--text-main);">ارز مبنای سیستم:</span>
             <span id="currBaseBadge" class="badge" style="background:#10b981; color:#fff; font-weight:bold; font-size:0.85rem; padding:4px 10px; border-radius:6px;">ریال ایران (IRR)</span>
-            <span style="font-size:0.75rem; color:var(--text-muted);">(نرخ برابری سایر ارزها بر مبنای این ارز محاسبه می‌گردد)</span>
+            
+            <!-- Role & Safety Badges -->
+            <span id="currUserRoleBadge" class="badge" style="background:#0284c7; color:#fff; font-size:0.75rem; padding:3px 8px; border-radius:4px;">👤 دسترسی: ابر مدیر (SuperAdmin)</span>
+            <span id="currSafetyBadge" class="badge" style="background:#10b981; color:#fff; font-size:0.75rem; padding:3px 8px; border-radius:4px;">🟢 فاز ۱: بدون سند مالی (تغییر آزاد)</span>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary" type="button" onclick="toggleCurrencyForm(true)" style="padding:5px 14px; font-size:0.82rem; font-weight:bold;">➕ تعریف ارز جدید</button>
+          <div style="display:flex; gap:8px;" id="currTopActions">
+            <button class="btn btn-primary" id="btnAddNewCurrency" type="button" onclick="toggleCurrencyForm(true)" style="padding:5px 14px; font-size:0.82rem; font-weight:bold;">➕ تعریف ارز جدید</button>
             <button class="btn btn-outline" id="btnUpdateAllRates" type="button" onclick="fetchAllOnlineRates()" style="padding:5px 14px; font-size:0.82rem; font-weight:bold; display:inline-flex; align-items:center; gap:6px;">
               <span>🌐</span>
               <span>بروزرسانی آنلاین نرخ‌ها</span>
@@ -2919,6 +2922,59 @@
       <!-- Modal Footer -->
       <div style="background:var(--bg-secondary); padding:10px 18px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end;">
         <button class="btn btn-primary" type="button" onclick="closeCurrencyModal()" style="padding:6px 22px; font-weight:bold;">تأیید و بستن</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================
+       Safety Confirmation Modal for Setting Base Currency (هشدار استانداردهای حسابداری)
+       ================================================================ -->
+  <div id="currencyBaseConfirmModal" style="display:none; position:fixed; z-index:5000; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); align-items:center; justify-content:center; direction:rtl;">
+    <div style="background:var(--bg-secondary); border:2px solid #f59e0b; border-radius:10px; width:640px; max-width:92vw; box-shadow:0 20px 50px rgba(0,0,0,0.8); overflow:hidden;">
+      
+      <!-- Warning Header -->
+      <div style="background:linear-gradient(90deg, #d97706, #b45309); color:#fff; padding:12px 18px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:8px;">⚠️ هشدار استانداردهای حسابداری (استاندارد شماره ۱۶ - تسعیر ارز)</span>
+        <button onclick="closeBaseConfirmModal()" style="background:transparent; border:none; color:#fff; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Warning Content -->
+      <div style="padding:20px; display:flex; flex-direction:column; gap:14px; font-size:0.88rem; line-height:1.7; color:var(--text-main);">
+        <div style="background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3); border-radius:8px; padding:12px 16px; color:#b45309; font-weight:bold;">
+          ⚠️ توجه مدیر سیستم: در این شرکت <span id="confirmSanadCountText" style="font-size:1rem; color:#dc2626;">۰</span> سند حسابداری و فاکتور مالی ثبت شده است!
+        </div>
+
+        <div>
+          تغییر ارز مبنا در حین سال مالی پس از ثبت اسناد، مبنای عددی دفاتر کل، ترازها، گزارش‌های ارزش‌گذاری انبار و صورت‌های مالی را تحت تاثیر قرار می‌دهد.
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px; font-size:0.85rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span>ارز مبنای جاری:</span>
+            <b id="confirmOldBaseText" style="color:var(--text-muted);">-</b>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span>ارز مبنای جدید انتخابی:</span>
+            <b id="confirmNewBaseText" style="color:#10b981;">-</b>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>نرخ تسعیر و تبدیل مبنا:</span>
+            <b id="confirmRateText" style="color:#0284c7;">-</b>
+          </div>
+        </div>
+
+        <div style="color:var(--text-muted); font-size:0.8rem;">
+          آیا به عنوان مدیر ارشد سیستم، از تغییر قطعی ارز مبنا و به‌روزرسانی محاسبات اطمینان کامل دارید؟
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="background:var(--bg-secondary); padding:12px 20px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-outline" type="button" onclick="closeBaseConfirmModal()" style="padding:6px 18px;">❌ انصراف و لغو</button>
+        <button class="btn btn-warning" id="btnConfirmForceBase" type="button" onclick="executeForceBaseCurrencyChange()" style="padding:6px 20px; font-weight:bold; background:#d97706; color:#fff; border:none;">
+          ✅ بله، تأیید مدیریتی و اعمال تغییر ارز مبنا
+        </button>
       </div>
 
     </div>

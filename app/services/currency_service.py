@@ -157,19 +157,88 @@ class CurrencyService:
         self.db.commit()
         return True
 
-    def set_as_base(self, currency_id: int) -> Optional[Currency]:
+    def get_financial_transactions_status(self) -> dict:
+        """Count existing sanads, invoices, etc. to evaluate base currency safety."""
+        from app.domain.models import SanadHeader, SalesInvoice, PurchaseInvoice
+        from sqlalchemy import func
+
+        sanad_count = self.db.query(func.count(SanadHeader.EntryID)).scalar() or 0
+        sales_count = self.db.query(func.count(SalesInvoice.InvoiceID)).scalar() or 0
+        purch_count = self.db.query(func.count(PurchaseInvoice.InvoiceID)).scalar() or 0
+        total_tx = sanad_count + sales_count + purch_count
+
+        return {
+            "hasTransactions": total_tx > 0,
+            "totalTransactions": total_tx,
+            "sanadCount": sanad_count,
+            "salesInvoiceCount": sales_count,
+            "purchaseInvoiceCount": purch_count,
+            "safetyPhase": 1 if total_tx == 0 else 3,
+            "safetyMessage": "هیچ سند مالی در سیستم ثبت نشده است (فاز ۱: تغییر آزاد و بدون ریسک)" if total_tx == 0 else f"{total_tx} سند مالی و فاکتور در سیستم ثبت شده است (فاز ۳: نیازمند تأییدیه ویزارد تسعیر ارز)",
+        }
+
+    def set_as_base(self, currency_id: int, user_role: str = "SuperAdmin", force_confirm: bool = False) -> dict:
+        # Check permissions: only SuperAdmin or Manager
+        if user_role not in ("SuperAdmin", "Manager"):
+            return {
+                "success": False,
+                "error": "permission_denied",
+                "message": "تنها کاربران ابر مدیر (SuperAdmin) و مدیر میانی (Manager) مجاز به تعیین یا تغییر ارز مبنا هستند."
+            }
+
         curr = self.get_by_id(currency_id)
         if not curr:
-            return None
+            return {"success": False, "error": "not_found", "message": "ارز مورد نظر یافت نشد."}
+
+        # Check transactions
+        tx_status = self.get_financial_transactions_status()
+        if tx_status["hasTransactions"] and not force_confirm:
+            return {
+                "success": False,
+                "error": "transactions_exist",
+                "requiresConfirmation": True,
+                "transactionStatus": tx_status,
+                "targetCurrency": {
+                    "id": curr.CurrencyID,
+                    "code": curr.CurrencyCode,
+                    "name": curr.CurrencyName,
+                    "manualRate": float(curr.ManualRate or 1.0),
+                    "onlineRate": float(curr.OnlineRate or 1.0)
+                },
+                "message": f"در سیستم {tx_status['totalTransactions']} تراکنش و سند مالی ثبت شده است. تغییر ارز مبنا نیازمند تاییدیه مدیریتی است."
+            }
+
+        old_base = self.get_base_currency()
+        old_base_name = old_base.CurrencyName if old_base else "نامشخص"
+
         self.db.query(Currency).update({Currency.IsBase: False})
         curr.IsBase = True
         curr.ManualRate = 1.0
         curr.OnlineRate = 1.0
-        curr.ManualRateDate = get_current_jalali_date_str()
-        curr.OnlineRateDate = get_current_jalali_date_str()
+        today_str = get_current_jalali_date_str()
+        curr.ManualRateDate = today_str
+        curr.OnlineRateDate = today_str
         self.db.commit()
         self.db.refresh(curr)
-        return curr
+
+        return {
+            "success": True,
+            "currency": {
+                "CurrencyID": curr.CurrencyID,
+                "CurrencyCode": curr.CurrencyCode,
+                "CurrencyName": curr.CurrencyName,
+                "CurrencySymbol": curr.CurrencySymbol,
+                "IsBase": True,
+                "ManualRate": 1.0,
+                "OnlineRate": 1.0,
+                "ManualRateDate": curr.ManualRateDate,
+                "OnlineRateDate": curr.OnlineRateDate,
+                "IsActive": curr.IsActive
+            },
+            "previousBase": old_base_name,
+            "safetyPhase": tx_status["safetyPhase"],
+            "message": f"ارز مبنا با موفقیت به «${curr.CurrencyName} (${curr.CurrencyCode})» تغییر یافت."
+        }
 
     def fetch_online_rate_for_code(self, currency_code: str) -> dict:
         """Fetch online exchange rate against base currency with today's live date."""

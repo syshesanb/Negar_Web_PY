@@ -5869,13 +5869,90 @@ function updateCurrencyDropdown(selectedVal) {
   }
 }
 
-function openCurrencyModal() {
+let pendingBaseCurrencyObj = null;
+
+function getCurrentUserRole() {
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+    return currentUser.role;
+  }
+  if (typeof SessionState !== 'undefined' && SessionState.user && SessionState.user.role) {
+    return SessionState.user.role;
+  }
+  return 'SuperAdmin';
+}
+
+function isManagerOrAdmin() {
+  const role = getCurrentUserRole();
+  return role === 'SuperAdmin' || role === 'Manager';
+}
+
+async function fetchTransactionStatus() {
+  try {
+    const res = await fetch('/api/Currencies/transaction-status');
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch(e) {
+    console.log('Error fetching transaction status:', e);
+  }
+  return {
+    hasTransactions: false,
+    totalTransactions: 0,
+    sanadCount: 0,
+    salesInvoiceCount: 0,
+    purchaseInvoiceCount: 0,
+    safetyPhase: 1,
+    safetyMessage: 'فاز ۱: بدون سند مالی'
+  };
+}
+
+async function openCurrencyModal() {
   const modal = document.getElementById('currencyModal');
   if (!modal) return;
   modal.style.display = 'flex';
-  loadCurrencies().then(() => {
-    renderCurrencyTable();
-  });
+
+  const role = getCurrentUserRole();
+  const isAdminOrMgr = isManagerOrAdmin();
+  const roleBadge = document.getElementById('currUserRoleBadge');
+  const safetyBadge = document.getElementById('currSafetyBadge');
+  const addBtn = document.getElementById('btnAddNewCurrency');
+  const updateRatesBtn = document.getElementById('btnUpdateAllRates');
+
+  // Update Role Badge
+  if (roleBadge) {
+    if (role === 'SuperAdmin') {
+      roleBadge.textContent = '👤 دسترسی: ابر مدیر (SuperAdmin) ✅';
+      roleBadge.style.background = '#0284c7';
+    } else if (role === 'Manager') {
+      roleBadge.textContent = '👤 دسترسی: مدیر میانی (Manager) ✅';
+      roleBadge.style.background = '#0d9488';
+    } else {
+      roleBadge.textContent = '🔒 دسترسی: کاربر عادی (فقط مشاهده نرخ‌ها)';
+      roleBadge.style.background = '#64748b';
+    }
+  }
+
+  // Toggle buttons based on role
+  if (addBtn) addBtn.style.display = isAdminOrMgr ? 'inline-block' : 'none';
+  if (updateRatesBtn) updateRatesBtn.style.display = isAdminOrMgr ? 'inline-flex' : 'none';
+
+  // Fetch live currencies and transaction status
+  await loadCurrencies();
+  const txStatus = await fetchTransactionStatus();
+
+  if (safetyBadge) {
+    if (txStatus.hasTransactions) {
+      safetyBadge.textContent = `⚠️ فاز ۳: ثبت اسناد مالی (${txStatus.totalTransactions} سند) - نیازمند تأییدیه`;
+      safetyBadge.style.background = '#d97706';
+      safetyBadge.title = `اسناد ثبت شده: ${txStatus.sanadCount} سند، فاکتورها: ${txStatus.salesInvoiceCount + txStatus.purchaseInvoiceCount}`;
+    } else {
+      safetyBadge.textContent = '🟢 فاز ۱: بدون سند مالی (تغییر آزاد و بی‌خطر)';
+      safetyBadge.style.background = '#10b981';
+      safetyBadge.title = 'هیچ سند یا فاکتوری در سیستم ثبت نشده است؛ تغییر ارز مبنا هیچ خطری ندارد.';
+    }
+  }
+
+  renderCurrencyTable(txStatus);
 }
 
 function closeCurrencyModal() {
@@ -5885,7 +5962,7 @@ function closeCurrencyModal() {
   updateCurrencyDropdown();
 }
 
-function renderCurrencyTable() {
+function renderCurrencyTable(txStatus) {
   const tbody = document.getElementById('currencyTableBody');
   const baseBadge = document.getElementById('currBaseBadge');
   if (!tbody) return;
@@ -5895,14 +5972,34 @@ function renderCurrencyTable() {
     baseBadge.textContent = `${baseCurr.CurrencyName} (${baseCurr.CurrencyCode})`;
   }
 
+  const isAdminOrMgr = isManagerOrAdmin();
+
   tbody.innerHTML = AppState.currencies.map((curr, idx) => {
     const isBase = curr.IsBase;
-    const baseCol = isBase
-      ? `<span class="badge" style="background:#10b981; color:#fff; font-weight:bold; font-size:0.75rem; padding:3px 8px; border-radius:4px;">⭐ ارز مبنا</span>`
-      : `<button class="btn btn-outline" style="padding:2px 8px; font-size:0.72rem; color:var(--text-muted); cursor:pointer;" onclick="setBaseCurrency(${curr.CurrencyID})" title="تبدیل به ارز مبنا">تعیین مبنا</button>`;
+    let baseCol = '';
+    if (isBase) {
+      baseCol = `<span class="badge" style="background:#10b981; color:#fff; font-weight:bold; font-size:0.75rem; padding:3px 8px; border-radius:4px;">⭐ ارز مبنا</span>`;
+    } else if (isAdminOrMgr) {
+      baseCol = `<button class="btn btn-outline" style="padding:2px 8px; font-size:0.72rem; color:var(--accent-color); font-weight:bold; cursor:pointer;" onclick="setBaseCurrency(${curr.CurrencyID})" title="تعیین به عنوان ارز مبنای سیستم">تعیین مبنا</button>`;
+    } else {
+      baseCol = `<span style="color:var(--text-muted); font-size:0.75rem;">-</span>`;
+    }
 
     const manualRateFmt = Number(curr.ManualRate || 1).toLocaleString('fa-IR');
     const onlineRateFmt = Number(curr.OnlineRate || 1).toLocaleString('fa-IR');
+
+    let actionsCol = '';
+    if (isAdminOrMgr) {
+      actionsCol = `
+        <div style="display:flex; gap:4px; justify-content:center;">
+          <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; cursor:pointer;" onclick="editCurrency(${curr.CurrencyID})" title="ویرایش اطلاعات ارز">✏️</button>
+          <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#10b981; cursor:pointer;" onclick="fetchSingleOnlineRateForCurrency(${curr.CurrencyID}, '${curr.CurrencyCode}')" title="استخراج آنلاین نرخ">🌐</button>
+          ${!isBase ? `<button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#ef4444; cursor:pointer;" onclick="deleteCurrency(${curr.CurrencyID})" title="حذف ارز">🗑️</button>` : ''}
+        </div>
+      `;
+    } else {
+      actionsCol = `<span style="color:var(--text-muted); font-size:0.75rem;">🔒 فقط مشاهده</span>`;
+    }
 
     return `
       <tr style="${isBase ? 'background:rgba(16,185,129,0.06); font-weight:bold;' : ''}">
@@ -5915,13 +6012,7 @@ function renderCurrencyTable() {
         <td style="color:var(--text-muted); font-size:0.78rem;">${curr.ManualRateDate || '-'}</td>
         <td style="color:#10b981; font-weight:bold;">${onlineRateFmt}</td>
         <td style="color:var(--text-muted); font-size:0.78rem;">${curr.OnlineRateDate || '-'}</td>
-        <td>
-          <div style="display:flex; gap:4px; justify-content:center;">
-            <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; cursor:pointer;" onclick="editCurrency(${curr.CurrencyID})" title="ویرایش اطلاعات ارز">✏️</button>
-            <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#10b981; cursor:pointer;" onclick="fetchSingleOnlineRateForCurrency(${curr.CurrencyID}, '${curr.CurrencyCode}')" title="استخراج آنلاین نرخ">🌐</button>
-            ${!isBase ? `<button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#ef4444; cursor:pointer;" onclick="deleteCurrency(${curr.CurrencyID})" title="حذف ارز">🗑️</button>` : ''}
-          </div>
-        </td>
+        <td>${actionsCol}</td>
       </tr>
     `;
   }).join('');
@@ -6005,12 +6096,21 @@ function updateCurrRatePreview() {
 }
 
 function editCurrency(id) {
+  if (!isManagerOrAdmin()) {
+    alert('تنها مدیران سیستم مجاز به ویرایش اطلاعات ارز هستند.');
+    return;
+  }
   const curr = AppState.currencies.find(c => c.CurrencyID === id);
   if (!curr) return;
   toggleCurrencyForm(true, curr);
 }
 
 async function saveCurrencyFromForm() {
+  if (!isManagerOrAdmin()) {
+    alert('تنها مدیران سیستم مجاز به ثبت و ویرایش ارز هستند.');
+    return;
+  }
+
   const editId = document.getElementById('currEditId').value;
   const name = document.getElementById('currName').value.trim();
   const code = document.getElementById('currCode').value.trim().toUpperCase();
@@ -6063,7 +6163,6 @@ async function saveCurrencyFromForm() {
         AppState.currencies.push(saved);
       }
     } else {
-      // Fallback local
       if (editId) {
         const idx = AppState.currencies.findIndex(c => c.CurrencyID === parseInt(editId));
         if (idx !== -1) AppState.currencies[idx] = { ...AppState.currencies[idx], ...payload };
@@ -6072,7 +6171,6 @@ async function saveCurrencyFromForm() {
       }
     }
   } catch(e) {
-    // Fallback local update
     if (editId) {
       const idx = AppState.currencies.findIndex(c => c.CurrencyID === parseInt(editId));
       if (idx !== -1) AppState.currencies[idx] = { ...AppState.currencies[idx], ...payload };
@@ -6088,12 +6186,17 @@ async function saveCurrencyFromForm() {
   }
 
   toggleCurrencyForm(false);
-  renderCurrencyTable();
+  const txStatus = await fetchTransactionStatus();
+  renderCurrencyTable(txStatus);
   updateCurrencyDropdown(name);
   alert(`ارز "${name} (${code})" با موفقیت ذخیره گردید.`);
 }
 
 async function deleteCurrency(id) {
+  if (!isManagerOrAdmin()) {
+    alert('تنها مدیران سیستم مجاز به حذف ارز هستند.');
+    return;
+  }
   const curr = AppState.currencies.find(c => c.CurrencyID === id);
   if (!curr) return;
   if (curr.IsBase) {
@@ -6107,20 +6210,78 @@ async function deleteCurrency(id) {
   } catch(e) {}
 
   AppState.currencies = AppState.currencies.filter(c => c.CurrencyID !== id);
-  renderCurrencyTable();
+  const txStatus = await fetchTransactionStatus();
+  renderCurrencyTable(txStatus);
   updateCurrencyDropdown();
   alert(`ارز "${curr.CurrencyName}" با موفقیت حذف گردید.`);
 }
 
 async function setBaseCurrency(id) {
+  if (!isManagerOrAdmin()) {
+    alert('⛔ عدم دسترسی: تنها کاربران ابر مدیر (SuperAdmin) و مدیر میانی (Manager) مجاز به تعیین یا تغییر ارز مبنا هستند.');
+    return;
+  }
+
   const curr = AppState.currencies.find(c => c.CurrencyID === id);
   if (!curr) return;
-  if (!confirm(`آیا می‌خواهید ارز "${curr.CurrencyName} (${curr.CurrencyCode})" به عنوان ارز مبنای جدید سیستم تعیین شود؟`)) return;
 
+  const role = getCurrentUserRole();
+  const txStatus = await fetchTransactionStatus();
+
+  // فاز ۱: بدون سند مالی
+  if (!txStatus.hasTransactions) {
+    if (!confirm(`آیا می‌خواهید ارز «${curr.CurrencyName} (${curr.CurrencyCode})» به عنوان ارز مبنای جدید سیستم تعیین شود؟\n\n(🟢 وضعیت امنیتی: هیچ سندی در سیستم ثبت نشده و این تغییر بدون ریسک مالی است)`)) {
+      return;
+    }
+    await doExecuteSetBaseCurrency(id, role, true);
+    alert(`✅ ارز مبنا با موفقیت و بدون ریسک به «${curr.CurrencyName}» تغییر یافت (فاز ۱: بدون سند مالی).`);
+    return;
+  }
+
+  // فاز ۳: اسناد مالی ثبت شده است -> باز کردن ویزارد هشدار و تاییدیه مدیریتی
+  openBaseConfirmModal(curr, txStatus);
+}
+
+function openBaseConfirmModal(curr, txStatus) {
+  pendingBaseCurrencyObj = curr;
+  const modal = document.getElementById('currencyBaseConfirmModal');
+  const countEl = document.getElementById('confirmSanadCountText');
+  const oldBaseEl = document.getElementById('confirmOldBaseText');
+  const newBaseEl = document.getElementById('confirmNewBaseText');
+  const rateEl = document.getElementById('confirmRateText');
+
+  const oldBase = AppState.currencies.find(c => c.IsBase) || AppState.currencies[0];
+
+  if (countEl) countEl.textContent = `${txStatus.totalTransactions} (${txStatus.sanadCount} سند حسابداری + ${txStatus.salesInvoiceCount + txStatus.purchaseInvoiceCount} فاکتور)`;
+  if (oldBaseEl) oldBaseEl.textContent = `${oldBase.CurrencyName} (${oldBase.CurrencyCode})`;
+  if (newBaseEl) newBaseEl.textContent = `${curr.CurrencyName} (${curr.CurrencyCode})`;
+  if (rateEl) rateEl.textContent = `۱ ${curr.CurrencyCode} = ${Number(curr.OnlineRate || curr.ManualRate || 1).toLocaleString('fa-IR')} ${oldBase.CurrencyCode}`;
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeBaseConfirmModal() {
+  const modal = document.getElementById('currencyBaseConfirmModal');
+  if (modal) modal.style.display = 'none';
+  pendingBaseCurrencyObj = null;
+}
+
+async function executeForceBaseCurrencyChange() {
+  if (!pendingBaseCurrencyObj) return;
+  const id = pendingBaseCurrencyObj.CurrencyID;
+  const name = pendingBaseCurrencyObj.CurrencyName;
+  const role = getCurrentUserRole();
+
+  closeBaseConfirmModal();
+  await doExecuteSetBaseCurrency(id, role, true);
+  alert(`✅ تأییدیه مدیریتی اعمال شد: ارز مبنای سیستم به «${name}» تغییر یافت.`);
+}
+
+async function doExecuteSetBaseCurrency(id, role, forceConfirm) {
   try {
-    const res = await fetch(`/api/Currencies/${id}/set-base`, { method: 'POST' });
+    const res = await fetch(`/api/Currencies/${id}/set-base?user_role=${role}&force_confirm=${forceConfirm}`, { method: 'POST' });
     if (res.ok) {
-      const updated = await res.json();
+      const data = await res.json();
     }
   } catch(e) {}
 
@@ -6132,9 +6293,10 @@ async function setBaseCurrency(id) {
     }
   });
 
-  renderCurrencyTable();
+  await loadCurrencies();
+  const txStatus = await fetchTransactionStatus();
+  renderCurrencyTable(txStatus);
   updateCurrencyDropdown();
-  alert(`ارز مبنا با موفقیت به «${curr.CurrencyName}» تغییر یافت.`);
 }
 
 async function fetchSingleOnlineRateFromForm() {
