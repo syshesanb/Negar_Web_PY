@@ -5616,7 +5616,7 @@ function openCompanyForm(companyId) {
     if (document.getElementById('compRegDate')) document.getElementById('compRegDate').value = '';
     if (document.getElementById('compActivity')) document.getElementById('compActivity').value = '';
     if (document.getElementById('compFactoryAddress')) document.getElementById('compFactoryAddress').value = '';
-    if (document.getElementById('compCurrency')) document.getElementById('compCurrency').value = 'ریال';
+    if (document.getElementById('compCurrency')) updateCurrencyDropdown('ریال ایران');
     if (document.getElementById('compModyanUniqueId')) document.getElementById('compModyanUniqueId').value = '';
     if (document.getElementById('compInsuranceCode')) document.getElementById('compInsuranceCode').value = '';
     if (document.getElementById('compVatRate')) document.getElementById('compVatRate').value = '10';
@@ -5628,6 +5628,7 @@ function openCompanyForm(companyId) {
     if (document.getElementById('compCeoNationalId')) document.getElementById('compCeoNationalId').value = '';
     if (document.getElementById('compCeoPhone')) document.getElementById('compCeoPhone').value = '';
     if (document.getElementById('compPageOpenMode')) document.getElementById('compPageOpenMode').value = 'unique';
+    loadCurrencies('ریال ایران');
   } else {
     // EDIT mode: load existing data
     const company = AppState.companies.find(c => c.id === companyId);
@@ -5653,7 +5654,7 @@ function openCompanyForm(companyId) {
     if (document.getElementById('compRegDate')) document.getElementById('compRegDate').value = company.regDate || '';
     if (document.getElementById('compActivity')) document.getElementById('compActivity').value = company.activity || '';
     if (document.getElementById('compFactoryAddress')) document.getElementById('compFactoryAddress').value = company.factoryAddress || '';
-    if (document.getElementById('compCurrency')) document.getElementById('compCurrency').value = company.currency || 'ریال';
+    if (document.getElementById('compCurrency')) updateCurrencyDropdown(company.currency || 'ریال ایران');
     if (document.getElementById('compModyanUniqueId')) document.getElementById('compModyanUniqueId').value = company.modyanUniqueId || '';
     if (document.getElementById('compInsuranceCode')) document.getElementById('compInsuranceCode').value = company.insuranceCode || '';
     if (document.getElementById('compVatRate')) document.getElementById('compVatRate').value = company.vatRate || '10';
