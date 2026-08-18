@@ -6005,27 +6005,15 @@ function renderCurrencyTable(txStatus) {
 
     return `
       <tr style="${isBase ? 'background:rgba(16,185,129,0.06); font-weight:bold;' : ''}">
-        <td>${idx + 1}</td>
-        <td style="text-align:right; font-weight:bold; color:var(--text-main);">${curr.CurrencyName}</td>
-        <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${curr.CurrencyCode}</code> <span style="color:var(--text-muted);">${curr.CurrencySymbol || ''}</span></td>
-        <td>${baseCol}</td>
-        <td style="color:#0284c7; font-weight:bold;">
-          <div>${manualRateFmt}</div>
-          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.ManualRateDate || '-'}</div>
-        </td>
-        <td style="color:#0369a1; font-weight:bold;">
-          <div>${cbiRateFmt}</div>
-          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.CbiRateDate || curr.OnlineRateDate || '-'}</div>
-        </td>
-        <td style="color:#059669; font-weight:bold;">
-          <div>${tgjuRateFmt}</div>
-          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.TgjuRateDate || curr.OnlineRateDate || '-'}</div>
-        </td>
-        <td style="color:#d97706; font-weight:bold;">
-          <div>${globalRateFmt}</div>
-          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.GlobalRateDate || curr.OnlineRateDate || '-'}</div>
-        </td>
-        <td>${actionsCol}</td>
+        <td style="padding:8px 4px;">${idx + 1}</td>
+        <td style="text-align:right; font-weight:bold; color:var(--text-main); padding:8px 10px;">${curr.CurrencyName}</td>
+        <td style="padding:8px 6px;"><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${curr.CurrencyCode}</code> <span style="color:var(--text-muted); font-size:0.8rem;">${curr.CurrencySymbol || ''}</span></td>
+        <td style="padding:8px 6px;">${baseCol}</td>
+        <td style="color:#0284c7; font-weight:bold; font-size:0.88rem; padding:8px 6px;">${manualRateFmt}</td>
+        <td style="color:#0369a1; font-weight:bold; font-size:0.88rem; padding:8px 6px;">${cbiRateFmt}</td>
+        <td style="color:#059669; font-weight:bold; font-size:0.88rem; padding:8px 6px;">${tgjuRateFmt}</td>
+        <td style="color:#d97706; font-weight:bold; font-size:0.88rem; padding:8px 6px;">${globalRateFmt}</td>
+        <td style="padding:8px 6px;">${actionsCol}</td>
       </tr>
     `;
   }).join('');
@@ -6045,7 +6033,6 @@ function toggleCurrencyForm(show, editObj) {
   }
 
   formArea.style.display = 'block';
-  const todayStr = (typeof PersianCal !== 'undefined') ? PersianCal.getTodayString() : '1405/05/27';
 
   if (editObj) {
     title.textContent = `✏️ ویرایش اطلاعات ارز: ${editObj.CurrencyName}`;
@@ -6055,14 +6042,10 @@ function toggleCurrencyForm(show, editObj) {
     document.getElementById('currSymbol').value = editObj.CurrencySymbol || '';
     document.getElementById('currIsBase').checked = editObj.IsBase || false;
     document.getElementById('currManualRate').value = editObj.ManualRate || 1.0;
-    document.getElementById('currManualRateDate').value = editObj.ManualRateDate || todayStr;
     
     document.getElementById('currCbiRate').value = editObj.CbiRate || editObj.OnlineRate || 1.0;
-    document.getElementById('currCbiRateDate').value = editObj.CbiRateDate || todayStr;
     document.getElementById('currTgjuRate').value = editObj.TgjuRate || editObj.OnlineRate || 1.0;
-    document.getElementById('currTgjuRateDate').value = editObj.TgjuRateDate || todayStr;
     document.getElementById('currGlobalRate').value = editObj.GlobalRate || editObj.OnlineRate || 1.0;
-    document.getElementById('currGlobalRateDate').value = editObj.GlobalRateDate || todayStr;
   } else {
     title.textContent = `➕ افزودن ارز جدید`;
     document.getElementById('currEditId').value = '';
@@ -6071,14 +6054,10 @@ function toggleCurrencyForm(show, editObj) {
     document.getElementById('currSymbol').value = '';
     document.getElementById('currIsBase').checked = false;
     document.getElementById('currManualRate').value = '';
-    document.getElementById('currManualRateDate').value = todayStr;
     
     document.getElementById('currCbiRate').value = '';
-    document.getElementById('currCbiRateDate').value = '';
     document.getElementById('currTgjuRate').value = '';
-    document.getElementById('currTgjuRateDate').value = '';
     document.getElementById('currGlobalRate').value = '';
-    document.getElementById('currGlobalRateDate').value = '';
   }
 
   onCurrIsBaseChanged();
@@ -6143,14 +6122,10 @@ async function saveCurrencyFromForm() {
   const symbol = document.getElementById('currSymbol').value.trim();
   const isBase = document.getElementById('currIsBase').checked;
   const mRate = parseFloat(document.getElementById('currManualRate').value) || 1.0;
-  const mDate = document.getElementById('currManualRateDate').value.trim();
 
   const cbiRate = parseFloat(document.getElementById('currCbiRate')?.value) || mRate;
-  const cbiDate = document.getElementById('currCbiRateDate')?.value || mDate;
   const tgjuRate = parseFloat(document.getElementById('currTgjuRate')?.value) || mRate;
-  const tgjuDate = document.getElementById('currTgjuRateDate')?.value || mDate;
   const globalRate = parseFloat(document.getElementById('currGlobalRate')?.value) || mRate;
-  const globalDate = document.getElementById('currGlobalRateDate')?.value || mDate;
 
   if (!name || !code) {
     alert('لطفاً نام ارز و کد بین‌المللی آن را وارد کنید.');
@@ -6163,15 +6138,10 @@ async function saveCurrencyFromForm() {
     CurrencySymbol: symbol,
     IsBase: isBase,
     ManualRate: isBase ? 1.0 : mRate,
-    ManualRateDate: mDate,
     CbiRate: isBase ? 1.0 : cbiRate,
-    CbiRateDate: cbiDate,
     TgjuRate: isBase ? 1.0 : tgjuRate,
-    TgjuRateDate: tgjuDate,
     GlobalRate: isBase ? 1.0 : globalRate,
-    GlobalRateDate: globalDate,
     OnlineRate: isBase ? 1.0 : tgjuRate,
-    OnlineRateDate: tgjuDate,
     IsActive: true
   };
 
@@ -6350,16 +6320,13 @@ async function fetchSingleOnlineRateFromForm() {
     if (res.ok) {
       const data = await res.json();
       document.getElementById('currCbiRate').value = data.cbiRate;
-      document.getElementById('currCbiRateDate').value = data.cbiRateDate;
       document.getElementById('currTgjuRate').value = data.tgjuRate;
-      document.getElementById('currTgjuRateDate').value = data.tgjuRateDate;
       document.getElementById('currGlobalRate').value = data.globalRate;
-      document.getElementById('currGlobalRateDate').value = data.globalRateDate;
 
       if (!document.getElementById('currManualRate').value) {
         document.getElementById('currManualRate').value = data.tgjuRate;
       }
-      alert(`✅ هر ۳ نرخ اینترنتی برای ${code} با تاریخ روز استخراج شدند:\n\n🏦 بانک مرکزی (سنا): ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز (TGJU): ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی (Forex): ${Number(data.globalRate).toLocaleString('fa-IR')}\n\n(تاریخ استخراج: ${data.todayDate})`);
+      alert(`✅ نرخ‌های ۳ منبع برای ${code} استخراج شدند:\n\n🏦 بانک مرکزی (سنا): ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز (TGJU): ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی (Forex): ${Number(data.globalRate).toLocaleString('fa-IR')}`);
     }
   } catch(e) {
     alert('خطا در دریافت نرخ‌های آنلاین از اینترنت.');
@@ -6374,17 +6341,13 @@ async function fetchSingleOnlineRateForCurrency(id, code) {
     if (res.ok) {
       const data = await res.json();
       curr.CbiRate = data.cbiRate;
-      curr.CbiRateDate = data.cbiRateDate;
       curr.TgjuRate = data.tgjuRate;
-      curr.TgjuRateDate = data.tgjuRateDate;
       curr.GlobalRate = data.globalRate;
-      curr.GlobalRateDate = data.globalRateDate;
       curr.OnlineRate = data.onlineRate;
-      curr.OnlineRateDate = data.onlineRateDate;
 
       const txStatus = await fetchTransactionStatus();
       renderCurrencyTable(txStatus);
-      alert(`✅ هر ۳ نرخ اینترنتی برای «${curr.CurrencyName} (${code})» با تاریخ روز استخراج و ذخیره شدند:\n\n🏦 بانک مرکزی: ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز: ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی: ${Number(data.globalRate).toLocaleString('fa-IR')}`);
+      alert(`✅ هر ۳ نرخ اینترنتی برای «${curr.CurrencyName} (${code})» با موفقیت ذخیره شدند:\n\n🏦 بانک مرکزی: ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز: ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی: ${Number(data.globalRate).toLocaleString('fa-IR')}`);
     }
   } catch(e) {
     alert('خطا در استخراج آنلاین نرخ‌ها.');
@@ -6407,7 +6370,7 @@ async function fetchAllOnlineRates() {
     }
     const txStatus = await fetchTransactionStatus();
     renderCurrencyTable(txStatus);
-    alert('✅ تمامی نرخ‌های برابری از هر ۳ منبع اینترنتی (بانک مرکزی، شبکه طلا و ارز، و بین‌المللی) دریافت و با تاریخ روز بروزرسانی شدند.');
+    alert('✅ تمامی نرخ‌های برابری از هر ۳ منبع اینترنتی (بانک مرکزی، شبکه طلا و ارز، و بین‌المللی) دریافت و بروزرسانی شدند.');
   } catch(e) {
     alert('خطا در ارتباط با سرور.');
   } finally {
