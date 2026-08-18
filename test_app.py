@@ -147,18 +147,15 @@ def run_tests():
     assert saved_curr["CurrencyCode"] == "CAD"
     print(" -> ارز جدید ایجاد شد:", saved_curr["CurrencyName"])
 
-    # Online rate fetch (3 Sources)
+    # Online rate fetch (TGJU Free Market Rate)
     online_rate_res = client.get("/api/Currencies/online-rate/USD")
     assert online_rate_res.status_code == 200
     rate_info = online_rate_res.json()
-    assert "cbiRate" in rate_info
-    assert "tgjuRate" in rate_info
-    assert "globalRate" in rate_info
-    print(f" -> استخراج آنلاین ۳ منبع نرخ دلار:")
-    print(f"    🏦 ۱. بانک مرکزی (سنا): {rate_info['cbiRate']}")
-    print(f"    📈 ۲. شبکه طلا و ارز (TGJU): {rate_info['tgjuRate']}")
-    print(f"    🌍 ۳. سرویس بین‌المللی (Forex): {rate_info['globalRate']}")
-    print(f"    📅 تاریخ استخراج: {rate_info['todayDate']}")
+    assert "onlineRate" in rate_info
+    assert float(rate_info["onlineRate"]) >= 1000000.0  # Live TGJU Dollar rate is around 1,865,000 IRR
+    print(f" -> استخراج زنده نرخ آزاد دلار از TGJU.org: {rate_info['onlineRate']} ریال")
+
+    print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 
     print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 

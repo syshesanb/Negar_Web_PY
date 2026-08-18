@@ -402,71 +402,44 @@ class CurrencyService:
         }
 
     def fetch_online_rate_for_code(self, currency_code: str) -> dict:
-        """Fetch online exchange rates from all 3 sources against base currency with today's live date."""
+        """Fetch live free market exchange rate (نرخ آزاد) from tgju.org against base currency."""
         code = currency_code.upper().strip()
         base_curr = self.get_base_currency()
         base_code = base_curr.CurrencyCode.upper() if base_curr else "IRR"
         today_str = get_current_jalali_date_str()
 
-        # Fetch real-time live rates from internet (TGJU, CBI, Global Forex)
+        # Fetch real-time live rates from tgju.org
         live_data = fetch_live_rates_from_internet()
-        cbi_market = live_data["cbi"]
         tgju_market = live_data["tgju"]
-        global_market = live_data["global"]
 
-        # 1. CBI Rate (بانک مرکزی / مرکز مبادله ایران و سنا)
-        cbi_code = cbi_market.get(code, DEFAULT_CBI_RATES.get(code, 1.0))
-        cbi_base = cbi_market.get(base_code, DEFAULT_CBI_RATES.get(base_code, 1.0))
-        cbi_final = cbi_code / cbi_base if cbi_base > 0 else cbi_code
-
-        # 2. TGJU Rate (شبکه اطلاع‌رسانی طلا، سکه و ارز / بازار آزاد)
+        # TGJU Free Market Rate (نرخ آزاد بازار تهران)
         tgju_code = tgju_market.get(code, DEFAULT_TGJU_RATES.get(code, 1.0))
         tgju_base = tgju_market.get(base_code, DEFAULT_TGJU_RATES.get(base_code, 1.0))
         tgju_final = tgju_code / tgju_base if tgju_base > 0 else tgju_code
-
-        # 3. Global Rate (سرویس بین‌المللی Forex)
-        glob_code = global_market.get(code, tgju_code)
-        glob_base = global_market.get(base_code, tgju_base)
-        glob_final = glob_code / glob_base if glob_base > 0 else glob_code
 
         return {
             "currencyCode": code,
             "baseCurrencyCode": base_code,
             "todayDate": today_str,
-            "cbiRate": round(cbi_final, 4),
-            "cbiRateDate": today_str,
-            "tgjuRate": round(tgju_final, 4),
-            "tgjuRateDate": today_str,
-            "globalRate": round(glob_final, 4),
-            "globalRateDate": today_str,
             "onlineRate": round(tgju_final, 4),
-            "onlineRateDate": today_str
+            "freeRate": round(tgju_final, 4),
+            "tgjuRate": round(tgju_final, 4),
+            "source": "شبکه اطلاع‌رسانی طلا، سکه و ارز (TGJU.org)"
         }
 
     def update_all_online_rates(self) -> List[Currency]:
-        """Fetch and update online rates for all currencies from all 3 sources."""
+        """Fetch and update live free market rates for all currencies from TGJU.org."""
         currencies = self.get_all()
         today_str = get_current_jalali_date_str()
 
         for curr in currencies:
             if curr.IsBase:
-                curr.CbiRate = 1.0
-                curr.CbiRateDate = today_str
-                curr.TgjuRate = 1.0
-                curr.TgjuRateDate = today_str
-                curr.GlobalRate = 1.0
-                curr.GlobalRateDate = today_str
                 curr.OnlineRate = 1.0
-                curr.OnlineRateDate = today_str
+                curr.TgjuRate = 1.0
+                curr.ManualRate = 1.0
             else:
                 rates = self.fetch_online_rate_for_code(curr.CurrencyCode)
-                curr.CbiRate = rates["cbiRate"]
-                curr.CbiRateDate = rates["cbiRateDate"]
-                curr.TgjuRate = rates["tgjuRate"]
-                curr.TgjuRateDate = rates["tgjuRateDate"]
-                curr.GlobalRate = rates["globalRate"]
-                curr.GlobalRateDate = rates["globalRateDate"]
                 curr.OnlineRate = rates["onlineRate"]
-                curr.OnlineRateDate = rates["onlineRateDate"]
+                curr.TgjuRate = rates["onlineRate"]
         self.db.commit()
         return self.get_all()

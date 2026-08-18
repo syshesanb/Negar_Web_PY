@@ -2845,42 +2845,22 @@
             </div>
           </div>
 
-          <!-- نرخ دستی -->
-          <div class="form-row" style="margin-bottom:10px; background:rgba(2,132,199,0.04); padding:10px; border-radius:6px; border:1px solid rgba(2,132,199,0.15);">
-            <div class="form-group" style="flex:1;">
-              <label class="form-label" style="font-weight:bold;">💵 نرخ برابری دستی (نسبت به ارز مبنا):</label>
+          <!-- نرخ دستی و نرخ آزاد TGJU -->
+          <div class="form-row" style="margin-bottom:12px; gap:12px;">
+            <!-- نرخ دستی -->
+            <div class="form-group" style="flex:1; background:rgba(2,132,199,0.04); padding:10px; border-radius:6px; border:1px solid rgba(2,132,199,0.15);">
+              <label class="form-label" style="font-weight:bold; color:var(--text-main);">💵 نرخ برابری دستی (نسبت به ارز مبنا):</label>
               <input type="number" step="any" id="currManualRate" class="form-input" placeholder="1.0" oninput="updateCurrRatePreview()" />
             </div>
-          </div>
 
-          <!-- نرخ‌های اینترنتی ۳ منبع -->
-          <div style="background:rgba(16,185,129,0.04); padding:12px; border-radius:6px; border:1px solid rgba(16,185,129,0.2); margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-weight:bold; font-size:0.88rem; color:#059669; display:flex; align-items:center; gap:6px;">
-                🌐 نرخ‌های اینترنتی برخط (۳ منبع رسمی، بازار و بین‌المللی):
-              </span>
-              <button class="btn btn-outline" type="button" onclick="fetchSingleOnlineRateFromForm()" title="استخراج همزمان نرخ از هر ۳ منبع اینترنتی" style="padding:4px 12px; font-size:0.8rem; font-weight:bold; border-radius:6px; cursor:pointer; color:#059669; border-color:#059669; background:#fff;">
-                🌐 استخراج آنلاین هر ۳ منبع
-              </button>
-            </div>
-
-            <div class="form-row" style="gap:10px;">
-              <!-- 1. بانک مرکزی -->
-              <div class="form-group" style="flex:1;">
-                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">🏦 ۱. بانک مرکزی (سنا/مرکز مبادله):</label>
-                <input type="number" step="any" id="currCbiRate" class="form-input" placeholder="خودکار..." />
-              </div>
-
-              <!-- 2. شبکه طلا و ارز TGJU -->
-              <div class="form-group" style="flex:1;">
-                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">📈 ۲. شبکه طلا و ارز (TGJU):</label>
-                <input type="number" step="any" id="currTgjuRate" class="form-input" placeholder="خودکار..." />
-              </div>
-
-              <!-- 3. سرویس بین‌المللی Forex -->
-              <div class="form-group" style="flex:1;">
-                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">🌍 ۳. سرویس بین‌المللی (Forex):</label>
-                <input type="number" step="any" id="currGlobalRate" class="form-input" placeholder="خودکار..." />
+            <!-- نرخ آزاد TGJU -->
+            <div class="form-group" style="flex:1; background:rgba(16,185,129,0.04); padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">
+              <label class="form-label" style="font-weight:bold; color:#059669;">🌐 نرخ آزاد (استخراج زنده از سایت TGJU.org):</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="number" step="any" id="currOnlineRate" class="form-input" placeholder="استخراج از سایت TGJU..." style="flex:1;" />
+                <button class="btn btn-outline" type="button" onclick="fetchSingleOnlineRateFromForm()" title="استخراج آنلاین نرخ آزاد از سایت TGJU" style="padding:0 12px; height:34px; font-size:0.8rem; font-weight:bold; border-radius:6px; cursor:pointer; color:#059669; border-color:#059669; background:#fff; flex-shrink:0;">
+                  🌐 استخراج از TGJU
+                </button>
               </div>
             </div>
           </div>
@@ -2896,19 +2876,17 @@
         </div>
 
         <!-- Currencies Table Grid (Fixed Header & No Horizontal Scroll) -->
-        <div class="table-wrapper" style="border:1px solid var(--border-color); border-radius:8px; max-height:360px; overflow-y:auto; overflow-x:hidden; position:relative;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:center;">
+        <div class="table-wrapper" style="border:1px solid var(--border-color); border-radius:8px; max-height:380px; overflow-y:auto; overflow-x:hidden; position:relative;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:center;">
             <thead style="position:sticky; top:0; z-index:20; background:var(--bg-card);">
               <tr style="background:var(--bg-card); box-shadow:0 2px 4px rgba(0,0,0,0.08);">
-                <th style="padding:10px 6px; position:sticky; top:0; background:var(--bg-card); width:45px; border-bottom:2px solid var(--border-color);">ردیف</th>
-                <th style="padding:10px 10px; position:sticky; top:0; background:var(--bg-card); text-align:right; border-bottom:2px solid var(--border-color);">نام ارز</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); width:110px; border-bottom:2px solid var(--border-color);">کد / نماد</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); width:100px; border-bottom:2px solid var(--border-color);">ارز مبنا</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); color:#0284c7; border-bottom:2px solid var(--border-color);">💵 نرخ دستی</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); color:#0369a1; border-bottom:2px solid var(--border-color);">🏦 بانک مرکزی (سنا)</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); color:#059669; border-bottom:2px solid var(--border-color);">📈 طلا و ارز (TGJU)</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); color:#d97706; border-bottom:2px solid var(--border-color);">🌍 بین‌المللی (Forex)</th>
-                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); width:120px; border-bottom:2px solid var(--border-color);">عملیات</th>
+                <th style="padding:10px 8px; position:sticky; top:0; background:var(--bg-card); width:50px; border-bottom:2px solid var(--border-color);">ردیف</th>
+                <th style="padding:10px 12px; position:sticky; top:0; background:var(--bg-card); text-align:right; border-bottom:2px solid var(--border-color);">نام ارز</th>
+                <th style="padding:10px 10px; position:sticky; top:0; background:var(--bg-card); width:120px; border-bottom:2px solid var(--border-color);">کد / نماد</th>
+                <th style="padding:10px 10px; position:sticky; top:0; background:var(--bg-card); width:110px; border-bottom:2px solid var(--border-color);">ارز مبنا</th>
+                <th style="padding:10px 12px; position:sticky; top:0; background:var(--bg-card); color:#0284c7; border-bottom:2px solid var(--border-color);">💵 نرخ برابری دستی</th>
+                <th style="padding:10px 12px; position:sticky; top:0; background:var(--bg-card); color:#059669; border-bottom:2px solid var(--border-color);">🌐 نرخ آزاد (TGJU.org)</th>
+                <th style="padding:10px 10px; position:sticky; top:0; background:var(--bg-card); width:130px; border-bottom:2px solid var(--border-color);">عملیات</th>
               </tr>
             </thead>
             <tbody id="currencyTableBody">
