@@ -147,12 +147,18 @@ def run_tests():
     assert saved_curr["CurrencyCode"] == "CAD"
     print(" -> ارز جدید ایجاد شد:", saved_curr["CurrencyName"])
 
-    # Online rate fetch
+    # Online rate fetch (3 Sources)
     online_rate_res = client.get("/api/Currencies/online-rate/USD")
     assert online_rate_res.status_code == 200
     rate_info = online_rate_res.json()
-    assert "onlineRate" in rate_info
-    print(f" -> استخراج آنلاین نرخ دلار: {rate_info['onlineRate']} (تاریخ: {rate_info['onlineRateDate']})")
+    assert "cbiRate" in rate_info
+    assert "tgjuRate" in rate_info
+    assert "globalRate" in rate_info
+    print(f" -> استخراج آنلاین ۳ منبع نرخ دلار:")
+    print(f"    🏦 ۱. بانک مرکزی (سنا): {rate_info['cbiRate']}")
+    print(f"    📈 ۲. شبکه طلا و ارز (TGJU): {rate_info['tgjuRate']}")
+    print(f"    🌍 ۳. سرویس بین‌المللی (Forex): {rate_info['globalRate']}")
+    print(f"    📅 تاریخ استخراج: {rate_info['todayDate']}")
 
     print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 

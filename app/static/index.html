@@ -2842,31 +2842,53 @@
             </div>
           </div>
 
-          <div class="form-row" style="margin-bottom:12px;">
-            <!-- نرخ دستی -->
+          <!-- نرخ دستی -->
+          <div class="form-row" style="margin-bottom:10px; background:rgba(2,132,199,0.04); padding:10px; border-radius:6px; border:1px solid rgba(2,132,199,0.15);">
             <div class="form-group" style="flex:1.5;">
-              <label class="form-label">نرخ برابری دستی (نسبت به ارز مبنا):</label>
+              <label class="form-label" style="font-weight:bold;">💵 نرخ برابری دستی (نسبت به ارز مبنا):</label>
               <input type="number" step="any" id="currManualRate" class="form-input" placeholder="1.0" oninput="updateCurrRatePreview()" />
             </div>
             <div class="form-group" style="flex:1.5;">
-              <label class="form-label">تاریخ ثبت نرخ دستی:</label>
+              <label class="form-label" style="font-weight:bold;">📅 تاریخ ثبت نرخ دستی:</label>
               <div style="display:flex; gap:4px; align-items:center;">
                 <input type="text" id="currManualRateDate" class="form-input" placeholder="1403/01/01" oninput="autoFormatDate(this)" maxlength="10" style="flex:1;" />
                 <button class="btn btn-outline date-picker-btn" type="button" onclick="PersianCal.open('currManualRateDate', this)" style="padding:0 8px; height:34px; border-radius:6px; cursor:pointer;">📅</button>
               </div>
             </div>
+          </div>
 
-            <!-- نرخ اینترنتی -->
-            <div class="form-group" style="flex:1.5;">
-              <label class="form-label">نرخ برابری اینترنتی:</label>
-              <div style="display:flex; gap:4px; align-items:center;">
-                <input type="number" step="any" id="currOnlineRate" class="form-input" placeholder="1.0" style="flex:1;" />
-                <button class="btn btn-outline" type="button" onclick="fetchSingleOnlineRateFromForm()" title="استخراج آنلاین نرخ از اینترنت" style="padding:0 10px; height:34px; font-size:0.8rem; font-weight:bold; border-radius:6px; flex-shrink:0; cursor:pointer; color:var(--accent-color);">🌐 استخراج</button>
-              </div>
+          <!-- نرخ‌های اینترنتی ۳ منبع -->
+          <div style="background:rgba(16,185,129,0.04); padding:12px; border-radius:6px; border:1px solid rgba(16,185,129,0.2); margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-weight:bold; font-size:0.88rem; color:#059669; display:flex; align-items:center; gap:6px;">
+                🌐 نرخ‌های اینترنتی برخط (۳ منبع رسمی، بازار و بین‌المللی):
+              </span>
+              <button class="btn btn-outline" type="button" onclick="fetchSingleOnlineRateFromForm()" title="استخراج همزمان نرخ از هر ۳ منبع اینترنتی" style="padding:4px 12px; font-size:0.8rem; font-weight:bold; border-radius:6px; cursor:pointer; color:#059669; border-color:#059669; background:#fff;">
+                🌐 استخراج آنلاین هر ۳ منبع
+              </button>
             </div>
-            <div class="form-group" style="flex:1.5;">
-              <label class="form-label">تاریخ استخراج اینترنتی:</label>
-              <input type="text" id="currOnlineRateDate" class="form-input" readonly style="background:var(--bg-primary); cursor:not-allowed;" placeholder="خودکار از اینترنت..." />
+
+            <div class="form-row" style="gap:10px;">
+              <!-- 1. بانک مرکزی -->
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">🏦 ۱. بانک مرکزی (سنا/نیما):</label>
+                <input type="number" step="any" id="currCbiRate" class="form-input" placeholder="خودکار..." />
+                <input type="text" id="currCbiRateDate" class="form-input" readonly style="margin-top:4px; font-size:0.75rem; background:var(--bg-primary); cursor:not-allowed;" placeholder="تاریخ سنا..." />
+              </div>
+
+              <!-- 2. شبکه طلا و ارز TGJU -->
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">📈 ۲. شبکه طلا و ارز (TGJU):</label>
+                <input type="number" step="any" id="currTgjuRate" class="form-input" placeholder="خودکار..." />
+                <input type="text" id="currTgjuRateDate" class="form-input" readonly style="margin-top:4px; font-size:0.75rem; background:var(--bg-primary); cursor:not-allowed;" placeholder="تاریخ TGJU..." />
+              </div>
+
+              <!-- 3. سرویس بین‌المللی Forex -->
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" style="font-size:0.8rem; color:var(--text-main);">🌍 ۳. سرویس بین‌المللی (Forex):</label>
+                <input type="number" step="any" id="currGlobalRate" class="form-input" placeholder="خودکار..." />
+                <input type="text" id="currGlobalRateDate" class="form-input" readonly style="margin-top:4px; font-size:0.75rem; background:var(--bg-primary); cursor:not-allowed;" placeholder="تاریخ Forex..." />
+              </div>
             </div>
           </div>
 
@@ -2881,20 +2903,19 @@
         </div>
 
         <!-- Currencies Table Grid -->
-        <div class="table-wrapper" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-          <table style="width:100%; font-size:0.85rem; text-align:center;">
+        <div class="table-wrapper" style="border:1px solid var(--border-color); border-radius:8px; overflow-x:auto;">
+          <table style="width:100%; min-width:850px; font-size:0.83rem; text-align:center;">
             <thead>
               <tr style="background:var(--bg-card);">
-                <th style="padding:8px 10px;">ردیف</th>
-                <th style="padding:8px 10px; text-align:right;">نام ارز</th>
-                <th style="padding:8px 10px;">کد (ISO)</th>
-                <th style="padding:8px 10px;">نماد</th>
-                <th style="padding:8px 10px;">ارز مبنا</th>
-                <th style="padding:8px 10px;">نرخ دستی</th>
-                <th style="padding:8px 10px;">تاریخ دستی</th>
-                <th style="padding:8px 10px;">نرخ اینترنتی</th>
-                <th style="padding:8px 10px;">تاریخ اینترنتی</th>
-                <th style="padding:8px 10px; width:170px;">عملیات</th>
+                <th style="padding:8px 6px;">ردیف</th>
+                <th style="padding:8px 8px; text-align:right;">نام ارز</th>
+                <th style="padding:8px 6px;">کد / نماد</th>
+                <th style="padding:8px 6px;">ارز مبنا</th>
+                <th style="padding:8px 6px;">💵 نرخ دستی</th>
+                <th style="padding:8px 6px; color:#0284c7;">🏦 بانک مرکزی (سنا)</th>
+                <th style="padding:8px 6px; color:#059669;">📈 طلا و ارز (TGJU)</th>
+                <th style="padding:8px 6px; color:#d97706;">🌍 بین‌المللی (Forex)</th>
+                <th style="padding:8px 6px; width:130px;">عملیات</th>
               </tr>
             </thead>
             <tbody id="currencyTableBody">

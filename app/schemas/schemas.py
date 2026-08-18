@@ -262,6 +262,15 @@ class CurrencyBase(BaseModel):
     IsBase: bool = False
     ManualRate: float = 1.0
     ManualRateDate: Optional[str] = None
+    
+    # 3 Online Rate Sources
+    CbiRate: Optional[float] = 1.0
+    CbiRateDate: Optional[str] = None
+    TgjuRate: Optional[float] = 1.0
+    TgjuRateDate: Optional[str] = None
+    GlobalRate: Optional[float] = 1.0
+    GlobalRateDate: Optional[str] = None
+    
     OnlineRate: float = 1.0
     OnlineRateDate: Optional[str] = None
     IsActive: bool = True
@@ -278,6 +287,14 @@ class CurrencyUpdateDTO(BaseModel):
     IsBase: Optional[bool] = None
     ManualRate: Optional[float] = None
     ManualRateDate: Optional[str] = None
+    
+    CbiRate: Optional[float] = None
+    CbiRateDate: Optional[str] = None
+    TgjuRate: Optional[float] = None
+    TgjuRateDate: Optional[str] = None
+    GlobalRate: Optional[float] = None
+    GlobalRateDate: Optional[str] = None
+    
     OnlineRate: Optional[float] = None
     OnlineRateDate: Optional[str] = None
     IsActive: Optional[bool] = None

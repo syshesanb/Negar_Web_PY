@@ -337,10 +337,24 @@ class Currency(Base):
     CurrencyName = Column(String(50), nullable=False)
     CurrencySymbol = Column(String(10), nullable=True)
     IsBase = Column(Boolean, default=False)
+    
+    # Manual rate
     ManualRate = Column(Numeric(18, 4), default=1.0)
     ManualRateDate = Column(String(20), nullable=True)
+    
+    # Online rates (3 Sources)
+    CbiRate = Column(Numeric(18, 4), default=1.0)              # نرخ اینترنتی بانک مرکزی (سنا / نیما)
+    CbiRateDate = Column(String(20), nullable=True)
+    TgjuRate = Column(Numeric(18, 4), default=1.0)             # نرخ اینترنتی شبکه اطلاع‌رسانی طلا، سکه و ارز
+    TgjuRateDate = Column(String(20), nullable=True)
+    GlobalRate = Column(Numeric(18, 4), default=1.0)           # نرخ اینترنتی سرویس بین‌المللی Forex
+    GlobalRateDate = Column(String(20), nullable=True)
+    
+    # Standard fallback / active selected online rate
     OnlineRate = Column(Numeric(18, 4), default=1.0)
     OnlineRateDate = Column(String(20), nullable=True)
+    
     IsActive = Column(Boolean, default=True)
     CreatedDate = Column(DateTime, default=datetime.utcnow)
+
 

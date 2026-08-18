@@ -5986,14 +5986,16 @@ function renderCurrencyTable(txStatus) {
     }
 
     const manualRateFmt = Number(curr.ManualRate || 1).toLocaleString('fa-IR');
-    const onlineRateFmt = Number(curr.OnlineRate || 1).toLocaleString('fa-IR');
+    const cbiRateFmt = Number(curr.CbiRate || curr.OnlineRate || 1).toLocaleString('fa-IR');
+    const tgjuRateFmt = Number(curr.TgjuRate || curr.OnlineRate || 1).toLocaleString('fa-IR');
+    const globalRateFmt = Number(curr.GlobalRate || curr.OnlineRate || 1).toLocaleString('fa-IR');
 
     let actionsCol = '';
     if (isAdminOrMgr) {
       actionsCol = `
         <div style="display:flex; gap:4px; justify-content:center;">
           <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; cursor:pointer;" onclick="editCurrency(${curr.CurrencyID})" title="ویرایش اطلاعات ارز">✏️</button>
-          <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#10b981; cursor:pointer;" onclick="fetchSingleOnlineRateForCurrency(${curr.CurrencyID}, '${curr.CurrencyCode}')" title="استخراج آنلاین نرخ">🌐</button>
+          <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#10b981; cursor:pointer;" onclick="fetchSingleOnlineRateForCurrency(${curr.CurrencyID}, '${curr.CurrencyCode}')" title="استخراج آنلاین هر ۳ منبع نرخ">🌐</button>
           ${!isBase ? `<button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#ef4444; cursor:pointer;" onclick="deleteCurrency(${curr.CurrencyID})" title="حذف ارز">🗑️</button>` : ''}
         </div>
       `;
@@ -6005,13 +6007,24 @@ function renderCurrencyTable(txStatus) {
       <tr style="${isBase ? 'background:rgba(16,185,129,0.06); font-weight:bold;' : ''}">
         <td>${idx + 1}</td>
         <td style="text-align:right; font-weight:bold; color:var(--text-main);">${curr.CurrencyName}</td>
-        <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${curr.CurrencyCode}</code></td>
-        <td><span style="font-size:0.95rem;">${curr.CurrencySymbol || '-'}</span></td>
+        <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${curr.CurrencyCode}</code> <span style="color:var(--text-muted);">${curr.CurrencySymbol || ''}</span></td>
         <td>${baseCol}</td>
-        <td style="color:#0284c7; font-weight:bold;">${manualRateFmt}</td>
-        <td style="color:var(--text-muted); font-size:0.78rem;">${curr.ManualRateDate || '-'}</td>
-        <td style="color:#10b981; font-weight:bold;">${onlineRateFmt}</td>
-        <td style="color:var(--text-muted); font-size:0.78rem;">${curr.OnlineRateDate || '-'}</td>
+        <td style="color:#0284c7; font-weight:bold;">
+          <div>${manualRateFmt}</div>
+          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.ManualRateDate || '-'}</div>
+        </td>
+        <td style="color:#0369a1; font-weight:bold;">
+          <div>${cbiRateFmt}</div>
+          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.CbiRateDate || curr.OnlineRateDate || '-'}</div>
+        </td>
+        <td style="color:#059669; font-weight:bold;">
+          <div>${tgjuRateFmt}</div>
+          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.TgjuRateDate || curr.OnlineRateDate || '-'}</div>
+        </td>
+        <td style="color:#d97706; font-weight:bold;">
+          <div>${globalRateFmt}</div>
+          <div style="color:var(--text-muted); font-size:0.72rem;">${curr.GlobalRateDate || curr.OnlineRateDate || '-'}</div>
+        </td>
         <td>${actionsCol}</td>
       </tr>
     `;
@@ -6043,8 +6056,13 @@ function toggleCurrencyForm(show, editObj) {
     document.getElementById('currIsBase').checked = editObj.IsBase || false;
     document.getElementById('currManualRate').value = editObj.ManualRate || 1.0;
     document.getElementById('currManualRateDate').value = editObj.ManualRateDate || todayStr;
-    document.getElementById('currOnlineRate').value = editObj.OnlineRate || 1.0;
-    document.getElementById('currOnlineRateDate').value = editObj.OnlineRateDate || todayStr;
+    
+    document.getElementById('currCbiRate').value = editObj.CbiRate || editObj.OnlineRate || 1.0;
+    document.getElementById('currCbiRateDate').value = editObj.CbiRateDate || todayStr;
+    document.getElementById('currTgjuRate').value = editObj.TgjuRate || editObj.OnlineRate || 1.0;
+    document.getElementById('currTgjuRateDate').value = editObj.TgjuRateDate || todayStr;
+    document.getElementById('currGlobalRate').value = editObj.GlobalRate || editObj.OnlineRate || 1.0;
+    document.getElementById('currGlobalRateDate').value = editObj.GlobalRateDate || todayStr;
   } else {
     title.textContent = `➕ افزودن ارز جدید`;
     document.getElementById('currEditId').value = '';
@@ -6054,8 +6072,13 @@ function toggleCurrencyForm(show, editObj) {
     document.getElementById('currIsBase').checked = false;
     document.getElementById('currManualRate').value = '';
     document.getElementById('currManualRateDate').value = todayStr;
-    document.getElementById('currOnlineRate').value = '';
-    document.getElementById('currOnlineRateDate').value = '';
+    
+    document.getElementById('currCbiRate').value = '';
+    document.getElementById('currCbiRateDate').value = '';
+    document.getElementById('currTgjuRate').value = '';
+    document.getElementById('currTgjuRateDate').value = '';
+    document.getElementById('currGlobalRate').value = '';
+    document.getElementById('currGlobalRateDate').value = '';
   }
 
   onCurrIsBaseChanged();
@@ -6065,15 +6088,18 @@ function toggleCurrencyForm(show, editObj) {
 function onCurrIsBaseChanged() {
   const isBase = document.getElementById('currIsBase').checked;
   const mRate = document.getElementById('currManualRate');
-  const oRate = document.getElementById('currOnlineRate');
+  const cRate = document.getElementById('currCbiRate');
+  const tRate = document.getElementById('currTgjuRate');
+  const gRate = document.getElementById('currGlobalRate');
+
   if (isBase) {
     mRate.value = '1';
-    oRate.value = '1';
+    if (cRate) cRate.value = '1';
+    if (tRate) tRate.value = '1';
+    if (gRate) gRate.value = '1';
     mRate.disabled = true;
-    oRate.disabled = true;
   } else {
     mRate.disabled = false;
-    oRate.disabled = false;
   }
   updateCurrRatePreview();
 }
@@ -6118,8 +6144,13 @@ async function saveCurrencyFromForm() {
   const isBase = document.getElementById('currIsBase').checked;
   const mRate = parseFloat(document.getElementById('currManualRate').value) || 1.0;
   const mDate = document.getElementById('currManualRateDate').value.trim();
-  const oRate = parseFloat(document.getElementById('currOnlineRate').value) || mRate;
-  const oDate = document.getElementById('currOnlineRateDate').value.trim() || mDate;
+
+  const cbiRate = parseFloat(document.getElementById('currCbiRate')?.value) || mRate;
+  const cbiDate = document.getElementById('currCbiRateDate')?.value || mDate;
+  const tgjuRate = parseFloat(document.getElementById('currTgjuRate')?.value) || mRate;
+  const tgjuDate = document.getElementById('currTgjuRateDate')?.value || mDate;
+  const globalRate = parseFloat(document.getElementById('currGlobalRate')?.value) || mRate;
+  const globalDate = document.getElementById('currGlobalRateDate')?.value || mDate;
 
   if (!name || !code) {
     alert('لطفاً نام ارز و کد بین‌المللی آن را وارد کنید.');
@@ -6133,8 +6164,14 @@ async function saveCurrencyFromForm() {
     IsBase: isBase,
     ManualRate: isBase ? 1.0 : mRate,
     ManualRateDate: mDate,
-    OnlineRate: isBase ? 1.0 : oRate,
-    OnlineRateDate: oDate,
+    CbiRate: isBase ? 1.0 : cbiRate,
+    CbiRateDate: cbiDate,
+    TgjuRate: isBase ? 1.0 : tgjuRate,
+    TgjuRateDate: tgjuDate,
+    GlobalRate: isBase ? 1.0 : globalRate,
+    GlobalRateDate: globalDate,
+    OnlineRate: isBase ? 1.0 : tgjuRate,
+    OnlineRateDate: tgjuDate,
     IsActive: true
   };
 
@@ -6255,7 +6292,7 @@ function openBaseConfirmModal(curr, txStatus) {
   if (countEl) countEl.textContent = `${txStatus.totalTransactions} (${txStatus.sanadCount} سند حسابداری + ${txStatus.salesInvoiceCount + txStatus.purchaseInvoiceCount} فاکتور)`;
   if (oldBaseEl) oldBaseEl.textContent = `${oldBase.CurrencyName} (${oldBase.CurrencyCode})`;
   if (newBaseEl) newBaseEl.textContent = `${curr.CurrencyName} (${curr.CurrencyCode})`;
-  if (rateEl) rateEl.textContent = `۱ ${curr.CurrencyCode} = ${Number(curr.OnlineRate || curr.ManualRate || 1).toLocaleString('fa-IR')} ${oldBase.CurrencyCode}`;
+  if (rateEl) rateEl.textContent = `۱ ${curr.CurrencyCode} = ${Number(curr.TgjuRate || curr.OnlineRate || curr.ManualRate || 1).toLocaleString('fa-IR')} ${oldBase.CurrencyCode}`;
 
   if (modal) modal.style.display = 'flex';
 }
@@ -6289,6 +6326,9 @@ async function doExecuteSetBaseCurrency(id, role, forceConfirm) {
     c.IsBase = (c.CurrencyID === id);
     if (c.CurrencyID === id) {
       c.ManualRate = 1.0;
+      c.CbiRate = 1.0;
+      c.TgjuRate = 1.0;
+      c.GlobalRate = 1.0;
       c.OnlineRate = 1.0;
     }
   });
@@ -6309,15 +6349,20 @@ async function fetchSingleOnlineRateFromForm() {
     const res = await fetch(`/api/Currencies/online-rate/${code}`);
     if (res.ok) {
       const data = await res.json();
-      document.getElementById('currOnlineRate').value = data.onlineRate;
-      document.getElementById('currOnlineRateDate').value = data.onlineRateDate;
+      document.getElementById('currCbiRate').value = data.cbiRate;
+      document.getElementById('currCbiRateDate').value = data.cbiRateDate;
+      document.getElementById('currTgjuRate').value = data.tgjuRate;
+      document.getElementById('currTgjuRateDate').value = data.tgjuRateDate;
+      document.getElementById('currGlobalRate').value = data.globalRate;
+      document.getElementById('currGlobalRateDate').value = data.globalRateDate;
+
       if (!document.getElementById('currManualRate').value) {
-        document.getElementById('currManualRate').value = data.onlineRate;
+        document.getElementById('currManualRate').value = data.tgjuRate;
       }
-      alert(`✅ نرخ آنلاین ${code} دریافت شد: ${Number(data.onlineRate).toLocaleString('fa-IR')} (تاریخ: ${data.onlineRateDate})`);
+      alert(`✅ هر ۳ نرخ اینترنتی برای ${code} با تاریخ روز استخراج شدند:\n\n🏦 بانک مرکزی (سنا): ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز (TGJU): ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی (Forex): ${Number(data.globalRate).toLocaleString('fa-IR')}\n\n(تاریخ استخراج: ${data.todayDate})`);
     }
   } catch(e) {
-    alert('خطا در دریافت نرخ آنلاین از اینترنت.');
+    alert('خطا در دریافت نرخ‌های آنلاین از اینترنت.');
   }
 }
 
@@ -6328,13 +6373,21 @@ async function fetchSingleOnlineRateForCurrency(id, code) {
     const res = await fetch(`/api/Currencies/online-rate/${code}`);
     if (res.ok) {
       const data = await res.json();
+      curr.CbiRate = data.cbiRate;
+      curr.CbiRateDate = data.cbiRateDate;
+      curr.TgjuRate = data.tgjuRate;
+      curr.TgjuRateDate = data.tgjuRateDate;
+      curr.GlobalRate = data.globalRate;
+      curr.GlobalRateDate = data.globalRateDate;
       curr.OnlineRate = data.onlineRate;
       curr.OnlineRateDate = data.onlineRateDate;
-      renderCurrencyTable();
-      alert(`✅ نرخ آنلاین ارز ${curr.CurrencyName} (${code}) بروزرسانی شد: ${Number(data.onlineRate).toLocaleString('fa-IR')} (تاریخ: ${data.onlineRateDate})`);
+
+      const txStatus = await fetchTransactionStatus();
+      renderCurrencyTable(txStatus);
+      alert(`✅ هر ۳ نرخ اینترنتی برای «${curr.CurrencyName} (${code})» با تاریخ روز استخراج و ذخیره شدند:\n\n🏦 بانک مرکزی: ${Number(data.cbiRate).toLocaleString('fa-IR')}\n📈 طلا و ارز: ${Number(data.tgjuRate).toLocaleString('fa-IR')}\n🌍 بین‌المللی: ${Number(data.globalRate).toLocaleString('fa-IR')}`);
     }
   } catch(e) {
-    alert('خطا در استخراج نرخ آنلاین.');
+    alert('خطا در استخراج آنلاین نرخ‌ها.');
   }
 }
 
@@ -6342,7 +6395,7 @@ async function fetchAllOnlineRates() {
   const btn = document.getElementById('btnUpdateAllRates');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳</span> <span>در حال دریافت...</span>';
+    btn.innerHTML = '<span>⏳</span> <span>در حال دریافت ۳ منبع...</span>';
   }
   try {
     const res = await fetch('/api/Currencies/update-all-online', { method: 'POST' });
@@ -6352,8 +6405,9 @@ async function fetchAllOnlineRates() {
         AppState.currencies = data;
       }
     }
-    renderCurrencyTable();
-    alert('✅ تمامی نرخ‌های برابری آنلاین از اینترنت دریافت و با تاریخ روز بروزرسانی شدند.');
+    const txStatus = await fetchTransactionStatus();
+    renderCurrencyTable(txStatus);
+    alert('✅ تمامی نرخ‌های برابری از هر ۳ منبع اینترنتی (بانک مرکزی، شبکه طلا و ارز، و بین‌المللی) دریافت و با تاریخ روز بروزرسانی شدند.');
   } catch(e) {
     alert('خطا در ارتباط با سرور.');
   } finally {

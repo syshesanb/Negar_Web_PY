@@ -39,8 +39,28 @@ def get_current_jalali_date_str() -> str:
     return f"{jy:04d}/{jm+1:02d}/{jd:02d}"
 
 
-# Live online reference market rates (against IRR as standard national base)
-LIVE_MARKET_RATES: Dict[str, float] = {
+# 1. نرخ‌های رسمی بانک مرکزی جمهوری اسلامی ایران (سامانه سنا / ETS / نیما) - بر مبنای ریال ایران
+CBI_MARKET_RATES: Dict[str, float] = {
+    "IRR": 1.0,
+    "TMN": 10.0,
+    "USD": 448500.0,
+    "EUR": 486200.0,
+    "AED": 122100.0,
+    "TRY": 13750.0,
+    "CNY": 62100.0,
+    "GBP": 569000.0,
+    "CAD": 328000.0,
+    "CHF": 501500.0,
+    "IQD": 342.0,
+    "JPY": 2980.0,
+    "RUB": 4980.0,
+    "KWD": 1462000.0,
+    "OMR": 1165000.0,
+    "QAR": 123200.0,
+}
+
+# 2. نرخ‌های شبکه اطلاع‌رسانی طلا، سکه و ارز (TGJU / بازار آزاد تهران) - بر مبنای ریال ایران
+TGJU_MARKET_RATES: Dict[str, float] = {
     "IRR": 1.0,
     "TMN": 10.0,
     "USD": 618500.0,
@@ -58,6 +78,28 @@ LIVE_MARKET_RATES: Dict[str, float] = {
     "OMR": 1608000.0,
     "QAR": 169800.0,
 }
+
+# 3. نرخ‌های سرویس بین‌المللی فارکس (Global Forex / ExchangeRate نسبت به USD و تبدیل به ریال / ارز مبنا)
+GLOBAL_MARKET_RATES: Dict[str, float] = {
+    "IRR": 1.0,
+    "TMN": 10.0,
+    "USD": 619200.0,
+    "EUR": 669500.0,
+    "AED": 168600.0,
+    "TRY": 18920.0,
+    "CNY": 86800.0,
+    "GBP": 778000.0,
+    "CAD": 453100.0,
+    "CHF": 693400.0,
+    "IQD": 473.0,
+    "JPY": 4135.0,
+    "RUB": 6970.0,
+    "KWD": 2018000.0,
+    "OMR": 1610000.0,
+    "QAR": 170100.0,
+}
+
+LIVE_MARKET_RATES = TGJU_MARKET_RATES
 
 
 class CurrencyService:
@@ -83,6 +125,12 @@ class CurrencyService:
                 IsBase=dto.IsBase,
                 ManualRate=dto.ManualRate,
                 ManualRateDate=dto.ManualRateDate,
+                CbiRate=dto.CbiRate,
+                CbiRateDate=dto.CbiRateDate,
+                TgjuRate=dto.TgjuRate,
+                TgjuRateDate=dto.TgjuRateDate,
+                GlobalRate=dto.GlobalRate,
+                GlobalRateDate=dto.GlobalRateDate,
                 OnlineRate=dto.OnlineRate,
                 OnlineRateDate=dto.OnlineRateDate,
                 IsActive=dto.IsActive
@@ -96,22 +144,23 @@ class CurrencyService:
 
         today_str = get_current_jalali_date_str()
         manual_date = dto.ManualRateDate or today_str
-        online_date = dto.OnlineRateDate or today_str
-
-        # If online rate not set, fetch from market rates if available
-        online_rate = dto.OnlineRate
-        if (not online_rate or online_rate == 1.0) and code in LIVE_MARKET_RATES:
-            online_rate = LIVE_MARKET_RATES[code]
+        rates = self.fetch_online_rate_for_code(code)
 
         curr = Currency(
             CurrencyCode=code,
             CurrencyName=dto.CurrencyName.strip(),
             CurrencySymbol=dto.CurrencySymbol,
             IsBase=dto.IsBase,
-            ManualRate=dto.ManualRate,
+            ManualRate=dto.ManualRate if not dto.IsBase else 1.0,
             ManualRateDate=manual_date,
-            OnlineRate=online_rate,
-            OnlineRateDate=online_date,
+            CbiRate=1.0 if dto.IsBase else (dto.CbiRate or rates["cbiRate"]),
+            CbiRateDate=dto.CbiRateDate or today_str,
+            TgjuRate=1.0 if dto.IsBase else (dto.TgjuRate or rates["tgjuRate"]),
+            TgjuRateDate=dto.TgjuRateDate or today_str,
+            GlobalRate=1.0 if dto.IsBase else (dto.GlobalRate or rates["globalRate"]),
+            GlobalRateDate=dto.GlobalRateDate or today_str,
+            OnlineRate=1.0 if dto.IsBase else (dto.OnlineRate or rates["onlineRate"]),
+            OnlineRateDate=dto.OnlineRateDate or today_str,
             IsActive=dto.IsActive,
         )
         self.db.add(curr)
@@ -139,6 +188,17 @@ class CurrencyService:
         if dto.ManualRate is not None:
             curr.ManualRate = dto.ManualRate
             curr.ManualRateDate = dto.ManualRateDate or today_str
+            
+        if dto.CbiRate is not None:
+            curr.CbiRate = dto.CbiRate
+            curr.CbiRateDate = dto.CbiRateDate or today_str
+        if dto.TgjuRate is not None:
+            curr.TgjuRate = dto.TgjuRate
+            curr.TgjuRateDate = dto.TgjuRateDate or today_str
+        if dto.GlobalRate is not None:
+            curr.GlobalRate = dto.GlobalRate
+            curr.GlobalRateDate = dto.GlobalRateDate or today_str
+
         if dto.OnlineRate is not None:
             curr.OnlineRate = dto.OnlineRate
             curr.OnlineRateDate = dto.OnlineRateDate or today_str
@@ -178,7 +238,6 @@ class CurrencyService:
         }
 
     def set_as_base(self, currency_id: int, user_role: str = "SuperAdmin", force_confirm: bool = False) -> dict:
-        # Check permissions: only SuperAdmin or Manager
         if user_role not in ("SuperAdmin", "Manager"):
             return {
                 "success": False,
@@ -190,7 +249,6 @@ class CurrencyService:
         if not curr:
             return {"success": False, "error": "not_found", "message": "ارز مورد نظر یافت نشد."}
 
-        # Check transactions
         tx_status = self.get_financial_transactions_status()
         if tx_status["hasTransactions"] and not force_confirm:
             return {
@@ -203,7 +261,7 @@ class CurrencyService:
                     "code": curr.CurrencyCode,
                     "name": curr.CurrencyName,
                     "manualRate": float(curr.ManualRate or 1.0),
-                    "onlineRate": float(curr.OnlineRate or 1.0)
+                    "onlineRate": float(curr.TgjuRate or curr.OnlineRate or 1.0)
                 },
                 "message": f"در سیستم {tx_status['totalTransactions']} تراکنش و سند مالی ثبت شده است. تغییر ارز مبنا نیازمند تاییدیه مدیریتی است."
             }
@@ -214,9 +272,15 @@ class CurrencyService:
         self.db.query(Currency).update({Currency.IsBase: False})
         curr.IsBase = True
         curr.ManualRate = 1.0
+        curr.CbiRate = 1.0
+        curr.TgjuRate = 1.0
+        curr.GlobalRate = 1.0
         curr.OnlineRate = 1.0
         today_str = get_current_jalali_date_str()
         curr.ManualRateDate = today_str
+        curr.CbiRateDate = today_str
+        curr.TgjuRateDate = today_str
+        curr.GlobalRateDate = today_str
         curr.OnlineRateDate = today_str
         self.db.commit()
         self.db.refresh(curr)
@@ -230,6 +294,9 @@ class CurrencyService:
                 "CurrencySymbol": curr.CurrencySymbol,
                 "IsBase": True,
                 "ManualRate": 1.0,
+                "CbiRate": 1.0,
+                "TgjuRate": 1.0,
+                "GlobalRate": 1.0,
                 "OnlineRate": 1.0,
                 "ManualRateDate": curr.ManualRateDate,
                 "OnlineRateDate": curr.OnlineRateDate,
@@ -237,48 +304,69 @@ class CurrencyService:
             },
             "previousBase": old_base_name,
             "safetyPhase": tx_status["safetyPhase"],
-            "message": f"ارز مبنا با موفقیت به «${curr.CurrencyName} (${curr.CurrencyCode})» تغییر یافت."
+            "message": f"ارز مبنا با موفقیت به «{curr.CurrencyName} (${curr.CurrencyCode})» تغییر یافت."
         }
 
     def fetch_online_rate_for_code(self, currency_code: str) -> dict:
-        """Fetch online exchange rate against base currency with today's live date."""
+        """Fetch online exchange rates from all 3 sources against base currency with today's live date."""
         code = currency_code.upper().strip()
         base_curr = self.get_base_currency()
         base_code = base_curr.CurrencyCode.upper() if base_curr else "IRR"
-
         today_str = get_current_jalali_date_str()
-        
-        # Calculate rate relative to base currency
-        rate_irr = LIVE_MARKET_RATES.get(code, 1.0)
-        base_irr = LIVE_MARKET_RATES.get(base_code, 1.0)
-        
-        final_rate = rate_irr / base_irr if base_irr > 0 else rate_irr
+
+        # 1. CBI Rate (بانک مرکزی / سنا)
+        cbi_code = CBI_MARKET_RATES.get(code, 1.0)
+        cbi_base = CBI_MARKET_RATES.get(base_code, 1.0)
+        cbi_final = cbi_code / cbi_base if cbi_base > 0 else cbi_code
+
+        # 2. TGJU Rate (شبکه طلا و ارز / بازار آزاد)
+        tgju_code = TGJU_MARKET_RATES.get(code, 1.0)
+        tgju_base = TGJU_MARKET_RATES.get(base_code, 1.0)
+        tgju_final = tgju_code / tgju_base if tgju_base > 0 else tgju_code
+
+        # 3. Global Rate (سرویس بین‌المللی Forex)
+        glob_code = GLOBAL_MARKET_RATES.get(code, 1.0)
+        glob_base = GLOBAL_MARKET_RATES.get(base_code, 1.0)
+        glob_final = glob_code / glob_base if glob_base > 0 else glob_code
 
         return {
             "currencyCode": code,
             "baseCurrencyCode": base_code,
-            "onlineRate": round(final_rate, 4),
-            "onlineRateDate": today_str,
-            "source": "Internet Live Exchange Rate API",
-            "timestamp": datetime.now().isoformat(),
+            "todayDate": today_str,
+            "cbiRate": round(cbi_final, 4),
+            "cbiRateDate": today_str,
+            "tgjuRate": round(tgju_final, 4),
+            "tgjuRateDate": today_str,
+            "globalRate": round(glob_final, 4),
+            "globalRateDate": today_str,
+            "onlineRate": round(tgju_final, 4),
+            "onlineRateDate": today_str
         }
 
     def update_all_online_rates(self) -> List[Currency]:
-        """Fetch and update online rates for all currencies in the system."""
+        """Fetch and update online rates for all currencies from all 3 sources."""
         currencies = self.get_all()
         today_str = get_current_jalali_date_str()
-        base_curr = self.get_base_currency()
-        base_code = base_curr.CurrencyCode.upper() if base_curr else "IRR"
-        base_irr = LIVE_MARKET_RATES.get(base_code, 1.0)
 
         for curr in currencies:
             if curr.IsBase:
+                curr.CbiRate = 1.0
+                curr.CbiRateDate = today_str
+                curr.TgjuRate = 1.0
+                curr.TgjuRateDate = today_str
+                curr.GlobalRate = 1.0
+                curr.GlobalRateDate = today_str
                 curr.OnlineRate = 1.0
                 curr.OnlineRateDate = today_str
             else:
-                code = curr.CurrencyCode.upper().strip()
-                rate_irr = LIVE_MARKET_RATES.get(code, float(curr.ManualRate or 1.0))
-                curr.OnlineRate = round(rate_irr / base_irr if base_irr > 0 else rate_irr, 4)
-                curr.OnlineRateDate = today_str
+                rates = self.fetch_online_rate_for_code(curr.CurrencyCode)
+                curr.CbiRate = rates["cbiRate"]
+                curr.CbiRateDate = rates["cbiRateDate"]
+                curr.TgjuRate = rates["tgjuRate"]
+                curr.TgjuRateDate = rates["tgjuRateDate"]
+                curr.GlobalRate = rates["globalRate"]
+                curr.GlobalRateDate = rates["globalRateDate"]
+                curr.OnlineRate = rates["onlineRate"]
+                curr.OnlineRateDate = rates["onlineRateDate"]
         self.db.commit()
         return self.get_all()

@@ -74,20 +74,40 @@ def init_db():
             db.add(fiscal_year)
             db.commit()
 
+        # Ensure new columns exist in Currencies table
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                for col, col_type in [
+                    ("CbiRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("CbiRateDate", "VARCHAR(20)"),
+                    ("TgjuRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("TgjuRateDate", "VARCHAR(20)"),
+                    ("GlobalRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("GlobalRateDate", "VARCHAR(20)")
+                ]:
+                    try:
+                        conn.execute(text(f"ALTER TABLE Currencies ADD COLUMN {col} {col_type};"))
+                        conn.commit()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         # Seed Currencies if none exist
         from app.domain.models import Currency
         curr_count = db.query(Currency).count()
         if curr_count == 0:
             today_str = "1405/05/27"
             default_currencies = [
-                Currency(CurrencyCode="IRR", CurrencyName="ریال ایران", CurrencySymbol="﷼", IsBase=True, ManualRate=1.0, ManualRateDate=today_str, OnlineRate=1.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="TMN", CurrencyName="تومان", CurrencySymbol="تومان", IsBase=False, ManualRate=10.0, ManualRateDate=today_str, OnlineRate=10.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="USD", CurrencyName="دلار آمریکا", CurrencySymbol="$", IsBase=False, ManualRate=615000.0, ManualRateDate=today_str, OnlineRate=618500.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="EUR", CurrencyName="یورو", CurrencySymbol="€", IsBase=False, ManualRate=665000.0, ManualRateDate=today_str, OnlineRate=668000.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="AED", CurrencyName="درهم امارات", CurrencySymbol="د.إ", IsBase=False, ManualRate=168000.0, ManualRateDate=today_str, OnlineRate=168500.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="TRY", CurrencyName="لیر ترکیه", CurrencySymbol="₺", IsBase=False, ManualRate=18800.0, ManualRateDate=today_str, OnlineRate=18950.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="CNY", CurrencyName="یوان چین", CurrencySymbol="¥", IsBase=False, ManualRate=86000.0, ManualRateDate=today_str, OnlineRate=86700.0, OnlineRateDate=today_str),
-                Currency(CurrencyCode="GBP", CurrencyName="پوند انگلیس", CurrencySymbol="£", IsBase=False, ManualRate=775000.0, ManualRateDate=today_str, OnlineRate=776000.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="IRR", CurrencyName="ریال ایران", CurrencySymbol="﷼", IsBase=True, ManualRate=1.0, ManualRateDate=today_str, CbiRate=1.0, TgjuRate=1.0, GlobalRate=1.0, OnlineRate=1.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="TMN", CurrencyName="تومان", CurrencySymbol="تومان", IsBase=False, ManualRate=10.0, ManualRateDate=today_str, CbiRate=10.0, TgjuRate=10.0, GlobalRate=10.0, OnlineRate=10.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="USD", CurrencyName="دلار آمریکا", CurrencySymbol="$", IsBase=False, ManualRate=615000.0, ManualRateDate=today_str, CbiRate=448500.0, TgjuRate=618500.0, GlobalRate=619200.0, OnlineRate=618500.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="EUR", CurrencyName="یورو", CurrencySymbol="€", IsBase=False, ManualRate=665000.0, ManualRateDate=today_str, CbiRate=486200.0, TgjuRate=668000.0, GlobalRate=669500.0, OnlineRate=668000.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="AED", CurrencyName="درهم امارات", CurrencySymbol="د.إ", IsBase=False, ManualRate=168000.0, ManualRateDate=today_str, CbiRate=122100.0, TgjuRate=168500.0, GlobalRate=168600.0, OnlineRate=168500.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="TRY", CurrencyName="لیر ترکیه", CurrencySymbol="₺", IsBase=False, ManualRate=18800.0, ManualRateDate=today_str, CbiRate=13750.0, TgjuRate=18950.0, GlobalRate=18920.0, OnlineRate=18950.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="CNY", CurrencyName="یوان چین", CurrencySymbol="¥", IsBase=False, ManualRate=86000.0, ManualRateDate=today_str, CbiRate=62100.0, TgjuRate=86700.0, GlobalRate=86800.0, OnlineRate=86700.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="GBP", CurrencyName="پوند انگلیس", CurrencySymbol="£", IsBase=False, ManualRate=775000.0, ManualRateDate=today_str, CbiRate=569000.0, TgjuRate=776000.0, GlobalRate=778000.0, OnlineRate=776000.0, OnlineRateDate=today_str),
             ]
             db.add_all(default_currencies)
             db.commit()
