@@ -74,6 +74,21 @@ class CurrencyService:
         return self.db.query(Currency).filter(Currency.IsBase == True).first()
 
     def create(self, dto: CurrencyCreateDTO) -> Currency:
+        code = dto.CurrencyCode.upper().strip()
+        existing = self.db.query(Currency).filter(Currency.CurrencyCode == code).first()
+        if existing:
+            update_dto = CurrencyUpdateDTO(
+                CurrencyName=dto.CurrencyName,
+                CurrencySymbol=dto.CurrencySymbol,
+                IsBase=dto.IsBase,
+                ManualRate=dto.ManualRate,
+                ManualRateDate=dto.ManualRateDate,
+                OnlineRate=dto.OnlineRate,
+                OnlineRateDate=dto.OnlineRateDate,
+                IsActive=dto.IsActive
+            )
+            return self.update(existing.CurrencyID, update_dto)
+
         # If set as base, unset other base currencies
         if dto.IsBase:
             self.db.query(Currency).update({Currency.IsBase: False})
@@ -85,11 +100,11 @@ class CurrencyService:
 
         # If online rate not set, fetch from market rates if available
         online_rate = dto.OnlineRate
-        if (not online_rate or online_rate == 1.0) and dto.CurrencyCode in LIVE_MARKET_RATES:
-            online_rate = LIVE_MARKET_RATES[dto.CurrencyCode]
+        if (not online_rate or online_rate == 1.0) and code in LIVE_MARKET_RATES:
+            online_rate = LIVE_MARKET_RATES[code]
 
         curr = Currency(
-            CurrencyCode=dto.CurrencyCode.upper().strip(),
+            CurrencyCode=code,
             CurrencyName=dto.CurrencyName.strip(),
             CurrencySymbol=dto.CurrencySymbol,
             IsBase=dto.IsBase,

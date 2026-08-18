@@ -5418,6 +5418,8 @@ function doBackup() {
       <div class="log-line" style="color:var(--success-color);">✅ پشتیبان‌گیری با موفقیت کامل شد → ${name}</div>
     `;
   }
+}
+
 function doRestore() {
   const file = document.getElementById('restoreFile')?.files[0];
   if (!file) { alert('لطفاً فایل پشتیبان را انتخاب کنید.'); return; }
