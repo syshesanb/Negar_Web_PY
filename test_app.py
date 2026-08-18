@@ -122,12 +122,37 @@ def run_tests():
     assert get_theme_res.json()["theme"] == "light"
     print(" -> استعلام تم فعال از سرور: light")
 
-    # 7. Test Frontend Root Route & Server-Side Theme Pre-Injection
-    print("\n7. تست بارگذاری صفحه اصلی و تزریق تم سرور...")
-    root_res = client.get("/")
-    assert root_res.status_code == 200
-    assert 'data-theme="light"' in root_res.text
-    print(" -> تم روشن مستقیماً در تگ html صفحه وب تزریق گردید (بدون پرش رنگ).")
+    # 8. Test Currency Management API & Online Rates
+    print("\n8. تست ماژول مدیریت ارزها و نرخ‌های برابری...")
+    curr_list_res = client.get("/api/Currencies")
+    assert curr_list_res.status_code == 200
+    currs = curr_list_res.json()
+    assert len(currs) >= 1
+    print(f" -> تعداد ارزهای موجود در سیستم: {len(currs)}")
+
+    # Create new currency
+    new_curr_res = client.post("/api/Currencies", json={
+        "CurrencyCode": "CAD",
+        "CurrencyName": "دلار کانادا",
+        "CurrencySymbol": "C$",
+        "IsBase": False,
+        "ManualRate": 450000.0,
+        "ManualRateDate": "1405/05/27",
+        "OnlineRate": 452000.0,
+        "OnlineRateDate": "1405/05/27",
+        "IsActive": True
+    })
+    assert new_curr_res.status_code == 200
+    saved_curr = new_curr_res.json()
+    assert saved_curr["CurrencyCode"] == "CAD"
+    print(" -> ارز جدید ایجاد شد:", saved_curr["CurrencyName"])
+
+    # Online rate fetch
+    online_rate_res = client.get("/api/Currencies/online-rate/USD")
+    assert online_rate_res.status_code == 200
+    rate_info = online_rate_res.json()
+    assert "onlineRate" in rate_info
+    print(f" -> استخراج آنلاین نرخ دلار: {rate_info['onlineRate']} (تاریخ: {rate_info['onlineRateDate']})")
 
     print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 

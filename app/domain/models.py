@@ -327,3 +327,20 @@ class ActivityLog(Base):
     Description = Column(Text, nullable=True)
     IPAddress = Column(String(50), nullable=True)
     ActivityDate = Column(DateTime, default=datetime.utcnow)
+
+
+class Currency(Base):
+    __tablename__ = "Currencies"
+
+    CurrencyID = Column(Integer, primary_key=True, autoincrement=True)
+    CurrencyCode = Column(String(10), nullable=False, unique=True)
+    CurrencyName = Column(String(50), nullable=False)
+    CurrencySymbol = Column(String(10), nullable=True)
+    IsBase = Column(Boolean, default=False)
+    ManualRate = Column(Numeric(18, 4), default=1.0)
+    ManualRateDate = Column(String(20), nullable=True)
+    OnlineRate = Column(Numeric(18, 4), default=1.0)
+    OnlineRateDate = Column(String(20), nullable=True)
+    IsActive = Column(Boolean, default=True)
+    CreatedDate = Column(DateTime, default=datetime.utcnow)
+

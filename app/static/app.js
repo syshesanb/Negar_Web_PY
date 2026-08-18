@@ -5418,8 +5418,6 @@ function doBackup() {
       <div class="log-line" style="color:var(--success-color);">✅ پشتیبان‌گیری با موفقیت کامل شد → ${name}</div>
     `;
   }
-}
-
 function doRestore() {
   const file = document.getElementById('restoreFile')?.files[0];
   if (!file) { alert('لطفاً فایل پشتیبان را انتخاب کنید.'); return; }
@@ -5665,6 +5663,11 @@ function openCompanyForm(companyId) {
     if (document.getElementById('compCeoNationalId')) document.getElementById('compCeoNationalId').value = company.ceoNationalId || '';
     if (document.getElementById('compCeoPhone')) document.getElementById('compCeoPhone').value = company.ceoPhone || '';
     if (document.getElementById('compPageOpenMode')) document.getElementById('compPageOpenMode').value = company.pageOpenMode || 'unique';
+    loadCurrencies(company.currency || 'ریال ایران');
+  }
+
+  if (companyId === null) {
+    loadCurrencies('ریال ایران');
   }
 
   // Reset active tab to General when opening
@@ -5801,6 +5804,418 @@ function deleteCompany(companyId) {
     renderCompaniesTable();
     alert(`شرکت "${company.name}" با موفقیت حذف شد.`);
   }
+}
+
+// ======================================================
+// CURRENCY & EXCHANGE RATE MANAGER (مدیریت ارزها و نرخ‌های برابری)
+// ======================================================
+
+AppState.currencies = [
+  { CurrencyID: 1, CurrencyCode: "IRR", CurrencyName: "ریال ایران", CurrencySymbol: "﷼", IsBase: true, ManualRate: 1.0, ManualRateDate: "1405/05/27", OnlineRate: 1.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 2, CurrencyCode: "TMN", CurrencyName: "تومان", CurrencySymbol: "تومان", IsBase: false, ManualRate: 10.0, ManualRateDate: "1405/05/27", OnlineRate: 10.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 3, CurrencyCode: "USD", CurrencyName: "دلار آمریکا", CurrencySymbol: "$", IsBase: false, ManualRate: 615000.0, ManualRateDate: "1405/05/27", OnlineRate: 618500.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 4, CurrencyCode: "EUR", CurrencyName: "یورو", CurrencySymbol: "€", IsBase: false, ManualRate: 665000.0, ManualRateDate: "1405/05/27", OnlineRate: 668000.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 5, CurrencyCode: "AED", CurrencyName: "درهم امارات", CurrencySymbol: "د.إ", IsBase: false, ManualRate: 168000.0, ManualRateDate: "1405/05/27", OnlineRate: 168500.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 6, CurrencyCode: "TRY", CurrencyName: "لیر ترکیه", CurrencySymbol: "₺", IsBase: false, ManualRate: 18800.0, ManualRateDate: "1405/05/27", OnlineRate: 18950.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 7, CurrencyCode: "CNY", CurrencyName: "یوان چین", CurrencySymbol: "¥", IsBase: false, ManualRate: 86000.0, ManualRateDate: "1405/05/27", OnlineRate: 86700.0, OnlineRateDate: "1405/05/27" },
+  { CurrencyID: 8, CurrencyCode: "GBP", CurrencyName: "پوند انگلیس", CurrencySymbol: "£", IsBase: false, ManualRate: 775000.0, ManualRateDate: "1405/05/27", OnlineRate: 776000.0, OnlineRateDate: "1405/05/27" }
+];
+
+async function loadCurrencies(selectedVal) {
+  try {
+    const res = await fetch('/api/Currencies');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.currencies = data;
+      }
+    }
+  } catch(e) {
+    console.log('Loading currencies locally:', e);
+  }
+  updateCurrencyDropdown(selectedVal);
+}
+
+function updateCurrencyDropdown(selectedVal) {
+  const select = document.getElementById('compCurrency');
+  const quickSelect = document.getElementById('quickCalcCurrency');
+  if (!select) return;
+
+  const currentVal = selectedVal || select.value || 'ریال ایران';
+  select.innerHTML = '';
+
+  AppState.currencies.forEach(curr => {
+    const opt = document.createElement('option');
+    opt.value = curr.CurrencyName;
+    opt.textContent = `${curr.CurrencyName} (${curr.CurrencyCode})${curr.IsBase ? ' ⭐ مبنا' : ''}`;
+    if (curr.CurrencyName === currentVal || curr.CurrencyCode === currentVal || (currentVal.includes('ریال') && curr.CurrencyCode === 'IRR')) {
+      opt.selected = true;
+    }
+    select.appendChild(opt);
+  });
+
+  // Also populate quick calculator select if exists
+  if (quickSelect) {
+    quickSelect.innerHTML = '';
+    AppState.currencies.forEach(curr => {
+      const opt = document.createElement('option');
+      opt.value = curr.CurrencyID;
+      opt.textContent = `${curr.CurrencyName} (${curr.CurrencyCode})`;
+      quickSelect.appendChild(opt);
+    });
+    calculateQuickConversion();
+  }
+}
+
+function openCurrencyModal() {
+  const modal = document.getElementById('currencyModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  loadCurrencies().then(() => {
+    renderCurrencyTable();
+  });
+}
+
+function closeCurrencyModal() {
+  const modal = document.getElementById('currencyModal');
+  if (modal) modal.style.display = 'none';
+  toggleCurrencyForm(false);
+  updateCurrencyDropdown();
+}
+
+function renderCurrencyTable() {
+  const tbody = document.getElementById('currencyTableBody');
+  const baseBadge = document.getElementById('currBaseBadge');
+  if (!tbody) return;
+
+  const baseCurr = AppState.currencies.find(c => c.IsBase) || AppState.currencies[0];
+  if (baseBadge && baseCurr) {
+    baseBadge.textContent = `${baseCurr.CurrencyName} (${baseCurr.CurrencyCode})`;
+  }
+
+  tbody.innerHTML = AppState.currencies.map((curr, idx) => {
+    const isBase = curr.IsBase;
+    const baseCol = isBase
+      ? `<span class="badge" style="background:#10b981; color:#fff; font-weight:bold; font-size:0.75rem; padding:3px 8px; border-radius:4px;">⭐ ارز مبنا</span>`
+      : `<button class="btn btn-outline" style="padding:2px 8px; font-size:0.72rem; color:var(--text-muted); cursor:pointer;" onclick="setBaseCurrency(${curr.CurrencyID})" title="تبدیل به ارز مبنا">تعیین مبنا</button>`;
+
+    const manualRateFmt = Number(curr.ManualRate || 1).toLocaleString('fa-IR');
+    const onlineRateFmt = Number(curr.OnlineRate || 1).toLocaleString('fa-IR');
+
+    return `
+      <tr style="${isBase ? 'background:rgba(16,185,129,0.06); font-weight:bold;' : ''}">
+        <td>${idx + 1}</td>
+        <td style="text-align:right; font-weight:bold; color:var(--text-main);">${curr.CurrencyName}</td>
+        <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${curr.CurrencyCode}</code></td>
+        <td><span style="font-size:0.95rem;">${curr.CurrencySymbol || '-'}</span></td>
+        <td>${baseCol}</td>
+        <td style="color:#0284c7; font-weight:bold;">${manualRateFmt}</td>
+        <td style="color:var(--text-muted); font-size:0.78rem;">${curr.ManualRateDate || '-'}</td>
+        <td style="color:#10b981; font-weight:bold;">${onlineRateFmt}</td>
+        <td style="color:var(--text-muted); font-size:0.78rem;">${curr.OnlineRateDate || '-'}</td>
+        <td>
+          <div style="display:flex; gap:4px; justify-content:center;">
+            <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; cursor:pointer;" onclick="editCurrency(${curr.CurrencyID})" title="ویرایش اطلاعات ارز">✏️</button>
+            <button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#10b981; cursor:pointer;" onclick="fetchSingleOnlineRateForCurrency(${curr.CurrencyID}, '${curr.CurrencyCode}')" title="استخراج آنلاین نرخ">🌐</button>
+            ${!isBase ? `<button class="btn btn-outline" style="padding:2px 6px; font-size:0.75rem; color:#ef4444; cursor:pointer;" onclick="deleteCurrency(${curr.CurrencyID})" title="حذف ارز">🗑️</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  calculateQuickConversion();
+}
+
+function toggleCurrencyForm(show, editObj) {
+  const formArea = document.getElementById('currFormArea');
+  const title = document.getElementById('currFormTitle');
+  if (!formArea) return;
+
+  if (!show) {
+    formArea.style.display = 'none';
+    document.getElementById('currEditId').value = '';
+    return;
+  }
+
+  formArea.style.display = 'block';
+  const todayStr = (typeof PersianCal !== 'undefined') ? PersianCal.getTodayString() : '1405/05/27';
+
+  if (editObj) {
+    title.textContent = `✏️ ویرایش اطلاعات ارز: ${editObj.CurrencyName}`;
+    document.getElementById('currEditId').value = editObj.CurrencyID;
+    document.getElementById('currName').value = editObj.CurrencyName;
+    document.getElementById('currCode').value = editObj.CurrencyCode;
+    document.getElementById('currSymbol').value = editObj.CurrencySymbol || '';
+    document.getElementById('currIsBase').checked = editObj.IsBase || false;
+    document.getElementById('currManualRate').value = editObj.ManualRate || 1.0;
+    document.getElementById('currManualRateDate').value = editObj.ManualRateDate || todayStr;
+    document.getElementById('currOnlineRate').value = editObj.OnlineRate || 1.0;
+    document.getElementById('currOnlineRateDate').value = editObj.OnlineRateDate || todayStr;
+  } else {
+    title.textContent = `➕ افزودن ارز جدید`;
+    document.getElementById('currEditId').value = '';
+    document.getElementById('currName').value = '';
+    document.getElementById('currCode').value = '';
+    document.getElementById('currSymbol').value = '';
+    document.getElementById('currIsBase').checked = false;
+    document.getElementById('currManualRate').value = '';
+    document.getElementById('currManualRateDate').value = todayStr;
+    document.getElementById('currOnlineRate').value = '';
+    document.getElementById('currOnlineRateDate').value = '';
+  }
+
+  onCurrIsBaseChanged();
+  updateCurrRatePreview();
+}
+
+function onCurrIsBaseChanged() {
+  const isBase = document.getElementById('currIsBase').checked;
+  const mRate = document.getElementById('currManualRate');
+  const oRate = document.getElementById('currOnlineRate');
+  if (isBase) {
+    mRate.value = '1';
+    oRate.value = '1';
+    mRate.disabled = true;
+    oRate.disabled = true;
+  } else {
+    mRate.disabled = false;
+    oRate.disabled = false;
+  }
+  updateCurrRatePreview();
+}
+
+function updateCurrRatePreview() {
+  const preview = document.getElementById('currRatePreviewText');
+  if (!preview) return;
+  const code = (document.getElementById('currCode')?.value || 'XXX').toUpperCase();
+  const name = document.getElementById('currName')?.value || 'ارز جدید';
+  const isBase = document.getElementById('currIsBase')?.checked;
+  const mRate = parseFloat(document.getElementById('currManualRate')?.value) || 1;
+  const baseCurr = AppState.currencies.find(c => c.IsBase) || AppState.currencies[0];
+  const baseCode = baseCurr ? baseCurr.CurrencyCode : 'IRR';
+
+  if (isBase) {
+    preview.innerHTML = `⭐ <b>${name} (${code})</b> به عنوان ارز مبنا انتخاب شده است (نرخ = ۱.۰).`;
+  } else {
+    preview.innerHTML = `معادل: ۱ ${code} = <b>${mRate.toLocaleString('fa-IR')}</b> ${baseCode}`;
+  }
+}
+
+function editCurrency(id) {
+  const curr = AppState.currencies.find(c => c.CurrencyID === id);
+  if (!curr) return;
+  toggleCurrencyForm(true, curr);
+}
+
+async function saveCurrencyFromForm() {
+  const editId = document.getElementById('currEditId').value;
+  const name = document.getElementById('currName').value.trim();
+  const code = document.getElementById('currCode').value.trim().toUpperCase();
+  const symbol = document.getElementById('currSymbol').value.trim();
+  const isBase = document.getElementById('currIsBase').checked;
+  const mRate = parseFloat(document.getElementById('currManualRate').value) || 1.0;
+  const mDate = document.getElementById('currManualRateDate').value.trim();
+  const oRate = parseFloat(document.getElementById('currOnlineRate').value) || mRate;
+  const oDate = document.getElementById('currOnlineRateDate').value.trim() || mDate;
+
+  if (!name || !code) {
+    alert('لطفاً نام ارز و کد بین‌المللی آن را وارد کنید.');
+    return;
+  }
+
+  const payload = {
+    CurrencyName: name,
+    CurrencyCode: code,
+    CurrencySymbol: symbol,
+    IsBase: isBase,
+    ManualRate: isBase ? 1.0 : mRate,
+    ManualRateDate: mDate,
+    OnlineRate: isBase ? 1.0 : oRate,
+    OnlineRateDate: oDate,
+    IsActive: true
+  };
+
+  try {
+    let res;
+    if (editId) {
+      res = await fetch(`/api/Currencies/${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      res = await fetch('/api/Currencies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    if (res.ok) {
+      const saved = await res.json();
+      if (editId) {
+        const idx = AppState.currencies.findIndex(c => c.CurrencyID === parseInt(editId));
+        if (idx !== -1) AppState.currencies[idx] = saved;
+      } else {
+        AppState.currencies.push(saved);
+      }
+    } else {
+      // Fallback local
+      if (editId) {
+        const idx = AppState.currencies.findIndex(c => c.CurrencyID === parseInt(editId));
+        if (idx !== -1) AppState.currencies[idx] = { ...AppState.currencies[idx], ...payload };
+      } else {
+        AppState.currencies.push({ CurrencyID: Date.now(), ...payload });
+      }
+    }
+  } catch(e) {
+    // Fallback local update
+    if (editId) {
+      const idx = AppState.currencies.findIndex(c => c.CurrencyID === parseInt(editId));
+      if (idx !== -1) AppState.currencies[idx] = { ...AppState.currencies[idx], ...payload };
+    } else {
+      AppState.currencies.push({ CurrencyID: Date.now(), ...payload });
+    }
+  }
+
+  if (isBase) {
+    AppState.currencies.forEach(c => {
+      if (c.CurrencyCode !== code) c.IsBase = false;
+    });
+  }
+
+  toggleCurrencyForm(false);
+  renderCurrencyTable();
+  updateCurrencyDropdown(name);
+  alert(`ارز "${name} (${code})" با موفقیت ذخیره گردید.`);
+}
+
+async function deleteCurrency(id) {
+  const curr = AppState.currencies.find(c => c.CurrencyID === id);
+  if (!curr) return;
+  if (curr.IsBase) {
+    alert('امکان حذف ارز مبنا وجود ندارد! ابتدا ارز دیگری را به عنوان مبنا تعیین نمایید.');
+    return;
+  }
+  if (!confirm(`آیا از حذف ارز "${curr.CurrencyName} (${curr.CurrencyCode})" اطمینان دارید؟`)) return;
+
+  try {
+    await fetch(`/api/Currencies/${id}`, { method: 'DELETE' });
+  } catch(e) {}
+
+  AppState.currencies = AppState.currencies.filter(c => c.CurrencyID !== id);
+  renderCurrencyTable();
+  updateCurrencyDropdown();
+  alert(`ارز "${curr.CurrencyName}" با موفقیت حذف گردید.`);
+}
+
+async function setBaseCurrency(id) {
+  const curr = AppState.currencies.find(c => c.CurrencyID === id);
+  if (!curr) return;
+  if (!confirm(`آیا می‌خواهید ارز "${curr.CurrencyName} (${curr.CurrencyCode})" به عنوان ارز مبنای جدید سیستم تعیین شود؟`)) return;
+
+  try {
+    const res = await fetch(`/api/Currencies/${id}/set-base`, { method: 'POST' });
+    if (res.ok) {
+      const updated = await res.json();
+    }
+  } catch(e) {}
+
+  AppState.currencies.forEach(c => {
+    c.IsBase = (c.CurrencyID === id);
+    if (c.CurrencyID === id) {
+      c.ManualRate = 1.0;
+      c.OnlineRate = 1.0;
+    }
+  });
+
+  renderCurrencyTable();
+  updateCurrencyDropdown();
+  alert(`ارز مبنا با موفقیت به «${curr.CurrencyName}» تغییر یافت.`);
+}
+
+async function fetchSingleOnlineRateFromForm() {
+  const code = (document.getElementById('currCode')?.value || '').trim().toUpperCase();
+  if (!code) {
+    alert('ابتدا کد ارز (مانند USD یا EUR) را وارد کنید.');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/Currencies/online-rate/${code}`);
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('currOnlineRate').value = data.onlineRate;
+      document.getElementById('currOnlineRateDate').value = data.onlineRateDate;
+      if (!document.getElementById('currManualRate').value) {
+        document.getElementById('currManualRate').value = data.onlineRate;
+      }
+      alert(`✅ نرخ آنلاین ${code} دریافت شد: ${Number(data.onlineRate).toLocaleString('fa-IR')} (تاریخ: ${data.onlineRateDate})`);
+    }
+  } catch(e) {
+    alert('خطا در دریافت نرخ آنلاین از اینترنت.');
+  }
+}
+
+async function fetchSingleOnlineRateForCurrency(id, code) {
+  const curr = AppState.currencies.find(c => c.CurrencyID === id);
+  if (!curr) return;
+  try {
+    const res = await fetch(`/api/Currencies/online-rate/${code}`);
+    if (res.ok) {
+      const data = await res.json();
+      curr.OnlineRate = data.onlineRate;
+      curr.OnlineRateDate = data.onlineRateDate;
+      renderCurrencyTable();
+      alert(`✅ نرخ آنلاین ارز ${curr.CurrencyName} (${code}) بروزرسانی شد: ${Number(data.onlineRate).toLocaleString('fa-IR')} (تاریخ: ${data.onlineRateDate})`);
+    }
+  } catch(e) {
+    alert('خطا در استخراج نرخ آنلاین.');
+  }
+}
+
+async function fetchAllOnlineRates() {
+  const btn = document.getElementById('btnUpdateAllRates');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> <span>در حال دریافت...</span>';
+  }
+  try {
+    const res = await fetch('/api/Currencies/update-all-online', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.currencies = data;
+      }
+    }
+    renderCurrencyTable();
+    alert('✅ تمامی نرخ‌های برابری آنلاین از اینترنت دریافت و با تاریخ روز بروزرسانی شدند.');
+  } catch(e) {
+    alert('خطا در ارتباط با سرور.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🌐</span> <span>بروزرسانی آنلاین نرخ‌ها</span>';
+    }
+  }
+}
+
+function calculateQuickConversion() {
+  const amount = parseFloat(document.getElementById('quickCalcAmount')?.value) || 0;
+  const select = document.getElementById('quickCalcCurrency');
+  const result = document.getElementById('quickCalcResult');
+  if (!select || !result) return;
+
+  const currId = parseInt(select.value);
+  const curr = AppState.currencies.find(c => c.CurrencyID === currId) || AppState.currencies[0];
+  const baseCurr = AppState.currencies.find(c => c.IsBase) || AppState.currencies[0];
+
+  if (!curr || !baseCurr) return;
+
+  const rate = curr.OnlineRate || curr.ManualRate || 1.0;
+  const total = amount * rate;
+
+  result.textContent = `${Number(total.toFixed(2)).toLocaleString('fa-IR')} ${baseCurr.CurrencyName} (${baseCurr.CurrencySymbol || baseCurr.CurrencyCode})`;
 }
 
 // ============================

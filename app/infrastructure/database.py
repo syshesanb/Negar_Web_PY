@@ -73,5 +73,24 @@ def init_db():
             )
             db.add(fiscal_year)
             db.commit()
+
+        # Seed Currencies if none exist
+        from app.domain.models import Currency
+        curr_count = db.query(Currency).count()
+        if curr_count == 0:
+            today_str = "1405/05/27"
+            default_currencies = [
+                Currency(CurrencyCode="IRR", CurrencyName="ریال ایران", CurrencySymbol="﷼", IsBase=True, ManualRate=1.0, ManualRateDate=today_str, OnlineRate=1.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="TMN", CurrencyName="تومان", CurrencySymbol="تومان", IsBase=False, ManualRate=10.0, ManualRateDate=today_str, OnlineRate=10.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="USD", CurrencyName="دلار آمریکا", CurrencySymbol="$", IsBase=False, ManualRate=615000.0, ManualRateDate=today_str, OnlineRate=618500.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="EUR", CurrencyName="یورو", CurrencySymbol="€", IsBase=False, ManualRate=665000.0, ManualRateDate=today_str, OnlineRate=668000.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="AED", CurrencyName="درهم امارات", CurrencySymbol="د.إ", IsBase=False, ManualRate=168000.0, ManualRateDate=today_str, OnlineRate=168500.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="TRY", CurrencyName="لیر ترکیه", CurrencySymbol="₺", IsBase=False, ManualRate=18800.0, ManualRateDate=today_str, OnlineRate=18950.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="CNY", CurrencyName="یوان چین", CurrencySymbol="¥", IsBase=False, ManualRate=86000.0, ManualRateDate=today_str, OnlineRate=86700.0, OnlineRateDate=today_str),
+                Currency(CurrencyCode="GBP", CurrencyName="پوند انگلیس", CurrencySymbol="£", IsBase=False, ManualRate=775000.0, ManualRateDate=today_str, OnlineRate=776000.0, OnlineRateDate=today_str),
+            ]
+            db.add_all(default_currencies)
+            db.commit()
     finally:
         db.close()
+

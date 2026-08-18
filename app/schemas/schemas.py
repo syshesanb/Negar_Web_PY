@@ -253,3 +253,40 @@ class InventoryRecordDTO(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CurrencyBase(BaseModel):
+    CurrencyCode: str
+    CurrencyName: str
+    CurrencySymbol: Optional[str] = None
+    IsBase: bool = False
+    ManualRate: float = 1.0
+    ManualRateDate: Optional[str] = None
+    OnlineRate: float = 1.0
+    OnlineRateDate: Optional[str] = None
+    IsActive: bool = True
+
+
+class CurrencyCreateDTO(CurrencyBase):
+    pass
+
+
+class CurrencyUpdateDTO(BaseModel):
+    CurrencyCode: Optional[str] = None
+    CurrencyName: Optional[str] = None
+    CurrencySymbol: Optional[str] = None
+    IsBase: Optional[bool] = None
+    ManualRate: Optional[float] = None
+    ManualRateDate: Optional[str] = None
+    OnlineRate: Optional[float] = None
+    OnlineRateDate: Optional[str] = None
+    IsActive: Optional[bool] = None
+
+
+class CurrencyDTO(CurrencyBase):
+    CurrencyID: int
+    CreatedDate: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
