@@ -244,6 +244,12 @@ const PersianCal = (() => {
     nextMonth() { if (++state.month > 12) { state.month = 1;  state.year++; } render(); },
     prevYear()  { state.year--;  render(); },
     nextYear()  { state.year++;  render(); },
+    selectToday() {
+      const [y, m, d] = todayJalali();
+      state.year = y;
+      state.month = m;
+      this.selectDay(d);
+    },
     getTodayString() {
       const [y, m, d] = todayJalali();
       const sm = String(m).padStart(2, '0');
@@ -257,17 +263,22 @@ const PersianCal = (() => {
 document.addEventListener('mousedown', function(e) {
   const popup = document.getElementById('persianCalendarPopup');
   if (!popup || popup.style.display === 'none') return;
-  if (!popup.contains(e.target) && !e.target.classList.contains('date-picker-btn')) {
+  if (!popup.contains(e.target) && !e.target.closest('.date-picker-btn')) {
     PersianCal.close();
   }
 });
 
 // ── Auto-format: YYYY/MM/DD  ─────────────────────────────────────────────
-// Strips non-digits, caps at 8 digits, inserts "/" automatically.
-// Cursor always moves to end for consistent sequential typing.
+// Strips non-digits, converts Persian/Arabic numbers, caps at 8 digits, inserts "/" automatically.
 function autoFormatDate(input) {
+  if (!input) return;
+  // Convert Persian and Arabic digits to standard English digits
+  let val = input.value
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+
   // 1. Extract only digit characters
-  let digits = input.value.replace(/\D/g, '');
+  let digits = val.replace(/\D/g, '');
 
   // 2. Cap at 8 digits (YYYYMMDD)
   if (digits.length > 8) digits = digits.slice(0, 8);

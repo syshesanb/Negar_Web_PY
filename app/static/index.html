@@ -873,7 +873,10 @@
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">تاریخ ثبت:</label>
-                    <input type="text" id="compRegDate" class="form-input" placeholder="1399/01/01" />
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <input type="text" id="compRegDate" class="form-input" placeholder="1399/01/01" oninput="autoFormatDate(this)" maxlength="10" style="flex:1;" />
+                      <button class="btn btn-outline date-picker-btn" type="button" onclick="PersianCal.open('compRegDate', this)" title="انتخاب از تقویم شمسی" style="padding:0 10px; height:36px; font-size:1rem; border-radius:6px; flex-shrink:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">📅</button>
+                    </div>
                   </div>
                   <div class="form-group">
                     <label class="form-label">سال مالی فعال:</label>
@@ -2749,11 +2752,11 @@
   <div id="persianCalendarPopup" class="pcal-popup" style="display:none; z-index:999999;" role="dialog" aria-label="تقویم شمسی">
     <!-- Header: year nav -->
     <div class="pcal-header">
-      <button class="pcal-nav-btn" onclick="PersianCal.prevYear()" title="سال قبل">&#171;</button>
-      <button class="pcal-nav-btn" onclick="PersianCal.prevMonth()" title="ماه قبل">&#8249;</button>
+      <button class="pcal-nav-btn" onclick="PersianCal.prevYear()" title="سال قبل (Previous Year)">&#171;</button>
+      <button class="pcal-nav-btn" onclick="PersianCal.prevMonth()" title="ماه قبل (Previous Month)">&#8249;</button>
       <span id="persianCalTitle" class="pcal-title"></span>
-      <button class="pcal-nav-btn" onclick="PersianCal.nextMonth()" title="ماه بعد">&#8250;</button>
-      <button class="pcal-nav-btn" onclick="PersianCal.nextYear()" title="سال بعد">&#187;</button>
+      <button class="pcal-nav-btn" onclick="PersianCal.nextMonth()" title="ماه بعد (Next Month)">&#8250;</button>
+      <button class="pcal-nav-btn" onclick="PersianCal.nextYear()" title="سال بعد (Next Year)">&#187;</button>
     </div>
     <!-- Weekday names -->
     <div class="pcal-weekdays">
@@ -2762,8 +2765,9 @@
     <!-- Days grid -->
     <div id="persianCalDays" class="pcal-days"></div>
     <!-- Footer -->
-    <div class="pcal-footer">
-      <button class="pcal-close-btn" onclick="PersianCal.close()">۔ بستن</button>
+    <div class="pcal-footer" style="display:flex; justify-content:space-between; padding:6px 10px; gap:8px;">
+      <button class="pcal-today-btn btn btn-outline" type="button" onclick="PersianCal.selectToday()" style="padding:3px 12px; font-size:0.78rem; font-weight:bold; border-radius:6px; cursor:pointer;">📅 امروز</button>
+      <button class="pcal-close-btn" type="button" onclick="PersianCal.close()" style="padding:3px 12px; font-size:0.78rem; border-radius:6px; cursor:pointer;">✖ بستن</button>
     </div>
   </div>
 
