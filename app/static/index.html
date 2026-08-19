@@ -808,7 +808,7 @@
         <!-- POPUP MODAL: DEFINITION & EDIT COMPANY       -->
         <!-- ============================================ -->
         <div id="companyModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
-          <div class="card form-card" style="max-width:920px; width:94%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+          <div class="card form-card" style="max-width:1080px; width:96%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
             
             <!-- Modal Header -->
             <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
@@ -825,13 +825,13 @@
               <input type="hidden" id="editingCompanyId" value="" />
 
               <!-- تب‌های مشخصات شرکت -->
-              <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; flex-wrap: wrap;">
-                <button class="btn btn-outline active-company-tab" id="tabBtn-general" onclick="switchCompanyFormTab('general')">۱. مشخصات عمومی و ثبتی</button>
-                <button class="btn btn-outline" id="tabBtn-location" onclick="switchCompanyFormTab('location')">۲. ارتباطی و مکانی</button>
-                <button class="btn btn-outline" id="tabBtn-bank" onclick="switchCompanyFormTab('bank')">۳. بانکی و مالی</button>
-                <button class="btn btn-outline" id="tabBtn-tax" onclick="switchCompanyFormTab('tax')">۴. مالیاتی و حاکمیتی</button>
-                <button class="btn btn-outline" id="tabBtn-license" onclick="switchCompanyFormTab('license')">۵. مجوزها و تاییدیه‌ها</button>
-                <button class="btn btn-outline" id="tabBtn-sign" onclick="switchCompanyFormTab('sign')">۶. مدیریت و امضاها</button>
+              <div style="display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; justify-content: space-between; flex-wrap: nowrap;">
+                <button class="btn btn-outline active-company-tab" id="tabBtn-general" onclick="switchCompanyFormTab('general')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۱. مشخصات عمومی و ثبتی</button>
+                <button class="btn btn-outline" id="tabBtn-location" onclick="switchCompanyFormTab('location')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۲. ارتباطی و مکانی</button>
+                <button class="btn btn-outline" id="tabBtn-bank" onclick="switchCompanyFormTab('bank')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۳. بانکی و مالی</button>
+                <button class="btn btn-outline" id="tabBtn-tax" onclick="switchCompanyFormTab('tax')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۴. مالیاتی و حاکمیتی</button>
+                <button class="btn btn-outline" id="tabBtn-license" onclick="switchCompanyFormTab('license')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۵. مجوزها و تاییدیه‌ها</button>
+                <button class="btn btn-outline" id="tabBtn-sign" onclick="switchCompanyFormTab('sign')" style="flex:1; padding:8px 4px; font-size:0.84rem; white-space:nowrap; text-align:center;">۶. مدیریت و امضاها</button>
               </div>
 
               <!-- بخش ۱: مشخصات عمومی و ثبتی -->
