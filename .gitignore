@@ -9,8 +9,8 @@ venv/
 ENV/
 .env
 
-# Database
-*.sqlite3
+# Database - sqlite3 is tracked intentionally for backup/restore
+# *.sqlite3
 *.db
 
 # IDE & OS
@@ -21,4 +21,3 @@ ENV/
 .DS_Store
 Thumbs.db
 ~$*
-

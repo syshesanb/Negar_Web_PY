@@ -26,6 +26,144 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def seed_default_chart_of_accounts(db: Session, company_id: int) -> int:
+    """
+    بارگذاری کدینگ استاندارد حسابداری از فایل cod_estandard.xlsx
+    برای شرکت مشخص‌شده.
+    سلسله‌مراتب: گروه → کل → معین
+    در صورت وجود قبلی، بارگذاری مجدد انجام نمی‌شود.
+    مقدار بازگشتی: تعداد حساب‌های بارگذاری‌شده
+    """
+    from app.domain.models import SarfaslHesab
+    from pathlib import Path
+
+    # بررسی وجود کدینگ برای این شرکت
+    existing_count = db.query(SarfaslHesab).filter(SarfaslHesab.CompanyID == company_id).count()
+    if existing_count > 0:
+        return existing_count
+
+    # مسیر فایل اکسل کدینگ استاندارد
+    excel_path = Path(settings.BASE_DIR) / "cod_estandard.xlsx"
+    if not excel_path.exists():
+        return 0
+
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(str(excel_path))
+        ws = wb.active
+
+        # نگاشت کدها به AccountID برای تعیین پدر
+        code_to_id: dict = {}
+        inserted = 0
+
+        # مرحله ۱: جمع‌آوری گروه‌ها و کل‌های یکتا
+        groups: dict = {}   # code -> name
+        kols: dict = {}     # code -> (name, group_code)
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or row[0] is None:
+                continue
+            grp_code  = str(row[0]).strip() if row[0] else None
+            grp_name  = str(row[1]).strip() if row[1] else None
+            kol_code  = str(row[2]).strip() if row[2] else None
+            kol_name  = str(row[3]).strip() if row[3] else None
+
+            if grp_code and grp_name and grp_code not in groups:
+                groups[grp_code] = grp_name
+            if kol_code and kol_name and kol_code not in kols:
+                kols[kol_code] = (kol_name, grp_code)
+
+        # مرحله ۲: درج گروه‌ها (سطح گروه)
+        for grp_code, grp_name in groups.items():
+            existing = db.query(SarfaslHesab).filter(
+                SarfaslHesab.CompanyID == company_id,
+                SarfaslHesab.AccountCode == grp_code
+            ).first()
+            if existing:
+                code_to_id[grp_code] = existing.AccountID
+                continue
+            acc = SarfaslHesab(
+                CompanyID=company_id,
+                AccountCode=grp_code,
+                AccountName=grp_name,
+                AccountType="گروه",
+                ParentAccountID=None,
+                IsActive=True,
+                AccountNature="بدهکار/بستانکار",
+            )
+            db.add(acc)
+            db.flush()
+            code_to_id[grp_code] = acc.AccountID
+            inserted += 1
+
+        # مرحله ۳: درج کل‌ها (سطح کل)
+        for kol_code, (kol_name, grp_code) in kols.items():
+            existing = db.query(SarfaslHesab).filter(
+                SarfaslHesab.CompanyID == company_id,
+                SarfaslHesab.AccountCode == kol_code
+            ).first()
+            if existing:
+                code_to_id[kol_code] = existing.AccountID
+                continue
+            parent_id = code_to_id.get(grp_code)
+            acc = SarfaslHesab(
+                CompanyID=company_id,
+                AccountCode=kol_code,
+                AccountName=kol_name,
+                AccountType="کل",
+                ParentAccountID=parent_id,
+                IsActive=True,
+                AccountNature="بدهکار/بستانکار",
+            )
+            db.add(acc)
+            db.flush()
+            code_to_id[kol_code] = acc.AccountID
+            inserted += 1
+
+        # مرحله ۴: درج معین‌ها (سطح معین)
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or row[0] is None:
+                continue
+            kol_code   = str(row[2]).strip() if row[2] else None
+            moin_code  = str(row[4]).strip() if row[4] else None
+            moin_name  = str(row[5]).strip() if row[5] else None
+            nature     = str(row[6]).strip() if row[6] else "بدهکار/بستانکار"
+
+            if not moin_code or not moin_name:
+                continue
+
+            existing = db.query(SarfaslHesab).filter(
+                SarfaslHesab.CompanyID == company_id,
+                SarfaslHesab.AccountCode == moin_code
+            ).first()
+            if existing:
+                code_to_id[moin_code] = existing.AccountID
+                continue
+
+            parent_id = code_to_id.get(kol_code)
+            acc = SarfaslHesab(
+                CompanyID=company_id,
+                AccountCode=moin_code,
+                AccountName=moin_name,
+                AccountType="معین",
+                ParentAccountID=parent_id,
+                IsActive=True,
+                AccountNature=nature,
+            )
+            db.add(acc)
+            db.flush()
+            code_to_id[moin_code] = acc.AccountID
+            inserted += 1
+
+        db.commit()
+        return inserted
+
+    except Exception as e:
+        db.rollback()
+        print(f"[WARNING] خطا در بارگذاری کدینگ استاندارد: {e}")
+        return 0
+
+
 def init_db():
     """Create all tables and seed default admin user and company if not present."""
     Base.metadata.create_all(bind=engine)
@@ -74,6 +212,20 @@ def init_db():
             db.add(fiscal_year)
             db.commit()
 
+            # بارگذاری کدینگ استاندارد برای شرکت پیش‌فرض
+            count = seed_default_chart_of_accounts(db, company.CompanyID)
+            print(f"[INFO] کدینگ پیش‌فرض بارگذاری شد: {count} حساب برای شرکت {company.CompanyName}")
+
+        else:
+            # بررسی و بارگذاری کدینگ برای شرکت‌هایی که کدینگ ندارند
+            from app.domain.models import SarfaslHesab
+            companies = db.query(Company).filter(Company.IsActive == True).all()
+            for comp in companies:
+                acc_count = db.query(SarfaslHesab).filter(SarfaslHesab.CompanyID == comp.CompanyID).count()
+                if acc_count == 0:
+                    count = seed_default_chart_of_accounts(db, comp.CompanyID)
+                    print(f"[INFO] کدینگ پیش‌فرض بارگذاری شد: {count} حساب برای شرکت {comp.CompanyName}")
+
         # Ensure new columns exist in Currencies table
         try:
             from sqlalchemy import text
@@ -113,4 +265,3 @@ def init_db():
             db.commit()
     finally:
         db.close()
-

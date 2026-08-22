@@ -1149,7 +1149,7 @@ function switchHesabdariTab(tabId) {
   }
 
   // 3. Render dynamic content for specific tab
-  if (tabId === 'accounts') renderAccountsTable();
+  if (tabId === 'accounts') loadAccountsFromServer();
   if (tabId === 'shenavar') renderShenavaarTable();
   if (tabId === 'sanad') renderSanadListTable();
   if (tabId === 'taraz') populateTarazFields();
@@ -1449,7 +1449,53 @@ function isAccountVisibleWithFilter(a, sortedAccounts) {
   return codeMatch && nameMatch;
 }
 
+// ============================
+// LOAD ACCOUNTS FROM SERVER API
+// ============================
+async function loadAccountsFromServer() {
+  const companyId = SessionState.company?.id
+    || (AppState.companies.length > 0 ? AppState.companies[0].id : 1);
+  try {
+    const resp = await fetch(`/api/Accounting/accounts/${companyId}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        // نگاشت فیلدهای backend به فرمت frontend
+        const mapped = data.map(a => ({
+          id: a.AccountID,
+          code: a.AccountCode,
+          name: a.AccountName,
+          type: a.AccountType || 'معین',
+          nature: a.AccountNature || 'بدهکار/بستانکار',
+          parentId: a.ParentAccountID || null,
+          isActive: a.IsActive !== false,
+          companyCode: SessionState.company?.code || '1001'
+        }));
+        AppState.accounts = mapped;
+        // باز کردن همه گره‌های درخت
+        mapped.forEach(a => expandedAccountIds.add(a.id));
+        // ذخیره الگوی پیش‌فرض برای شرکت‌های جدید
+        if (pristineAccountsTemplate.length === 0) {
+          pristineAccountsTemplate = data.map(a => ({
+            id: a.AccountID,
+            code: a.AccountCode,
+            name: a.AccountName,
+            type: a.AccountType || 'معین',
+            nature: a.AccountNature || 'بدهکار/بستانکار',
+            parentId: a.ParentAccountID || null,
+            isActive: a.IsActive !== false
+          }));
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('خطا در بارگذاری کدینگ از سرور:', e);
+  }
+  renderAccountsTable();
+}
+
 function renderAccountsTable() {
+
   const tbody = document.getElementById('accountsTableBody');
   if (!tbody) return;
 
@@ -5780,10 +5826,13 @@ function saveCompany() {
       return;
     }
     // CREATE new company
+    const newId = Date.now();
     AppState.companies.push({
-      id: Date.now(),
+      id: newId,
       ...newCompanyData
     });
+    // بارگذاری کدینگ پیش‌فرض برای شرکت جدید
+    initializeCompanyAccounts(code);
     alert(`شرکت جدید "${name}" با موفقیت ثبت شد.`);
   }
 
