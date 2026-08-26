@@ -45,8 +45,13 @@ class UserAccountBase(BaseModel):
     IsActive: bool = True
     FullName: Optional[str] = None
     JobTitle: Optional[str] = None
-    MaxCompaniesAllowed: int = 0
+    MaxCompaniesAllowed: int = 1
     MaxFiscalYearsPerCompany: int = 0
+    MaxUsersAllowed: int = 5
+    DeploymentType: Optional[str] = "Cloud"
+    AllowedModules: Optional[str] = None
+    AllowedPermissionsTree: Optional[str] = None
+    ParentUserID: Optional[int] = None
 
 
 class UserAccountCreateDTO(UserAccountBase):

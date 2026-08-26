@@ -30,8 +30,13 @@ class UserAccount(Base):
     FullName = Column(String(150), nullable=True)
     JobTitle = Column(String(150), nullable=True)  # عنوان سازمانی / سمت شغلی
     CreatorIP = Column(String(50), nullable=True)
-    MaxCompaniesAllowed = Column(Integer, default=0)
+    MaxCompaniesAllowed = Column(Integer, default=1)
     MaxFiscalYearsPerCompany = Column(Integer, default=0)
+    MaxUsersAllowed = Column(Integer, default=5)
+    DeploymentType = Column(String(50), default="Cloud")  # Cloud / OnPremise
+    AllowedModules = Column(Text, nullable=True)  # JSON string of allowed module IDs
+    AllowedPermissionsTree = Column(Text, nullable=True)  # JSON string of granular permission keys
+    ParentUserID = Column(Integer, nullable=True)  # Reference to Manager UserID
 
     RolePermissions = relationship("RolePermission", back_populates="User", cascade="all, delete-orphan")
 

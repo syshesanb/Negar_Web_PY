@@ -172,12 +172,20 @@ def init_db():
     try:
         from sqlalchemy import text
         with engine.connect() as conn:
-            # 1. Users.JobTitle
-            try:
-                conn.execute(text("ALTER TABLE Users ADD COLUMN JobTitle VARCHAR(150);"))
-                conn.commit()
-            except Exception:
-                pass
+            # 1. Users hierarchy & deployment columns
+            for col, col_type in [
+                ("JobTitle", "VARCHAR(150)"),
+                ("DeploymentType", "VARCHAR(50) DEFAULT 'Cloud'"),
+                ("MaxUsersAllowed", "INTEGER DEFAULT 5"),
+                ("AllowedModules", "TEXT"),
+                ("AllowedPermissionsTree", "TEXT"),
+                ("ParentUserID", "INTEGER")
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE Users ADD COLUMN {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    pass
             # 2. Currencies extra columns
             for col, col_type in [
                 ("CbiRate", "NUMERIC(18, 4) DEFAULT 1.0"),

@@ -409,9 +409,57 @@ const AppState = {
     { id: 4, year: '1400', startDate: '1400/01/01', endDate: '1400/12/29', company: '1001', notes: 'سال مالی اولیه تاسیس', status: 'بسته' }
   ],
   users: [
-    { id: 1, username: 'admin', fullName: 'ابر مدیر سیستم', jobTitle: 'مدیر ارشد فناوری و زیرساخت', userType: 'SuperAdmin', isActive: true, ip: '*' },
-    { id: 2, username: 'accountant1', fullName: 'علی رضایی', jobTitle: 'سرپرست امور مالی و حسابداری', userType: 'User', isActive: true, ip: '*' },
-    { id: 3, username: 'storekeeper', fullName: 'رضا حسینی', jobTitle: 'سرپرست انبار مرکزی', userType: 'User', isActive: true, ip: '*' }
+    {
+      id: 1,
+      username: 'admin',
+      fullName: 'ابر مدیر سیستم',
+      jobTitle: 'مدیر ارشد فناوری و زیرساخت',
+      userType: 'SuperAdmin',
+      isActive: true,
+      ip: '*',
+      maxCompanies: 99,
+      maxUsers: 99,
+      deploymentType: 'Cloud',
+      allowedModules: ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan', 'assets', 'automation', 'crm'],
+      permissionsTree: []
+    },
+    {
+      id: 2,
+      username: 'manager_tehran',
+      fullName: 'مهندس حسینی (مدیر شعبه تهران)',
+      jobTitle: 'مدیر میانی و سرپرست مالی',
+      userType: 'Manager',
+      isActive: true,
+      ip: '*',
+      maxCompanies: 2,
+      maxUsers: 5,
+      deploymentType: 'Cloud',
+      allowedModules: ['accounting', 'inventory', 'sales', 'payroll'],
+      permissionsTree: [],
+      parentUserId: 1
+    },
+    {
+      id: 3,
+      username: 'accountant1',
+      fullName: 'علی رضایی',
+      jobTitle: 'سرپرست امور مالی و حسابداری',
+      userType: 'User',
+      isActive: true,
+      ip: '*',
+      parentUserId: 2,
+      permissionsTree: []
+    },
+    {
+      id: 4,
+      username: 'storekeeper',
+      fullName: 'رضا حسینی',
+      jobTitle: 'سرپرست انبار مرکزی',
+      userType: 'User',
+      isActive: true,
+      ip: '*',
+      parentUserId: 2,
+      permissionsTree: []
+    }
   ],
   accounts: [
     { id: 1, code: '11', name: 'دارائیهای جاری', type: 'گروه', nature: 'بدهکار', parentId: null },
@@ -1056,7 +1104,7 @@ function showForm(formId) {
   if (formId === 'form-personnel') renderPersonnelTable();
   if (formId === 'form-payslip') initPayslipForm();
   if (formId === 'form-cardex') initCardexForm();
-  if (formId === 'form-permissions-matrix') renderPermissionsMatrix();
+  if (formId === 'form-permissions-matrix') renderPermissionsTree();
   if (formId === 'form-companies-list') renderCompaniesTable();
   if (formId === 'form-fiscal-years') renderFiscalYearsTable();
   if (formId === 'form-switch-company') renderSwitchCompanyForm();
@@ -1284,17 +1332,436 @@ function goBack() {
 }
 
 // ============================
-// USERS MODULE
 // ============================
+// USERS MODULE & HIERARCHICAL PERMISSIONS TREE
+// ============================
+
+const SYSTEM_PERMISSIONS_HIERARCHY = [
+  {
+    id: 'accounting',
+    title: '📊 ماژول حسابداری مالی نگار (Hesabdari)',
+    icon: '📊',
+    children: [
+      {
+        id: 'accounting.sanad',
+        title: '📄 ثبت و صدور اسناد حسابداری (Sanad)',
+        children: [
+          {
+            id: 'accounting.sanad.tabs',
+            title: '📑 تب‌پیج‌های درون فرم سند',
+            children: [
+              { id: 'accounting.sanad.tab_general', title: '🔹 تب مشخصات عمومی سند', isLeaf: true },
+              { id: 'accounting.sanad.tab_lines', title: '🔹 تب سطرهای آرتیکل و کدینگ', isLeaf: true },
+              { id: 'accounting.sanad.tab_attachments', title: '🔹 تب ضمائم و اسناد پیوست', isLeaf: true },
+              { id: 'accounting.sanad.tab_currency', title: '🔹 تب تسویه ارزی و برابری', isLeaf: true }
+            ]
+          },
+          {
+            id: 'accounting.sanad.actions',
+            title: '🔘 دکمه‌ها و عملیات‌های فرم سند',
+            children: [
+              { id: 'accounting.sanad.btn_new', title: '➕ دکمه ثبت سند جدید', isLeaf: true },
+              { id: 'accounting.sanad.btn_edit', title: '✏️ دکمه ویرایش سند', isLeaf: true },
+              { id: 'accounting.sanad.btn_delete', title: '🗑️ دکمه حذف سند', isLeaf: true },
+              { id: 'accounting.sanad.btn_confirm', title: '🔒 دکمه تایید و قطعی‌سازی سند', isLeaf: true },
+              { id: 'accounting.sanad.btn_print', title: '🖨️ دکمه چاپ و پیش‌نمایش سند', isLeaf: true },
+              { id: 'accounting.sanad.btn_excel', title: '📊 دکمه خروجی اکسل اسناد', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'accounting.coding',
+        title: '📋 کدگذاری و سرفصل حساب‌ها (Chart of Accounts)',
+        children: [
+          {
+            id: 'accounting.coding.tabs',
+            title: '📑 تب‌پیج‌های سطوح حساب‌ها',
+            children: [
+              { id: 'accounting.coding.tab_group', title: '🔹 تب سطح گروه حساب‌ها', isLeaf: true },
+              { id: 'accounting.coding.tab_kol', title: '🔹 تب سطح حساب‌های کل', isLeaf: true },
+              { id: 'accounting.coding.tab_moein', title: '🔹 تب سطح حساب‌های معین', isLeaf: true },
+              { id: 'accounting.coding.tab_tafsili', title: '🔹 تب سطح حساب‌های تفصیلی', isLeaf: true }
+            ]
+          },
+          {
+            id: 'accounting.coding.actions',
+            title: '🔘 دکمه‌ها و عملیات‌های کدینگ',
+            children: [
+              { id: 'accounting.coding.btn_add', title: '➕ دکمه تعریف حساب جدید', isLeaf: true },
+              { id: 'accounting.coding.btn_edit', title: '✏️ دکمه ویرایش حساب', isLeaf: true },
+              { id: 'accounting.coding.btn_delete', title: '🗑️ دکمه حذف حساب', isLeaf: true },
+              { id: 'accounting.coding.btn_export', title: '📤 دکمه خروجی استاندارد کدینگ', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'accounting.reports',
+        title: '📈 ترازها، دفاتر و گزارشات مالی',
+        children: [
+          {
+            id: 'accounting.reports.tabs',
+            title: '📑 تب‌پیج‌های گزارشات',
+            children: [
+              { id: 'accounting.reports.tab_taraz2', title: '🔹 تراز آزمایشی ۲ ستونی', isLeaf: true },
+              { id: 'accounting.reports.tab_taraz4', title: '🔹 تراز آزمایشی ۴ ستونی', isLeaf: true },
+              { id: 'accounting.reports.tab_taraz6', title: '🔹 تراز آزمایشی ۶ ستونی', isLeaf: true },
+              { id: 'accounting.reports.tab_taraz8', title: '🔹 تراز آزمایشی ۸ ستونی', isLeaf: true },
+              { id: 'accounting.reports.tab_ledger', title: '🔹 دفتر روزنامه و دفتر کل', isLeaf: true }
+            ]
+          },
+          {
+            id: 'accounting.reports.actions',
+            title: '🔘 دکمه‌های گزارش‌گیری',
+            children: [
+              { id: 'accounting.reports.btn_calc', title: '⚡ دکمه محاسبه و استخراج تراز', isLeaf: true },
+              { id: 'accounting.reports.btn_print', title: '🖨️ دکمه چاپ گزارش', isLeaf: true },
+              { id: 'accounting.reports.btn_excel', title: '📊 دکمه خروجی فایل اکسل', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'accounting.shenavar',
+        title: '🏷️ حساب‌های تفصیلی شناور (Shenavar)',
+        children: [
+          {
+            id: 'accounting.shenavar.actions',
+            title: '🔘 دکمه‌ها و عملیات شناور',
+            children: [
+              { id: 'accounting.shenavar.btn_add', title: '➕ دکمه تعریف شناور جدید', isLeaf: true },
+              { id: 'accounting.shenavar.btn_edit', title: '✏️ دکمه ویرایش شناور', isLeaf: true },
+              { id: 'accounting.shenavar.btn_delete', title: '🗑️ دکمه حذف شناور', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'inventory',
+    title: '📦 ماژول انبارداری، خرید و فروش کالا',
+    icon: '📦',
+    children: [
+      {
+        id: 'inventory.products',
+        title: '📦 تعریف کالاها و خدمات (Products)',
+        children: [
+          {
+            id: 'inventory.products.tabs',
+            title: '📑 تب‌پیج‌های کالا',
+            children: [
+              { id: 'inventory.products.tab_info', title: '🔹 تب مشخصات عمومی کالا', isLeaf: true },
+              { id: 'inventory.products.tab_prices', title: '🔹 تب نرخ‌ها و قیمت‌گذاری', isLeaf: true },
+              { id: 'inventory.products.tab_stock', title: '🔹 تب موجودی اولیه و نقطه‌سفارش', isLeaf: true }
+            ]
+          },
+          {
+            id: 'inventory.products.actions',
+            title: '🔘 دکمه‌های مدیریت کالا',
+            children: [
+              { id: 'inventory.products.btn_add', title: '➕ تعریف کالای جدید', isLeaf: true },
+              { id: 'inventory.products.btn_edit', title: '✏️ ویرایش مشخصات کالا', isLeaf: true },
+              { id: 'inventory.products.btn_delete', title: '🗑️ حذف کالا', isLeaf: true },
+              { id: 'inventory.products.btn_cardex', title: '📊 مشاهده کاردکس کالا', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'inventory.warehouses',
+        title: '🏢 مدیریت انبارها و حوالجات',
+        children: [
+          {
+            id: 'inventory.warehouses.actions',
+            title: '🔘 دکمه‌های انبار',
+            children: [
+              { id: 'inventory.warehouses.btn_add', title: '➕ تعریف انبار جدید', isLeaf: true },
+              { id: 'inventory.warehouses.btn_edit', title: '✏️ ویرایش اطلاعات انبار', isLeaf: true },
+              { id: 'inventory.warehouses.btn_transfer', title: '🔄 ثبت انتقال بین انبارها', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'sales',
+    title: '🛒 ماژول خرید و فروش و صدور فاکتور',
+    icon: '🛒',
+    children: [
+      {
+        id: 'sales.invoice',
+        title: '🧾 صدور فاکتور فروش (Sales Invoice)',
+        children: [
+          {
+            id: 'sales.invoice.tabs',
+            title: '📑 تب‌پیج‌های فاکتور فروش',
+            children: [
+              { id: 'sales.invoice.tab_header', title: '🔹 سربرگ فاکتور و خریدار', isLeaf: true },
+              { id: 'sales.invoice.tab_items', title: '🔹 اقلام کالا، تخفیفات و ارزش افزوده', isLeaf: true },
+              { id: 'sales.invoice.tab_payment', title: '🔹 نحوه تسویه و دریافت وجه', isLeaf: true }
+            ]
+          },
+          {
+            id: 'sales.invoice.actions',
+            title: '🔘 دکمه‌های فاکتور فروش',
+            children: [
+              { id: 'sales.invoice.btn_new', title: '➕ صدور فاکتور فروش جدید', isLeaf: true },
+              { id: 'sales.invoice.btn_edit', title: '✏️ ویرایش فاکتور', isLeaf: true },
+              { id: 'sales.invoice.btn_cancel', title: '❌ ابطال فاکتور', isLeaf: true },
+              { id: 'sales.invoice.btn_print', title: '🖨️ چاپ فاکتور رسمی', isLeaf: true },
+              { id: 'sales.invoice.btn_send_tax', title: '🏛️ ارسال مستقیم به سامانه مودیان', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sales.purchase',
+        title: '📥 فاکتور خرید و رسید انبار',
+        children: [
+          {
+            id: 'sales.purchase.actions',
+            title: '🔘 دکمه‌های خرید',
+            children: [
+              { id: 'sales.purchase.btn_new', title: '➕ ثبت فاکتور خرید جدید', isLeaf: true },
+              { id: 'sales.purchase.btn_edit', title: '✏️ ویرایش فاکتور خرید', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'treasury',
+    title: '🏦 ماژول خزانه‌داری، چک و بانک',
+    icon: '🏦',
+    children: [
+      {
+        id: 'treasury.checks',
+        title: '💳 مدیریت چک‌ها و اسناد دریافتنی/پرداختنی',
+        children: [
+          {
+            id: 'treasury.checks.tabs',
+            title: '📑 تب‌پیج‌های چک',
+            children: [
+              { id: 'treasury.checks.tab_in', title: '🔹 تب چک‌های دریافتی', isLeaf: true },
+              { id: 'treasury.checks.tab_out', title: '🔹 تب چک‌های پرداختی', isLeaf: true }
+            ]
+          },
+          {
+            id: 'treasury.checks.actions',
+            title: '🔘 عملیات و دکمه‌های چک',
+            children: [
+              { id: 'treasury.checks.btn_new', title: '➕ ثبت چک جدید', isLeaf: true },
+              { id: 'treasury.checks.btn_pass', title: '🟢 اعلام وصول چک', isLeaf: true },
+              { id: 'treasury.checks.btn_return', title: '🔴 برگشت زدن چک', isLeaf: true },
+              { id: 'treasury.checks.btn_spend', title: '🔄 خرج کردن چک به غیر', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'treasury.banks',
+        title: '🏛️ حساب‌های بانکی، صندوق و پوز',
+        children: [
+          {
+            id: 'treasury.banks.actions',
+            title: '🔘 دکمه‌های حساب بانکی',
+            children: [
+              { id: 'treasury.banks.btn_new', title: '➕ افتتاح حساب بانکی/صندوق', isLeaf: true },
+              { id: 'treasury.banks.btn_edit', title: '✏️ ویرایش حساب بانکی', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'payroll',
+    title: '👔 ماژول حقوق و دستمزد پرسنل',
+    icon: '👔',
+    children: [
+      {
+        id: 'payroll.personnel',
+        title: '👥 پرونده پرسنلی و احکام کارگزینی',
+        children: [
+          {
+            id: 'payroll.personnel.tabs',
+            title: '📑 تب‌های پرونده پرسنل',
+            children: [
+              { id: 'payroll.personnel.tab_id', title: '🔹 مشخصات هویتی و شماره بیمه', isLeaf: true },
+              { id: 'payroll.personnel.tab_contract', title: '🔹 احکام حقوقی و پایه مزایا', isLeaf: true }
+            ]
+          },
+          {
+            id: 'payroll.personnel.actions',
+            title: '🔘 دکمه‌های کارگزینی',
+            children: [
+              { id: 'payroll.personnel.btn_new', title: '➕ ثبت پرسنل جدید', isLeaf: true },
+              { id: 'payroll.personnel.btn_edit', title: '✏️ ویرایش احکام پرسنل', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'payroll.payslip',
+        title: '💰 محاسبه فیش حقوقی و دیسکت بیمه',
+        children: [
+          {
+            id: 'payroll.payslip.actions',
+            title: '🔘 عملیات حقوق ماهانه',
+            children: [
+              { id: 'payroll.payslip.btn_calc', title: '⚡ محاسبه حقوق و مزایا', isLeaf: true },
+              { id: 'payroll.payslip.btn_print', title: '🖨️ چاپ فیش‌های حقوقی', isLeaf: true },
+              { id: 'payroll.payslip.btn_bimeh', title: '💾 تولید فایل دیسکت بیمه تأمین اجتماعی', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'currencies',
+    title: '💱 ماژول مدیریت ارزی و تسعیر',
+    icon: '💱',
+    children: [
+      {
+        id: 'currencies.rates',
+        title: '📈 ارزها و نرخ‌های برابری آنلاین و دستی',
+        children: [
+          {
+            id: 'currencies.rates.actions',
+            title: '🔘 دکمه‌های ارزی',
+            children: [
+              { id: 'currencies.rates.btn_new', title: '➕ تعریف ارز جدید', isLeaf: true },
+              { id: 'currencies.rates.btn_tgju', title: '🌐 دریافت آنلاین نرخ آزاد از TGJU', isLeaf: true },
+              { id: 'currencies.rates.btn_edit', title: '✏️ ثبت نرخ دستی و تاریخ اعمال', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'modyan',
+    title: '🏛️ سامانه مودیان مالیاتی (Tax System)',
+    icon: '🏛️',
+    children: [
+      {
+        id: 'modyan.actions',
+        title: '🔘 دکمه‌ها و ارتباط با کارپوشه',
+        children: [
+          { id: 'modyan.btn_sign', title: '🔐 امضای دیجیتال فاکتور با کلید اختصاصی', isLeaf: true },
+          { id: 'modyan.btn_send', title: '🚀 ارسال بسته‌های فاکتور به سازمان امور مالیاتی', isLeaf: true },
+          { id: 'modyan.btn_inquire', title: '🔍 استعلام وضعیت و شماره منحصر به فرد مالیاتی', isLeaf: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'companies',
+    title: '🏢 مدیریت شرکت‌ها و سال‌های مالی',
+    icon: '🏢',
+    children: [
+      {
+        id: 'companies.company',
+        title: '🏢 مشخصات شرکت‌ها (Company Form)',
+        children: [
+          {
+            id: 'companies.company.tabs',
+            title: '📑 تب‌پیج‌های ۶ گانه فرم شرکت',
+            children: [
+              { id: 'companies.company.tab_main', title: '🔹 تب ۱: مشخصات اصلی و کد اقتصادی', isLeaf: true },
+              { id: 'companies.company.tab_branch', title: '🔹 تب ۲: شعب، تلفن و نشانی', isLeaf: true },
+              { id: 'companies.company.tab_bank', title: '🔹 تب ۳: حساب بانکی و ارز مبنا', isLeaf: true },
+              { id: 'companies.company.tab_chart', title: '🔹 تب ۴: چارت سازمانی و کدینگ', isLeaf: true },
+              { id: 'companies.company.tab_perm', title: '🔹 تب ۵: مجوزها و تاییدها', isLeaf: true },
+              { id: 'companies.company.tab_sign', title: '🔹 تب ۶: مدیریت و امضاها', isLeaf: true }
+            ]
+          },
+          {
+            id: 'companies.company.actions',
+            title: '🔘 دکمه‌های مدیریت شرکت',
+            children: [
+              { id: 'companies.company.btn_new', title: '➕ تعریف شرکت جدید', isLeaf: true },
+              { id: 'companies.company.btn_edit', title: '✏️ ویرایش مشخصات شرکت', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'companies.fiscal_years',
+        title: '📅 مدیریت سال‌های مالی',
+        children: [
+          {
+            id: 'companies.fiscal_years.actions',
+            title: '🔘 دکمه‌های سال مالی',
+            children: [
+              { id: 'companies.fiscal_years.btn_new', title: '➕ افتتاح سال مالی جدید', isLeaf: true },
+              { id: 'companies.fiscal_years.btn_close', title: '🔒 بستن و انتهای دوره سال مالی', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'users',
+    title: '👥 مدیریت کاربران و دسترسی‌ها',
+    icon: '👥',
+    children: [
+      {
+        id: 'users.mgmt',
+        title: '👤 تعریف و ویرایش کاربران سیستم',
+        children: [
+          {
+            id: 'users.mgmt.actions',
+            title: '🔘 دکمه‌های کاربران',
+            children: [
+              { id: 'users.mgmt.btn_new', title: '➕ تعریف کاربر جدید', isLeaf: true },
+              { id: 'users.mgmt.btn_edit', title: '✏️ ویرایش کاربر', isLeaf: true },
+              { id: 'users.mgmt.btn_toggle', title: '🟢/🔴 فعال یا غیرفعال‌سازی کاربر', isLeaf: true },
+              { id: 'users.mgmt.btn_delete', title: '🗑️ حذف کاربر', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'users.perms',
+        title: '🌳 درختواره سطوح دسترسی منوها',
+        children: [
+          {
+            id: 'users.perms.actions',
+            title: '🔘 دکمه‌های دسترسی',
+            children: [
+              { id: 'users.perms.btn_save', title: '💾 ذخیره تغییرات دسترسی‌ها', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
+
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   if (!tbody) return;
-  tbody.innerHTML = AppState.users.map(u => `
+
+  // Filter users based on logged-in user role:
+  // SuperAdmin sees all users; Manager sees only users they created + themselves; User sees self
+  let visibleUsers = AppState.users;
+  if (currentUser && currentUser.role === 'Manager') {
+    visibleUsers = AppState.users.filter(u => u.id === currentUser.id || u.parentUserId === currentUser.id);
+  }
+
+  tbody.innerHTML = visibleUsers.map(u => `
     <tr>
       <td><b>${u.username}</b></td>
       <td>${u.fullName}</td>
       <td><span style="font-weight:bold; color:var(--accent-color); font-size:0.85rem;">${u.jobTitle || 'کارشناس'}</span></td>
-      <td><span class="badge badge-primary">${u.userType}</span></td>
+      <td><span class="badge ${u.userType === 'SuperAdmin' ? 'badge-primary' : (u.userType === 'Manager' ? 'badge-warning' : 'badge-secondary')}">${u.userType}</span></td>
       <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold;">${u.ip || '*'}</code></td>
       <td><span class="badge ${u.isActive ? 'badge-success' : 'badge-warning'}">${u.isActive ? 'فعال' : 'غیرفعال'}</span></td>
       <td>
@@ -1310,10 +1777,51 @@ function renderUsersTable() {
   `).join('');
 }
 
+function handleUserTypeChange(roleValue) {
+  const mgrSec = document.getElementById('managerConfigSection');
+  if (!mgrSec) return;
+  
+  // Only SuperAdmin can configure Manager limits
+  const isSuperAdmin = !currentUser || currentUser.role === 'SuperAdmin' || currentUser.username === 'admin';
+  if (roleValue === 'Manager' && isSuperAdmin) {
+    mgrSec.style.display = 'block';
+  } else {
+    mgrSec.style.display = 'none';
+  }
+}
+
 function openAddUserModal(userId = null) {
   const modal = document.getElementById('userModalOverlay');
   const title = document.getElementById('userModalTitle');
+  const typeSelect = document.getElementById('newUserType');
+  const mgrSec = document.getElementById('managerConfigSection');
   if (!modal) return;
+
+  const isSuperAdmin = !currentUser || currentUser.role === 'SuperAdmin' || currentUser.username === 'admin';
+  const isManager = currentUser && currentUser.role === 'Manager';
+
+  // If logged-in user is a Manager, enforce limits
+  if (isManager && !userId) {
+    const existingCount = AppState.users.filter(u => u.parentUserId === currentUser.id).length;
+    const maxAllowed = currentUser.maxUsers || 5;
+    if (existingCount >= maxAllowed) {
+      alert(`⚠️ سقف ایجاد کاربر برای شما (${maxAllowed} کاربر) به پایان رسیده است. جهت افزایش سقف با ابر مدیر تماس بگیرید.`);
+      return;
+    }
+  }
+
+  // Adjust role options in dropdown based on who is logged in
+  if (typeSelect) {
+    if (isManager) {
+      typeSelect.innerHTML = `<option value="User">کاربر عادی (User)</option>`;
+    } else {
+      typeSelect.innerHTML = `
+        <option value="User">کاربر عادی (User)</option>
+        <option value="Manager">مدیر میانی (Manager)</option>
+        <option value="SuperAdmin">مدیر ارشد سیستم (SuperAdmin)</option>
+      `;
+    }
+  }
 
   if (userId) {
     const user = AppState.users.find(u => u.id === userId);
@@ -1324,9 +1832,23 @@ function openAddUserModal(userId = null) {
     document.getElementById('newFullName').value = user.fullName || '';
     if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = user.jobTitle || '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = user.password || '';
-    if (document.getElementById('newUserType')) document.getElementById('newUserType').value = user.userType || 'User';
+    if (typeSelect) typeSelect.value = user.userType || 'User';
     if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = user.ip || '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = user.isActive !== false;
+
+    // Manager special fields
+    if (document.getElementById('newMgrDeploymentType')) document.getElementById('newMgrDeploymentType').value = user.deploymentType || 'Cloud';
+    if (document.getElementById('newMgrMaxCompanies')) document.getElementById('newMgrMaxCompanies').value = user.maxCompanies || 1;
+    if (document.getElementById('newMgrMaxUsers')) document.getElementById('newMgrMaxUsers').value = user.maxUsers || 5;
+    
+    // Checkboxes
+    const allowed = user.allowedModules || ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan'];
+    const cbs = document.querySelectorAll('#mgrModulesCheckboxes input[type="checkbox"]');
+    cbs.forEach(cb => {
+      cb.checked = allowed.includes(cb.value);
+    });
+
+    handleUserTypeChange(user.userType);
   } else {
     if (title) title.innerHTML = `👤 تعریف کاربر جدید`;
     document.getElementById('userEditId').value = '';
@@ -1334,9 +1856,20 @@ function openAddUserModal(userId = null) {
     document.getElementById('newFullName').value = '';
     if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = '';
-    if (document.getElementById('newUserType')) document.getElementById('newUserType').value = 'User';
+    if (typeSelect) typeSelect.value = isManager ? 'User' : 'User';
     if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = true;
+
+    if (document.getElementById('newMgrDeploymentType')) document.getElementById('newMgrDeploymentType').value = 'Cloud';
+    if (document.getElementById('newMgrMaxCompanies')) document.getElementById('newMgrMaxCompanies').value = 1;
+    if (document.getElementById('newMgrMaxUsers')) document.getElementById('newMgrMaxUsers').value = 5;
+
+    const cbs = document.querySelectorAll('#mgrModulesCheckboxes input[type="checkbox"]');
+    cbs.forEach(cb => {
+      cb.checked = ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan'].includes(cb.value);
+    });
+
+    handleUserTypeChange('User');
   }
 
   modal.style.display = 'flex';
@@ -1364,6 +1897,15 @@ function saveNewUser() {
   const ip = document.getElementById('newUserIp')?.value?.trim() || '*';
   const isActive = document.getElementById('newUserIsActive')?.checked !== false;
 
+  const deploymentType = document.getElementById('newMgrDeploymentType')?.value || 'Cloud';
+  const maxCompanies = parseInt(document.getElementById('newMgrMaxCompanies')?.value || '1');
+  const maxUsers = parseInt(document.getElementById('newMgrMaxUsers')?.value || '5');
+
+  const selectedModules = [];
+  document.querySelectorAll('#mgrModulesCheckboxes input[type="checkbox"]:checked').forEach(cb => {
+    selectedModules.push(cb.value);
+  });
+
   if (!username || !fullName) {
     alert('نام کاربری و نام کامل الزامی هستند.');
     return;
@@ -1373,7 +1915,6 @@ function saveNewUser() {
     // EDIT
     const user = AppState.users.find(u => u.id === parseInt(editId));
     if (user) {
-      // Check duplicate username if changed
       const dup = AppState.users.find(u => u.username === username && u.id !== user.id);
       if (dup) {
         alert('این نام کاربری قبلاً برای کاربر دیگری ثبت شده است.');
@@ -1386,7 +1927,13 @@ function saveNewUser() {
       user.userType = userType;
       user.ip = ip;
       user.isActive = isActive;
-      alert(`مشخصات کاربر "${fullName}" با عنوان سازمانی "${jobTitle}" با موفقیت به‌روزرسانی شد.`);
+      if (userType === 'Manager') {
+        user.deploymentType = deploymentType;
+        user.maxCompanies = maxCompanies;
+        user.maxUsers = maxUsers;
+        user.allowedModules = selectedModules;
+      }
+      alert(`مشخصات کاربر "${fullName}" با موفقیت به‌روزرسانی شد.`);
     }
   } else {
     // CREATE
@@ -1394,7 +1941,9 @@ function saveNewUser() {
       alert('این نام کاربری قبلاً ثبت شده است.');
       return;
     }
-    AppState.users.push({
+
+    const currentUserId = currentUser ? currentUser.id : 1;
+    const newUserObj = {
       id: Date.now(),
       username,
       fullName,
@@ -1402,13 +1951,24 @@ function saveNewUser() {
       password: password || '123456',
       userType,
       isActive,
-      ip
-    });
-    alert(`کاربر جدید "${username}" با عنوان سازمانی "${jobTitle}" با موفقیت اضافه شد.`);
+      ip,
+      parentUserId: currentUserId,
+      deploymentType: userType === 'Manager' ? deploymentType : 'Cloud',
+      maxCompanies: userType === 'Manager' ? maxCompanies : 1,
+      maxUsers: userType === 'Manager' ? maxUsers : 0,
+      allowedModules: userType === 'Manager' ? selectedModules : [],
+      permissionsTree: []
+    };
+
+    AppState.users.push(newUserObj);
+    alert(`کاربر جدید "${username}" با نقش "${userType}" با موفقیت ایجاد گردید.`);
   }
 
   closeUserModal();
   renderUsersTable();
+  if (document.getElementById('form-permissions-matrix')?.style.display !== 'none') {
+    renderPermissionsTree();
+  }
 }
 
 function toggleUserStatus(userId) {
@@ -1432,21 +1992,228 @@ function deleteUser(userId) {
   }
 }
 
-function renderPermissionsMatrix() {
-  const modules = ['حسابداری', 'کاربران', 'انبارداری', 'خرید', 'فروش', 'حقوق', 'اموال', 'اتوماسیون', 'CRM', 'خزانه'];
-  const tbody = document.getElementById('permissionsMatrixBody');
-  if (!tbody) return;
-  tbody.innerHTML = modules.map(m => `
-    <tr>
-      <td>${m}</td>
-      ${['مشاهده','ایجاد','ویرایش','حذف','چاپ','خروجی'].map(p => `
-        <td style="text-align:center;"><input type="checkbox" checked style="width:16px;height:16px;cursor:pointer;" /></td>
-      `).join('')}
-    </tr>
+// ============================================
+// HIERARCHICAL PERMISSIONS TREE ENGINE
+// ============================================
+let activePermUserId = 1;
+
+function renderPermissionsTree() {
+  const select = document.getElementById('permUserSelect');
+  const container = document.getElementById('permissionsTreeContainer');
+  const badge = document.getElementById('permUserRoleBadge');
+  const scopeText = document.getElementById('permScopeText');
+  if (!select || !container) return;
+
+  // 1. Populate User Select dropdown based on role
+  let selectableUsers = AppState.users;
+  if (currentUser && currentUser.role === 'Manager') {
+    // Manager only manages their own created Users
+    selectableUsers = AppState.users.filter(u => u.parentUserId === currentUser.id);
+  }
+
+  select.innerHTML = selectableUsers.map(u => `
+    <option value="${u.id}" ${u.id === activePermUserId ? 'selected' : ''}>
+      ${u.fullName} (${u.jobTitle || u.userType}) - [${u.username}]
+    </option>
   `).join('');
+
+  if (selectableUsers.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">هیچ کاربری جهت تنظیم دسترسی یافت نشد. ابتدا کاربر جدید تعریف نمایید.</div>`;
+    return;
+  }
+
+  // Ensure active user is in list
+  if (!selectableUsers.some(u => u.id === activePermUserId)) {
+    activePermUserId = selectableUsers[0].id;
+    select.value = activePermUserId;
+  }
+
+  const targetUser = AppState.users.find(u => u.id === activePermUserId) || selectableUsers[0];
+  
+  // Update badge
+  if (badge) {
+    badge.textContent = targetUser.userType;
+    badge.className = `badge ${targetUser.userType === 'SuperAdmin' ? 'badge-primary' : (targetUser.userType === 'Manager' ? 'badge-warning' : 'badge-secondary')}`;
+  }
+
+  // Find parent manager module constraints
+  let allowedModuleIds = null;
+  if (targetUser.parentUserId) {
+    const parentMgr = AppState.users.find(u => u.id === targetUser.parentUserId);
+    if (parentMgr && parentMgr.allowedModules && parentMgr.allowedModules.length > 0) {
+      allowedModuleIds = parentMgr.allowedModules;
+    }
+  } else if (targetUser.userType === 'Manager' && targetUser.allowedModules && targetUser.allowedModules.length > 0) {
+    allowedModuleIds = targetUser.allowedModules;
+  }
+
+  if (scopeText) {
+    if (targetUser.userType === 'SuperAdmin') {
+      scopeText.innerHTML = `🛡️ <b>ابر مدیر سیستم</b> دارای دسترسی ۱۰۰٪ و بدون محدودیت به کلیه بخش‌ها و دکمه‌های سامانه می‌باشد.`;
+    } else if (allowedModuleIds) {
+      scopeText.innerHTML = `🔒 دسترسی‌های این کاربر محدود به ماژول‌های مجاز تخصیص داده شده (<b>${allowedModuleIds.join('، ')}</b>) می‌باشد.`;
+    } else {
+      scopeText.textContent = `دسترسی‌های این کاربر در محدوده استاندارد تنظیم می‌گردد.`;
+    }
+  }
+
+  // 2. Build HTML for Hierarchical Tree
+  const userPerms = targetUser.permissionsTree || [];
+  const isSuper = targetUser.userType === 'SuperAdmin';
+
+  let treeHtml = `<div class="perm-tree-root" style="display:flex; flex-direction:column; gap:8px;">`;
+
+  SYSTEM_PERMISSIONS_HIERARCHY.forEach(mod => {
+    // If user is constrained by Manager's allowed modules, filter unallowed modules!
+    const isModuleAllowed = !allowedModuleIds || allowedModuleIds.includes(mod.id);
+    const modChecked = isSuper || (userPerms.includes(mod.id) || (userPerms.length === 0 && isModuleAllowed));
+
+    treeHtml += `
+      <div class="perm-node perm-level-1 ${isModuleAllowed ? '' : 'perm-node-disabled'}" data-node-id="${mod.id}" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-bottom:4px; opacity:${isModuleAllowed ? '1' : '0.45'};">
+        <!-- Level 1 Header -->
+        <div style="background:var(--bg-secondary); padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="tree-toggle-btn" onclick="toggleTreeNode('${mod.id}')" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem; width:20px;">▼</button>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:0.92rem; color:var(--accent-color); cursor:pointer;">
+              <input type="checkbox" class="tree-cb tree-mod-cb" value="${mod.id}" ${modChecked ? 'checked' : ''} ${!isModuleAllowed ? 'disabled' : ''} onchange="toggleTreeCheckbox(this)" style="width:16px; height:16px; cursor:pointer;" />
+              <span>${mod.title}</span>
+            </label>
+          </div>
+          <span class="badge badge-primary" style="font-size:0.75rem;">سطح ۱: ماژول اصلی</span>
+        </div>
+
+        <!-- Level 1 Children (Forms) -->
+        <div id="tree-children-${mod.id}" class="tree-children-container" style="padding:10px 18px 10px 36px; display:flex; flex-direction:column; gap:8px; background:var(--bg-card);">
+          ${(mod.children || []).map(formNode => {
+            const formChecked = isSuper || (userPerms.includes(formNode.id) || (userPerms.length === 0 && isModuleAllowed));
+            return `
+              <div class="perm-node perm-level-2" data-node-id="${formNode.id}" style="border:1px dashed var(--border-color); border-radius:6px; padding:8px 12px; background:var(--bg-primary);">
+                <!-- Level 2 Header (Form) -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button type="button" class="tree-toggle-btn" onclick="toggleTreeNode('${formNode.id}')" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem; width:16px;">▼</button>
+                    <label style="display:flex; align-items:center; gap:6px; font-weight:bold; font-size:0.86rem; color:var(--text-main); cursor:pointer;">
+                      <input type="checkbox" class="tree-cb" value="${formNode.id}" ${formChecked ? 'checked' : ''} ${!isModuleAllowed ? 'disabled' : ''} onchange="toggleTreeCheckbox(this)" style="width:15px; height:15px; cursor:pointer;" />
+                      <span>${formNode.title}</span>
+                    </label>
+                  </div>
+                  <span class="badge badge-secondary" style="font-size:0.72rem;">سطح ۲: فرم</span>
+                </div>
+
+                <!-- Level 2 Children (Tabs & Buttons) -->
+                <div id="tree-children-${formNode.id}" class="tree-children-container" style="display:flex; flex-direction:column; gap:6px; padding-right:24px;">
+                  ${(formNode.children || []).map(subGroup => {
+                    const groupChecked = isSuper || (userPerms.includes(subGroup.id) || (userPerms.length === 0 && isModuleAllowed));
+                    return `
+                      <div class="perm-node perm-level-3" data-node-id="${subGroup.id}" style="background:var(--bg-secondary); border-radius:4px; padding:6px 10px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                          <label style="display:flex; align-items:center; gap:6px; font-weight:bold; font-size:0.8rem; color:var(--text-muted); cursor:pointer;">
+                            <input type="checkbox" class="tree-cb" value="${subGroup.id}" ${groupChecked ? 'checked' : ''} ${!isModuleAllowed ? 'disabled' : ''} onchange="toggleTreeCheckbox(this)" style="width:14px; height:14px; cursor:pointer;" />
+                            <span>${subGroup.title}</span>
+                          </label>
+                          <span style="font-size:0.7rem; color:var(--text-muted);">سطح ۳</span>
+                        </div>
+
+                        <!-- Level 4 Children (Action Leaf items) -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; padding-right:16px;">
+                          ${(subGroup.children || []).map(leaf => {
+                            const leafChecked = isSuper || (userPerms.includes(leaf.id) || (userPerms.length === 0 && isModuleAllowed));
+                            return `
+                              <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--text-main); cursor:pointer; background:var(--bg-card); padding:4px 8px; border-radius:4px; border:1px solid var(--border-color);">
+                                <input type="checkbox" class="tree-cb tree-leaf-cb" value="${leaf.id}" ${leafChecked ? 'checked' : ''} ${!isModuleAllowed ? 'disabled' : ''} onchange="toggleTreeCheckbox(this)" style="width:13px; height:13px; cursor:pointer;" />
+                                <span>${leaf.title}</span>
+                              </label>
+                            `;
+                          }).join('')}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  treeHtml += `</div>`;
+  container.innerHTML = treeHtml;
 }
 
-// ============================
+function loadUserPermissionsTree(userId) {
+  activePermUserId = parseInt(userId);
+  renderPermissionsTree();
+}
+
+function toggleTreeNode(nodeId) {
+  const container = document.getElementById('tree-children-' + nodeId);
+  const btn = document.querySelector(`.perm-node[data-node-id="${nodeId}"] .tree-toggle-btn`);
+  if (!container) return;
+  if (container.style.display === 'none') {
+    container.style.display = 'flex';
+    if (btn) btn.textContent = '▼';
+  } else {
+    container.style.display = 'none';
+    if (btn) btn.textContent = '◀';
+  }
+}
+
+function expandAllTreeNodes() {
+  document.querySelectorAll('.tree-children-container').forEach(el => {
+    el.style.display = 'flex';
+  });
+  document.querySelectorAll('.tree-toggle-btn').forEach(btn => {
+    btn.textContent = '▼';
+  });
+}
+
+function collapseAllTreeNodes() {
+  document.querySelectorAll('.tree-children-container').forEach(el => {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('.tree-toggle-btn').forEach(btn => {
+    btn.textContent = '◀';
+  });
+}
+
+function selectAllAllowedTree(checkStatus) {
+  document.querySelectorAll('#permissionsTreeContainer input[type="checkbox"]:not(:disabled)').forEach(cb => {
+    cb.checked = checkStatus;
+  });
+}
+
+function toggleTreeCheckbox(cb) {
+  const checked = cb.checked;
+  const parentNode = cb.closest('.perm-node');
+  if (parentNode) {
+    // Check/uncheck all descendant checkboxes under this node
+    parentNode.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(childCb => {
+      childCb.checked = checked;
+    });
+  }
+}
+
+function saveUserPermissionsTree() {
+  const select = document.getElementById('permUserSelect');
+  const userId = parseInt(select?.value || activePermUserId);
+  const user = AppState.users.find(u => u.id === userId);
+  if (!user) {
+    alert('کاربر انتخاب شده نامعتبر است.');
+    return;
+  }
+
+  const checkedKeys = [];
+  document.querySelectorAll('#permissionsTreeContainer input[type="checkbox"]:checked').forEach(cb => {
+    checkedKeys.push(cb.value);
+  });
+
+  user.permissionsTree = checkedKeys;
+  alert(`✅ درختواره سطوح دسترسی برای کاربر «${user.fullName}» (${checkedKeys.length} آیتم دسترسی فعال) با موفقیت ذخیره گردید.`);
+}
+
+
 // ACCOUNTING MODULE
 // ============================
 function sortTreePreOrder(list) {

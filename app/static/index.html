@@ -773,11 +773,52 @@
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label class="form-label" style="font-weight:bold;">نقش سیستمی (سطح دسترسی): *</label>
-                  <select id="newUserType" class="form-select" style="height:38px; font-weight:bold;">
+                  <select id="newUserType" class="form-select" style="height:38px; font-weight:bold;" onchange="handleUserTypeChange(this.value)">
                     <option value="User">کاربر عادی (User)</option>
                     <option value="Manager">مدیر میانی (Manager)</option>
                     <option value="SuperAdmin">مدیر ارشد سیستم (SuperAdmin)</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- MANAGER SPECIAL CONFIGURATION (VISIBLE ONLY WHEN ROLE IS MANAGER) -->
+              <div id="managerConfigSection" style="display:none; background:rgba(2,132,199,0.05); border:1px solid rgba(2,132,199,0.25); border-radius:8px; padding:14px; margin-bottom:14px;">
+                <div style="font-weight:bold; color:var(--accent-color); font-size:0.92rem; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                  <span>⚙️ تنظیمات و محدودیت‌های اختصاصی مدیر میانی (ویژه سوپر ادمین)</span>
+                </div>
+
+                <div class="form-row" style="margin-bottom:10px;">
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">نوع استقرار و استفاده:</label>
+                    <select id="newMgrDeploymentType" class="form-select" style="height:34px; font-size:0.85rem;">
+                      <option value="Cloud">☁️ استفاده بصورت سرویس ابری (Cloud)</option>
+                      <option value="OnPremise">🏢 نرم‌افزار نصبی روی سرور سازمان خود (On-Premise)</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">سقف تعداد شرکت‌های مجاز:</label>
+                    <input type="number" id="newMgrMaxCompanies" class="form-input" min="1" max="99" value="1" style="height:34px;" />
+                  </div>
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">سقف کاربران یوزر مجاز:</label>
+                    <input type="number" id="newMgrMaxUsers" class="form-input" min="1" max="99" value="5" style="height:34px;" />
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label" style="font-size:0.82rem; font-weight:bold; margin-bottom:6px;">ماژول‌های مجاز برای این مدیر میانی و یوزرهایش:</label>
+                  <div id="mgrModulesCheckboxes" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px; background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="accounting" checked /> 📊 حسابداری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="inventory" checked /> 📦 انبارداری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="sales" checked /> 🛒 خرید و فروش</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="treasury" checked /> 🏦 خزانه‌داری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="payroll" checked /> 👔 حقوق و دستمزد</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="currencies" checked /> 💱 مدیریت ارزی</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="modyan" checked /> 🏛️ سامانه مودیان</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="assets" /> 🏛 اموال و دارایی</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="automation" /> ✉️ اتوماسیون</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="crm" /> 🤝 باشگاه مشتریان</label>
+                  </div>
                 </div>
               </div>
 
@@ -810,16 +851,43 @@
           </div>
         </div>
 
+        <!-- ============================================ -->
+        <!-- HIERARCHICAL PERMISSIONS TREE FORM           -->
+        <!-- ============================================ -->
         <div id="form-permissions-matrix" class="form-section">
-          <h2 class="form-heading">🔑 ماتریس سطوح دسترسی (PermissionsForm)</h2>
-          <div class="card form-card">
-            <div class="table-wrapper">
-              <table>
-                <thead><tr><th>ماژول</th><th>مشاهده</th><th>ایجاد</th><th>ویرایش</th><th>حذف</th><th>چاپ</th><th>خروجی</th></tr></thead>
-                <tbody id="permissionsMatrixBody"></tbody>
-              </table>
+          <h2 class="form-heading">🌳 درختواره سطوح دسترسی منوها، فرم‌ها، تب‌ها و دکمه‌ها (PermissionsTreeForm)</h2>
+          
+          <div class="card form-card" style="max-width:1080px; margin:0 auto 24px;">
+            <!-- Top Controls Bar -->
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; background:var(--bg-secondary); padding:14px 18px; border-radius:10px; border:1px solid var(--border-color); margin-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label style="font-weight:bold; font-size:0.92rem; color:var(--text-main); white-space:nowrap;">👤 انتخاب کاربر جهت تنظیم دسترسی:</label>
+                <select id="permUserSelect" class="form-select" style="min-width:260px; height:38px; font-weight:bold;" onchange="loadUserPermissionsTree(this.value)">
+                  <!-- Populated dynamically via app.js -->
+                </select>
+                <span id="permUserRoleBadge" class="badge badge-primary" style="font-size:0.82rem; padding:4px 10px;">User</span>
+              </div>
+
+              <!-- Hierarchy Action Buttons -->
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <button class="btn btn-outline" type="button" onclick="expandAllTreeNodes()" style="font-size:0.82rem; padding:4px 10px;" title="باز کردن همه شاخه‌ها">📂 باز کردن همه</button>
+                <button class="btn btn-outline" type="button" onclick="collapseAllTreeNodes()" style="font-size:0.82rem; padding:4px 10px;" title="بستن همه شاخه‌ها">📁 بستن همه</button>
+                <button class="btn btn-outline" type="button" onclick="selectAllAllowedTree(true)" style="font-size:0.82rem; padding:4px 10px; color:#10b981;" title="انتخاب همه موارد مجاز">✔️ انتخاب همه</button>
+                <button class="btn btn-outline" type="button" onclick="selectAllAllowedTree(false)" style="font-size:0.82rem; padding:4px 10px; color:#ef4444;" title="لغو انتخاب همه">❌ لغو انتخاب</button>
+                <button class="btn btn-primary" type="button" onclick="saveUserPermissionsTree()" style="font-size:0.85rem; padding:5px 16px; font-weight:bold;">💾 ذخیره درختواره دسترسی‌ها</button>
+              </div>
             </div>
-            <div class="form-actions"><button class="btn btn-primary" onclick="alert('ماتریس دسترسی‌ها ذخیره شد.')">💾 ذخیره تنظیمات دسترسی</button></div>
+
+            <!-- Scope Hint Banner -->
+            <div id="permScopeBanner" style="background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.84rem; color:var(--accent-color); display:flex; align-items:center; gap:8px;">
+              <span>ℹ️</span>
+              <span id="permScopeText">دسترسی‌های این کاربر در محدوده ماژول‌ها و سطوح مجاز تنظیم می‌گردد.</span>
+            </div>
+
+            <!-- Tree View Container -->
+            <div id="permissionsTreeContainer" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:16px; max-height:68vh; overflow-y:auto;">
+              <!-- Dynamically populated hierarchical tree -->
+            </div>
           </div>
         </div>
 
