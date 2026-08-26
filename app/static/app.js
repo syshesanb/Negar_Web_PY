@@ -1185,45 +1185,133 @@ function renderUsersTable() {
       <td><b>${u.username}</b></td>
       <td>${u.fullName}</td>
       <td><span class="badge badge-primary">${u.userType}</span></td>
-      <td>${u.ip}</td>
+      <td>${u.ip || '127.0.0.1'}</td>
       <td><span class="badge ${u.isActive ? 'badge-success' : 'badge-warning'}">${u.isActive ? 'فعال' : 'غیرفعال'}</span></td>
       <td>
-        <button class="btn btn-outline" style="padding:3px 8px;" onclick="toggleUserStatus(${u.id})">
-          ${u.isActive ? '🔴 غیرفعال' : '🟢 فعال'}
-        </button>
-        <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteUser(${u.id})">🗑️ حذف</button>
+        <div style="display:flex; gap:4px; justify-content:center;">
+          <button class="btn btn-outline" style="padding:2px 8px; font-size:0.78rem; cursor:pointer;" onclick="openAddUserModal(${u.id})" title="ویرایش اطلاعات کاربر">✏️ ویرایش</button>
+          <button class="btn btn-outline" style="padding:2px 8px; font-size:0.78rem; cursor:pointer;" onclick="toggleUserStatus(${u.id})" title="تغییر وضعیت">
+            ${u.isActive ? '🔴 غیرفعال' : '🟢 فعال'}
+          </button>
+          ${u.id !== 1 ? `<button class="btn btn-outline" style="padding:2px 8px; font-size:0.78rem; color:#ef4444; cursor:pointer;" onclick="deleteUser(${u.id})" title="حذف کاربر">🗑️ حذف</button>` : ''}
+        </div>
       </td>
     </tr>
   `).join('');
 }
 
+function openAddUserModal(userId = null) {
+  const modal = document.getElementById('userModalOverlay');
+  const title = document.getElementById('userModalTitle');
+  if (!modal) return;
+
+  if (userId) {
+    const user = AppState.users.find(u => u.id === userId);
+    if (!user) return;
+    if (title) title.innerHTML = `✏️ ویرایش مشخصات کاربر: <b>${user.fullName}</b>`;
+    document.getElementById('userEditId').value = user.id;
+    document.getElementById('newUsername').value = user.username || '';
+    document.getElementById('newFullName').value = user.fullName || '';
+    if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = user.password || '';
+    if (document.getElementById('newUserType')) document.getElementById('newUserType').value = user.userType || 'User';
+    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = user.ip || '127.0.0.1';
+    if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = user.isActive !== false;
+  } else {
+    if (title) title.innerHTML = `👤 تعریف کاربر جدید`;
+    document.getElementById('userEditId').value = '';
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newFullName').value = '';
+    if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = '';
+    if (document.getElementById('newUserType')) document.getElementById('newUserType').value = 'User';
+    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = '127.0.0.1';
+    if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = true;
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('newUsername')?.focus();
+  }, 50);
+}
+
 function openAddUserRow() {
-  document.getElementById('addUserRow').style.display = 'block';
-  document.getElementById('newUsername').focus();
+  openAddUserModal();
+}
+
+function closeUserModal() {
+  const modal = document.getElementById('userModalOverlay');
+  if (modal) modal.style.display = 'none';
 }
 
 function saveNewUser() {
+  const editId = document.getElementById('userEditId')?.value;
   const username = document.getElementById('newUsername')?.value?.trim();
   const fullName = document.getElementById('newFullName')?.value?.trim();
-  const userType = document.getElementById('newUserType')?.value;
-  if (!username || !fullName) { alert('نام کاربری و نام کامل الزامی هستند.'); return; }
-  if (AppState.users.find(u => u.username === username)) { alert('این نام کاربری قبلاً ثبت شده است.'); return; }
-  AppState.users.push({ id: Date.now(), username, fullName, userType, isActive: true, ip: '127.0.0.1' });
-  document.getElementById('newUsername').value = '';
-  document.getElementById('newFullName').value = '';
-  document.getElementById('addUserRow').style.display = 'none';
+  const password = document.getElementById('newUserPassword')?.value;
+  const userType = document.getElementById('newUserType')?.value || 'User';
+  const ip = document.getElementById('newUserIp')?.value?.trim() || '127.0.0.1';
+  const isActive = document.getElementById('newUserIsActive')?.checked !== false;
+
+  if (!username || !fullName) {
+    alert('نام کاربری و نام کامل الزامی هستند.');
+    return;
+  }
+
+  if (editId) {
+    // EDIT
+    const user = AppState.users.find(u => u.id === parseInt(editId));
+    if (user) {
+      // Check duplicate username if changed
+      const dup = AppState.users.find(u => u.username === username && u.id !== user.id);
+      if (dup) {
+        alert('این نام کاربری قبلاً برای کاربر دیگری ثبت شده است.');
+        return;
+      }
+      user.username = username;
+      user.fullName = fullName;
+      if (password) user.password = password;
+      user.userType = userType;
+      user.ip = ip;
+      user.isActive = isActive;
+      alert(`مشخصات کاربر "${fullName}" با موفقیت به‌روزرسانی شد.`);
+    }
+  } else {
+    // CREATE
+    if (AppState.users.find(u => u.username === username)) {
+      alert('این نام کاربری قبلاً ثبت شده است.');
+      return;
+    }
+    AppState.users.push({
+      id: Date.now(),
+      username,
+      fullName,
+      password: password || '123456',
+      userType,
+      isActive,
+      ip
+    });
+    alert(`کاربر جدید "${username}" با موفقیت اضافه شد.`);
+  }
+
+  closeUserModal();
   renderUsersTable();
-  alert(`کاربر "${username}" با موفقیت اضافه شد.`);
 }
 
 function toggleUserStatus(userId) {
   const user = AppState.users.find(u => u.id === userId);
-  if (user) { user.isActive = !user.isActive; renderUsersTable(); }
+  if (user) {
+    user.isActive = !user.isActive;
+    renderUsersTable();
+  }
 }
 
 function deleteUser(userId) {
-  if (userId === 1) { alert('حذف مدیر ارشد سیستم مجاز نیست.'); return; }
-  if (confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
+  if (userId === 1) {
+    alert('حذف مدیر ارشد سیستم مجاز نیست.');
+    return;
+  }
+  const user = AppState.users.find(u => u.id === userId);
+  const name = user ? user.fullName : 'این کاربر';
+  if (confirm(`آیا از حذف کاربر «${name}» اطمینان دارید؟`)) {
     AppState.users = AppState.users.filter(u => u.id !== userId);
     renderUsersTable();
   }
