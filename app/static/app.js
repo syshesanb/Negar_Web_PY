@@ -399,7 +399,9 @@ const AppState = {
       website: 'www.negar-erp.ir',
       address: 'تهران، خیابان ولیعصر، پلاک ۱۰۰',
       notes: 'شرکت اصلی و پیش‌فرض سیستم نگار',
-      activeYear: '1403'
+      activeYear: '1403',
+      ownerUserId: 1,       // مرتبط با سوپر ادمین (id=1)
+      creatorIp: '*'        // ایجاد شده توسط سوپر ادمین
     }
   ],
   fiscalYears: [
@@ -6501,13 +6503,83 @@ function lockApp() {
 // ============================
 // COMPANIES MODULE
 // ============================
+
+/**
+ * Returns only the companies visible to the currently logged-in user:
+ * - SuperAdmin  → sees ALL companies
+ * - Manager     → sees only companies where ownerUserId === currentUser.id
+ * - User        → sees only companies owned by their parent Manager
+ */
+function getVisibleCompanies() {
+  if (!currentUser) return AppState.companies;
+
+  const role = currentUser.role || currentUser.userType;
+
+  if (role === 'SuperAdmin') {
+    return AppState.companies;
+  }
+
+  if (role === 'Manager') {
+    return AppState.companies.filter(c => c.ownerUserId === currentUser.id);
+  }
+
+  // Regular User: see companies belonging to their manager
+  const parentMgr = AppState.users.find(u => u.id === currentUser.parentUserId);
+  if (parentMgr) {
+    return AppState.companies.filter(c => c.ownerUserId === parentMgr.id);
+  }
+
+  return AppState.companies;
+}
+
 function renderCompaniesTable() {
   const tbody = document.getElementById('companiesTableBody');
   if (!tbody) return;
-  tbody.innerHTML = AppState.companies.map(c => `
+
+  const visible = getVisibleCompanies();
+
+  // Quota info banner for Manager
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isManager = role === 'Manager';
+  let quotaHtml = '';
+  if (isManager) {
+    const max = currentUser.maxCompanies || 1;
+    const used = visible.length;
+    const pct = Math.min(100, Math.round((used / max) * 100));
+    const barColor = used >= max ? '#ef4444' : (used >= max * 0.8 ? '#f59e0b' : '#22c55e');
+    quotaHtml = `
+      <tr>
+        <td colspan="7" style="padding:8px 12px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color);">
+          <div style="display:flex; align-items:center; gap:10px; font-size:0.82rem;">
+            <span style="font-weight:bold;">🏢 سقف شرکت‌های مجاز شما:</span>
+            <div style="flex:1; max-width:200px; background:var(--border-color); border-radius:4px; height:8px; overflow:hidden;">
+              <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px; transition:width 0.3s;"></div>
+            </div>
+            <span style="font-weight:bold; color:${barColor};">${used} از ${max} شرکت استفاده شده</span>
+            ${used >= max ? '<span style="color:#ef4444; font-weight:bold;">⚠️ ظرفیت پر شده</span>' : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  if (visible.length === 0) {
+    tbody.innerHTML = quotaHtml + `
+      <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
+        هیچ شرکتی برای نمایش وجود ندارد. ابتدا شرکت جدید تعریف نمایید.
+      </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = quotaHtml + visible.map(c => {
+    // Find owner label
+    const ownerUser = AppState.users.find(u => u.id === c.ownerUserId);
+    const ownerLabel = ownerUser ? `<span title="مدیر: ${ownerUser.fullName} | آی‌پی: ${ownerUser.ip || c.creatorIp || '*'}" style="font-size:0.72rem; color:var(--text-muted); display:block;">${ownerUser.fullName}</span>` : '';
+
+    return `
     <tr>
       <td><b>${c.code}</b></td>
-      <td><b>${c.name}</b></td>
+      <td><b>${c.name}</b>${ownerLabel}</td>
       <td style="font-size:0.82rem;">${c.ecoCode || '-'}</td>
       <td>${c.phone || '-'}</td>
       <td style="font-size:0.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.address || ''}">${c.address || '-'}</td>
@@ -6517,7 +6589,261 @@ function renderCompaniesTable() {
         <button class="btn btn-outline" style="padding:3px 10px;color:red;" onclick="deleteCompany(${c.id})">🗑️ حذف</button>
       </td>
     </tr>
-  `).join('');
+  `}).join('');
+}
+
+function openCompanyForm(companyId) {
+  const modal = document.getElementById('companyModalOverlay');
+  const title = document.getElementById('companyFormTitle');
+  if (!modal) return;
+
+  // Manager quota check before adding a new company
+  if (companyId === null) {
+    const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+    if (role === 'Manager') {
+      const owned = AppState.companies.filter(c => c.ownerUserId === currentUser.id).length;
+      const max = currentUser.maxCompanies || 1;
+      if (owned >= max) {
+        alert(`⚠️ سقف ایجاد شرکت برای شما (${max} شرکت) به پایان رسیده است.\nجهت افزایش سقف با ابر مدیر سیستم تماس بگیرید.`);
+        return;
+      }
+    }
+  }
+
+  modal.style.display = 'flex';
+
+  if (companyId === null) {
+    // NEW company mode
+    title.textContent = '🏢 تعریف شرکت جدید';
+    document.getElementById('editingCompanyId').value = '';
+    document.getElementById('compCode').value = '';
+    document.getElementById('compName').value = '';
+    document.getElementById('compEcoCode').value = '';
+    document.getElementById('compPhone').value = '';
+    document.getElementById('compFax').value = '';
+    document.getElementById('compPostalCode').value = '';
+    document.getElementById('compEmail').value = '';
+    document.getElementById('compWebsite').value = '';
+    document.getElementById('compAddress').value = '';
+    document.getElementById('compNotes').value = '';
+    document.getElementById('compActiveYear').value = '1403';
+    
+    // New fields:
+    if (document.getElementById('compLegalType')) document.getElementById('compLegalType').value = 'سهامی خاص';
+    if (document.getElementById('compRegNo')) document.getElementById('compRegNo').value = '';
+    if (document.getElementById('compNationalId')) document.getElementById('compNationalId').value = '';
+    if (document.getElementById('compRegDate')) document.getElementById('compRegDate').value = '';
+    if (document.getElementById('compActivity')) document.getElementById('compActivity').value = '';
+    if (document.getElementById('compFactoryAddress')) document.getElementById('compFactoryAddress').value = '';
+    if (document.getElementById('compCurrency')) updateCurrencyDropdown('ریال ایران');
+    if (document.getElementById('compModyanUniqueId')) document.getElementById('compModyanUniqueId').value = '';
+    if (document.getElementById('compInsuranceCode')) document.getElementById('compInsuranceCode').value = '';
+    if (document.getElementById('compVatRate')) document.getElementById('compVatRate').value = '10';
+    if (document.getElementById('compModyanPrivateKey')) document.getElementById('compModyanPrivateKey').value = '';
+    if (document.getElementById('compLicenseNo')) document.getElementById('compLicenseNo').value = '';
+    if (document.getElementById('compLicenseExpiry')) document.getElementById('compLicenseExpiry').value = '';
+    if (document.getElementById('compShenaseSenfi')) document.getElementById('compShenaseSenfi').value = '';
+    if (document.getElementById('compCEO')) document.getElementById('compCEO').value = '';
+    if (document.getElementById('compCeoNationalId')) document.getElementById('compCeoNationalId').value = '';
+    if (document.getElementById('compCeoPhone')) document.getElementById('compCeoPhone').value = '';
+    if (document.getElementById('compPageOpenMode')) document.getElementById('compPageOpenMode').value = 'unique';
+    loadCurrencies('ریال ایران');
+  } else {
+    // EDIT mode: load existing data
+    const company = AppState.companies.find(c => c.id === companyId);
+    if (!company) return;
+    title.textContent = `✏️ ویرایش مشخصات شرکت: ${company.name}`;
+    document.getElementById('editingCompanyId').value = company.id;
+    document.getElementById('compCode').value = company.code;
+    document.getElementById('compName').value = company.name;
+    document.getElementById('compEcoCode').value = company.ecoCode || '';
+    document.getElementById('compPhone').value = company.phone || '';
+    document.getElementById('compFax').value = company.fax || '';
+    document.getElementById('compPostalCode').value = company.postalCode || '';
+    document.getElementById('compEmail').value = company.email || '';
+    document.getElementById('compWebsite').value = company.website || '';
+    document.getElementById('compAddress').value = company.address || '';
+    document.getElementById('compNotes').value = company.notes || '';
+    document.getElementById('compActiveYear').value = company.activeYear || '1403';
+
+    // New fields:
+    if (document.getElementById('compLegalType')) document.getElementById('compLegalType').value = company.legalType || 'سهامی خاص';
+    if (document.getElementById('compRegNo')) document.getElementById('compRegNo').value = company.regNo || '';
+    if (document.getElementById('compNationalId')) document.getElementById('compNationalId').value = company.nationalId || '';
+    if (document.getElementById('compRegDate')) document.getElementById('compRegDate').value = company.regDate || '';
+    if (document.getElementById('compActivity')) document.getElementById('compActivity').value = company.activity || '';
+    if (document.getElementById('compFactoryAddress')) document.getElementById('compFactoryAddress').value = company.factoryAddress || '';
+    if (document.getElementById('compCurrency')) updateCurrencyDropdown(company.currency || 'ریال ایران');
+    if (document.getElementById('compModyanUniqueId')) document.getElementById('compModyanUniqueId').value = company.modyanUniqueId || '';
+    if (document.getElementById('compInsuranceCode')) document.getElementById('compInsuranceCode').value = company.insuranceCode || '';
+    if (document.getElementById('compVatRate')) document.getElementById('compVatRate').value = company.vatRate || '10';
+    if (document.getElementById('compModyanPrivateKey')) document.getElementById('compModyanPrivateKey').value = company.modyanPrivateKey || '';
+    if (document.getElementById('compLicenseNo')) document.getElementById('compLicenseNo').value = company.licenseNo || '';
+    if (document.getElementById('compLicenseExpiry')) document.getElementById('compLicenseExpiry').value = company.licenseExpiry || '';
+    if (document.getElementById('compShenaseSenfi')) document.getElementById('compShenaseSenfi').value = company.shenaseSenfi || '';
+    if (document.getElementById('compCEO')) document.getElementById('compCEO').value = company.ceo || '';
+    if (document.getElementById('compCeoNationalId')) document.getElementById('compCeoNationalId').value = company.ceoNationalId || '';
+    if (document.getElementById('compCeoPhone')) document.getElementById('compCeoPhone').value = company.ceoPhone || '';
+    if (document.getElementById('compPageOpenMode')) document.getElementById('compPageOpenMode').value = company.pageOpenMode || 'unique';
+    loadCurrencies(company.currency || 'ریال ایران');
+  }
+
+  if (companyId === null) {
+    loadCurrencies('ریال ایران');
+  }
+
+  // Reset active tab to General when opening
+  switchCompanyFormTab('general');
+
+  setTimeout(() => document.getElementById('compCode')?.focus(), 100);
+}
+
+function closeCompanyForm() {
+  const modal = document.getElementById('companyModalOverlay');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveCompany() {
+  const editingId = document.getElementById('editingCompanyId')?.value;
+  const code = document.getElementById('compCode')?.value?.trim();
+  const name = document.getElementById('compName')?.value?.trim();
+  const ecoCode = document.getElementById('compEcoCode')?.value?.trim();
+  const phone = document.getElementById('compPhone')?.value?.trim();
+  const fax = document.getElementById('compFax')?.value?.trim();
+  const postalCode = document.getElementById('compPostalCode')?.value?.trim();
+  const email = document.getElementById('compEmail')?.value?.trim();
+  const website = document.getElementById('compWebsite')?.value?.trim();
+  const address = document.getElementById('compAddress')?.value?.trim();
+  const notes = document.getElementById('compNotes')?.value?.trim();
+  const activeYear = document.getElementById('compActiveYear')?.value;
+  const pageOpenMode = document.getElementById('compPageOpenMode')?.value || 'unique';
+
+  // New fields:
+  const legalType = document.getElementById('compLegalType')?.value;
+  const regNo = document.getElementById('compRegNo')?.value?.trim();
+  const nationalId = document.getElementById('compNationalId')?.value?.trim();
+  const regDate = document.getElementById('compRegDate')?.value?.trim();
+  const activity = document.getElementById('compActivity')?.value?.trim();
+  const factoryAddress = document.getElementById('compFactoryAddress')?.value?.trim();
+  const currency = document.getElementById('compCurrency')?.value;
+  const modyanUniqueId = document.getElementById('compModyanUniqueId')?.value?.trim();
+  const insuranceCode = document.getElementById('compInsuranceCode')?.value?.trim();
+  const vatRate = document.getElementById('compVatRate')?.value?.trim();
+  const modyanPrivateKey = document.getElementById('compModyanPrivateKey')?.value?.trim();
+  const licenseNo = document.getElementById('compLicenseNo')?.value?.trim();
+  const licenseExpiry = document.getElementById('compLicenseExpiry')?.value?.trim();
+  const shenaseSenfi = document.getElementById('compShenaseSenfi')?.value?.trim();
+  const ceo = document.getElementById('compCEO')?.value?.trim();
+  const ceoNationalId = document.getElementById('compCeoNationalId')?.value?.trim();
+  const ceoPhone = document.getElementById('compCeoPhone')?.value?.trim();
+
+  // Get logo
+  const logo = currentCompLogoBase64;
+
+  // Get bank accounts from rows
+  const bankAccounts = [];
+  document.querySelectorAll('.comp-bank-account-row').forEach(row => {
+    const bankName = row.querySelector('.comp-bank-name')?.value?.trim();
+    const branchName = row.querySelector('.comp-bank-branch')?.value?.trim();
+    const accountType = row.querySelector('.comp-bank-type')?.value?.trim();
+    const accountNo = row.querySelector('.comp-bank-no')?.value?.trim();
+    const shiba = row.querySelector('.comp-bank-shiba')?.value?.trim();
+    const cardNo = row.querySelector('.comp-bank-card')?.value?.trim();
+    const address = row.querySelector('.comp-bank-address')?.value?.trim();
+
+    if (bankName || accountNo) {
+      bankAccounts.push({ bankName, branchName, accountType, accountNo, shiba, cardNo, address });
+    }
+  });
+
+  // Get signatories from rows
+  const signatories = [];
+  document.querySelectorAll('.comp-signatory-row').forEach(row => {
+    const name = row.querySelector('.comp-sign-name')?.value?.trim();
+    const role = row.querySelector('.comp-sign-role')?.value?.trim();
+    const isActive = row.querySelector('.comp-sign-active')?.checked || false;
+
+    if (name) {
+      signatories.push({ name, role, isActive });
+    }
+  });
+
+  // Validation
+  if (!code) { alert('کد شرکت الزامی است.'); document.getElementById('compCode').focus(); return; }
+  if (!name) { alert('نام شرکت الزامی است.'); document.getElementById('compName').focus(); return; }
+
+  // Determine ownerUserId and creatorIp for the new company
+  const ownerUserId = currentUser ? currentUser.id : 1;
+  const creatorIp = currentUser ? (currentUser.ip || '*') : '*';
+
+  const newCompanyData = {
+    code, name, ecoCode, phone, fax, postalCode, email, website, address, notes, activeYear, pageOpenMode,
+    legalType, regNo, nationalId, regDate, activity, factoryAddress, currency, 
+    modyanUniqueId, insuranceCode, vatRate, modyanPrivateKey,
+    licenseNo, licenseExpiry, shenaseSenfi, ceo, ceoNationalId, ceoPhone,
+    logo, bankAccounts, signatories
+  };
+
+  if (SessionState.company && SessionState.company.code === code) {
+    SessionState.company.pageOpenMode = pageOpenMode;
+  }
+
+  if (editingId) {
+    // UPDATE existing company (do NOT change ownerUserId)
+    const idx = AppState.companies.findIndex(c => c.id === Number(editingId));
+    if (idx !== -1) {
+      AppState.companies[idx] = { ...AppState.companies[idx], ...newCompanyData };
+      alert(`شرکت "${name}" با موفقیت بروزرسانی شد.`);
+    }
+  } else {
+    // CHECK duplicate code
+    if (AppState.companies.find(c => c.code === code)) {
+      alert(`کد شرکت "${code}" قبلاً ثبت شده است. لطفاً کد منحصربفرد وارد کنید.`);
+      document.getElementById('compCode').focus();
+      return;
+    }
+    // CREATE new company — stamp with owner and creator IP
+    const newId = Date.now();
+    AppState.companies.push({
+      id: newId,
+      ownerUserId,     // UserID مدیر میانی یا سوپر ادمین ایجادکننده
+      creatorIp,       // آی‌پی مدیر میانی ایجادکننده
+      ...newCompanyData
+    });
+    // بارگذاری کدینگ پیش‌فرض برای شرکت جدید
+    initializeCompanyAccounts(code);
+    alert(`شرکت جدید "${name}" با موفقیت ثبت شد.\n🏷️ مالک: ${currentUser?.fullName || 'سوپر ادمین'} | آی‌پی: ${creatorIp}`);
+  }
+
+  try {
+    localStorage.setItem('negar_companies', JSON.stringify(AppState.companies));
+  } catch(e) {}
+
+  closeCompanyForm();
+  renderCompaniesTable();
+}
+
+function deleteCompany(companyId) {
+  const company = AppState.companies.find(c => c.id === companyId);
+  if (!company) return;
+
+  // Manager can only delete their own companies
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  if (role === 'Manager' && company.ownerUserId !== currentUser.id) {
+    alert('شما مجاز به حذف شرکت‌های سایر مدیران نمی‌باشید.');
+    return;
+  }
+
+  const visible = getVisibleCompanies();
+  if (visible.length === 1 && role !== 'SuperAdmin') {
+    alert('حداقل یک شرکت باید در سیستم تعریف شده باشد. امکان حذف آخرین شرکت وجود ندارد.');
+    return;
+  }
+  if (confirm(`آیا از حذف شرکت "${company.name}" (کد: ${company.code}) اطمینان دارید؟`)) {
+    AppState.companies = AppState.companies.filter(c => c.id !== companyId);
+    renderCompaniesTable();
+    alert(`شرکت "${company.name}" با موفقیت حذف شد.`);
+  }
 }
 
 function switchCompanyFormTab(tabId) {
