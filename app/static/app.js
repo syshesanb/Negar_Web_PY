@@ -1781,9 +1781,7 @@ function handleUserTypeChange(roleValue) {
   const mgrSec = document.getElementById('managerConfigSection');
   if (!mgrSec) return;
   
-  // Only SuperAdmin can configure Manager limits
-  const isSuperAdmin = !currentUser || currentUser.role === 'SuperAdmin' || currentUser.username === 'admin';
-  if (roleValue === 'Manager' && isSuperAdmin) {
+  if (roleValue === 'Manager') {
     mgrSec.style.display = 'block';
   } else {
     mgrSec.style.display = 'none';

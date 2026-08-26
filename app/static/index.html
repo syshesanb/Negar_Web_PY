@@ -782,42 +782,48 @@
               </div>
 
               <!-- MANAGER SPECIAL CONFIGURATION (VISIBLE ONLY WHEN ROLE IS MANAGER) -->
-              <div id="managerConfigSection" style="display:none; background:rgba(2,132,199,0.05); border:1px solid rgba(2,132,199,0.25); border-radius:8px; padding:14px; margin-bottom:14px;">
-                <div style="font-weight:bold; color:var(--accent-color); font-size:0.92rem; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                  <span>⚙️ تنظیمات و محدودیت‌های اختصاصی مدیر میانی (ویژه سوپر ادمین)</span>
+              <div id="managerConfigSection" style="display:none; background:rgba(2,132,199,0.06); border:1.5px solid var(--accent-color); border-radius:10px; padding:16px; margin-bottom:14px; box-shadow:0 4px 12px rgba(2,132,199,0.1);">
+                <div style="font-weight:bold; color:var(--accent-color); font-size:0.95rem; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                  <span>⚡ تنظیمات و اختیارات اختصاصی مدیر میانی (تعریف شده توسط سوپر ادمین):</span>
                 </div>
 
-                <div class="form-row" style="margin-bottom:10px;">
-                  <div class="form-group" style="flex:1;">
-                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">نوع استقرار و استفاده:</label>
-                    <select id="newMgrDeploymentType" class="form-select" style="height:34px; font-size:0.85rem;">
+                <div class="form-row" style="margin-bottom:12px; gap:10px;">
+                  <!-- 1. نوع استفاده و استقرار -->
+                  <div class="form-group" style="flex:1.3;">
+                    <label class="form-label" style="font-size:0.84rem; font-weight:bold; color:var(--text-main);">🌐 نوع استفاده و استقرار برنامه:</label>
+                    <select id="newMgrDeploymentType" class="form-select" style="height:38px; font-size:0.85rem; font-weight:bold;">
                       <option value="Cloud">☁️ استفاده بصورت سرویس ابری (Cloud)</option>
-                      <option value="OnPremise">🏢 نرم‌افزار نصبی روی سرور سازمان خود (On-Premise)</option>
+                      <option value="OnPremise">🏢 نرم‌افزار نصبی روی سرور سازمان (On-Premise)</option>
                     </select>
                   </div>
+
+                  <!-- 2. سقف تعداد شرکت‌های مجاز -->
                   <div class="form-group" style="flex:1;">
-                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">سقف تعداد شرکت‌های مجاز:</label>
-                    <input type="number" id="newMgrMaxCompanies" class="form-input" min="1" max="99" value="1" style="height:34px;" />
+                    <label class="form-label" style="font-size:0.84rem; font-weight:bold; color:var(--text-main);">🏢 سقف شرکت‌های مجاز:</label>
+                    <input type="number" id="newMgrMaxCompanies" class="form-input" min="1" max="99" value="1" style="height:38px; font-weight:bold;" title="حداکثر تعداد شرکتی که این مدیر میانی می‌تواند تعریف کند" />
                   </div>
+
+                  <!-- 3. سقف کاربران یوزر مجاز (استفاده همزمان) -->
                   <div class="form-group" style="flex:1;">
-                    <label class="form-label" style="font-size:0.82rem; font-weight:bold;">سقف کاربران یوزر مجاز:</label>
-                    <input type="number" id="newMgrMaxUsers" class="form-input" min="1" max="99" value="5" style="height:34px;" />
+                    <label class="form-label" style="font-size:0.84rem; font-weight:bold; color:var(--text-main);">👥 سقف یوزرهای همزمان:</label>
+                    <input type="number" id="newMgrMaxUsers" class="form-input" min="1" max="99" value="5" style="height:38px; font-weight:bold;" title="حداکثر تعداد کاربر یوزری که این مدیر میانی می‌تواند برای استفاده همزمان ایجاد کند" />
                   </div>
                 </div>
 
+                <!-- ماژول‌های مجاز -->
                 <div class="form-group" style="margin-bottom:0;">
-                  <label class="form-label" style="font-size:0.82rem; font-weight:bold; margin-bottom:6px;">ماژول‌های مجاز برای این مدیر میانی و یوزرهایش:</label>
-                  <div id="mgrModulesCheckboxes" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px; background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="accounting" checked /> 📊 حسابداری</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="inventory" checked /> 📦 انبارداری</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="sales" checked /> 🛒 خرید و فروش</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="treasury" checked /> 🏦 خزانه‌داری</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="payroll" checked /> 👔 حقوق و دستمزد</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="currencies" checked /> 💱 مدیریت ارزی</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="modyan" checked /> 🏛️ سامانه مودیان</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="assets" /> 🏛 اموال و دارایی</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="automation" /> ✉️ اتوماسیون</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;"><input type="checkbox" value="crm" /> 🤝 باشگاه مشتریان</label>
+                  <label class="form-label" style="font-size:0.84rem; font-weight:bold; margin-bottom:8px; color:var(--text-main);">📦 ماژول‌های مجاز برنامه جهت استفاده این مدیر و یوزرهایش:</label>
+                  <div id="mgrModulesCheckboxes" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:8px; background:var(--bg-card); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color);">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="accounting" checked /> 📊 حسابداری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="inventory" checked /> 📦 انبارداری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="sales" checked /> 🛒 خرید و فروش</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="treasury" checked /> 🏦 خزانه‌داری</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="payroll" checked /> 👔 حقوق و دستمزد</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="currencies" checked /> 💱 مدیریت ارزی</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="modyan" checked /> 🏛️ سامانه مودیان</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="assets" /> 🏛 اموال و دارایی</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="automation" /> ✉️ اتوماسیون</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer; font-weight:bold;"><input type="checkbox" value="crm" /> 🤝 باشگاه مشتریان</label>
                   </div>
                 </div>
               </div>
