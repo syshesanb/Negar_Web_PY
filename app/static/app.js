@@ -1781,6 +1781,12 @@ function handleUserTypeChange(roleValue) {
   const mgrSec = document.getElementById('managerConfigSection');
   if (!mgrSec) return;
   
+  const isManager = currentUser && (currentUser.role === 'Manager' || currentUser.userType === 'Manager');
+  if (isManager) {
+    mgrSec.style.display = 'none';
+    return;
+  }
+
   if (roleValue === 'Manager') {
     mgrSec.style.display = 'block';
   } else {
@@ -1795,15 +1801,15 @@ function openAddUserModal(userId = null) {
   const mgrSec = document.getElementById('managerConfigSection');
   if (!modal) return;
 
-  const isSuperAdmin = !currentUser || currentUser.role === 'SuperAdmin' || currentUser.username === 'admin';
-  const isManager = currentUser && currentUser.role === 'Manager';
+  const isSuperAdmin = !currentUser || currentUser.role === 'SuperAdmin' || currentUser.userType === 'SuperAdmin' || currentUser.username === 'admin';
+  const isManager = currentUser && (currentUser.role === 'Manager' || currentUser.userType === 'Manager');
 
-  // If logged-in user is a Manager, enforce limits
+  // If logged-in user is a Manager, enforce limits and block creating other managers
   if (isManager && !userId) {
     const existingCount = AppState.users.filter(u => u.parentUserId === currentUser.id).length;
     const maxAllowed = currentUser.maxUsers || 5;
     if (existingCount >= maxAllowed) {
-      alert(`⚠️ سقف ایجاد کاربر برای شما (${maxAllowed} کاربر) به پایان رسیده است. جهت افزایش سقف با ابر مدیر تماس بگیرید.`);
+      alert(`⚠️ سقف ایجاد کاربر برای شما (${maxAllowed} کاربر همزمان) به پایان رسیده است. جهت افزایش سقف با ابر مدیر تماس بگیرید.`);
       return;
     }
   }
@@ -1811,8 +1817,11 @@ function openAddUserModal(userId = null) {
   // Adjust role options in dropdown based on who is logged in
   if (typeSelect) {
     if (isManager) {
-      typeSelect.innerHTML = `<option value="User">کاربر عادی (User)</option>`;
+      // A Manager can ONLY create/edit regular Users
+      typeSelect.innerHTML = `<option value="User" selected>کاربر عادی (User) [محدود به مدیر میانی]</option>`;
+      typeSelect.disabled = true;
     } else {
+      typeSelect.disabled = false;
       typeSelect.innerHTML = `
         <option value="User">کاربر عادی (User)</option>
         <option value="Manager">مدیر میانی (Manager)</option>
@@ -1830,7 +1839,7 @@ function openAddUserModal(userId = null) {
     document.getElementById('newFullName').value = user.fullName || '';
     if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = user.jobTitle || '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = user.password || '';
-    if (typeSelect) typeSelect.value = user.userType || 'User';
+    if (typeSelect && !isManager) typeSelect.value = user.userType || 'User';
     if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = user.ip || '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = user.isActive !== false;
 
@@ -1846,7 +1855,7 @@ function openAddUserModal(userId = null) {
       cb.checked = allowed.includes(cb.value);
     });
 
-    handleUserTypeChange(user.userType);
+    handleUserTypeChange(isManager ? 'User' : user.userType);
   } else {
     if (title) title.innerHTML = `👤 تعریف کاربر جدید`;
     document.getElementById('userEditId').value = '';
@@ -1854,7 +1863,7 @@ function openAddUserModal(userId = null) {
     document.getElementById('newFullName').value = '';
     if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = '';
-    if (typeSelect) typeSelect.value = isManager ? 'User' : 'User';
+    if (typeSelect && !isManager) typeSelect.value = 'User';
     if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = true;
 
@@ -1891,9 +1900,13 @@ function saveNewUser() {
   const fullName = document.getElementById('newFullName')?.value?.trim();
   const jobTitle = document.getElementById('newUserJobTitle')?.value?.trim() || 'کارشناس سازمانی';
   const password = document.getElementById('newUserPassword')?.value;
-  const userType = document.getElementById('newUserType')?.value || 'User';
+  const rawUserType = document.getElementById('newUserType')?.value || 'User';
   const ip = document.getElementById('newUserIp')?.value?.trim() || '*';
   const isActive = document.getElementById('newUserIsActive')?.checked !== false;
+
+  const isManager = currentUser && (currentUser.role === 'Manager' || currentUser.userType === 'Manager');
+  // Manager is STRICTLY forced to only create/manage 'User' role
+  const userType = isManager ? 'User' : rawUserType;
 
   const deploymentType = document.getElementById('newMgrDeploymentType')?.value || 'Cloud';
   const maxCompanies = parseInt(document.getElementById('newMgrMaxCompanies')?.value || '1');
@@ -1925,7 +1938,7 @@ function saveNewUser() {
       user.userType = userType;
       user.ip = ip;
       user.isActive = isActive;
-      if (userType === 'Manager') {
+      if (userType === 'Manager' && !isManager) {
         user.deploymentType = deploymentType;
         user.maxCompanies = maxCompanies;
         user.maxUsers = maxUsers;
