@@ -906,6 +906,7 @@ function updateDocumentTitle(formId, customSubTitle) {
     'form-backup': 'پشتیبان‌گیری',
     'form-restore': 'بازیابی اطلاعات',
     'form-theme-manager': 'مدیریت تم‌ها',
+    'form-license-info': 'وضعیت استقرار و لایسنس سامانه',
     'form-lock': 'قفل سیستم',
     'form-about': 'درباره نگار',
     'form-contact': 'تماس با ما',
