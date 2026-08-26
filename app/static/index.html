@@ -286,6 +286,10 @@
             <div class="tile-icon-box tile-purple">📋</div>
             <div class="tile-title">سوابق و لاگ فعالیت‌های کاربران</div>
           </div>
+          <div class="tile-card" onclick="showForm('form-license-info')">
+            <div class="tile-icon-box tile-blue" style="background:linear-gradient(135deg, #0ea5e9, #0284c7);">🔐</div>
+            <div class="tile-title">وضعیت استقرار و لایسنس سامانه</div>
+          </div>
         </div>
       </div>
 
@@ -842,6 +846,76 @@
               </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- ---- LICENSE & DUAL-MODE DEPLOYMENT FORM ---- -->
+        <div id="form-license-info" class="form-section">
+          <h2 class="form-heading">🔐 وضعیت استقرار و لایسنس سامانه (License & Deployment)</h2>
+          
+          <div class="card form-card" style="max-width:1080px; margin:0 auto 24px;">
+            <!-- Status Highlights -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:20px;">
+              <!-- 1. Deployment Mode -->
+              <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:bold;">نوع معماری و استقرار:</span>
+                <span id="licDeploymentMode" style="font-size:1.05rem; font-weight:bold; color:var(--accent-color);">🏢 سرور اختصاصی سازمان (On-Premise)</span>
+                <span style="font-size:0.75rem; color:var(--text-muted);">پشتیبانی از سرور اختصاصی و سرویس ابری</span>
+              </div>
+
+              <!-- 2. Validity Status -->
+              <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:bold;">وضعیت اعتبار نرم‌افزار:</span>
+                <span id="licStatusTitle" style="font-size:1.05rem; font-weight:bold; color:#10b981;">🟢 فعال و قانونی</span>
+                <span id="licCustomerName" style="font-size:0.82rem; font-weight:bold; color:var(--text-main);">شرکت نمونه نگار</span>
+              </div>
+
+              <!-- 3. Capacity (Users & Companies) -->
+              <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:bold;">ظرفیت کاربران و شرکت‌ها:</span>
+                <div style="display:flex; justify-content:space-between; font-size:0.88rem; font-weight:bold;">
+                  <span>👥 کاربران: <b id="licUsersCount" style="color:var(--accent-color);">3 / 99</b></span>
+                  <span>🏢 شرکت‌ها: <b id="licCompaniesCount" style="color:var(--accent-color);">1 / 20</b></span>
+                </div>
+                <span style="font-size:0.75rem; color:var(--text-muted);">سقف تعریف طبق مجوز لایسنس</span>
+              </div>
+
+              <!-- 4. Support & Expiry -->
+              <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:bold;">اعتبار زمانی و تمدید سالانه:</span>
+                <span id="licExpiryDate" style="font-size:1rem; font-weight:bold; color:var(--text-main);">تا تاریخ ۲۰۳۰-۱۲-۲۹</span>
+                <span id="licDaysRemaining" style="font-size:0.8rem; font-weight:bold; color:#10b981;">۱۵۸۰ روز باقیمانده</span>
+              </div>
+            </div>
+
+            <!-- Enabled Modules -->
+            <h4 style="margin-top:10px; margin-bottom:12px; color:var(--accent-color); font-weight:bold;">📦 ماژول‌های فعال و خریداری شده سامانه:</h4>
+            <div id="licModulesGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:24px;">
+              <!-- Dynamically populated via app.js -->
+            </div>
+
+            <!-- Hardware Binding / Server Machine ID (For On-Premise) -->
+            <div style="background:rgba(2,132,199,0.05); border:1px solid rgba(2,132,199,0.2); border-radius:10px; padding:16px; margin-bottom:24px;">
+              <h4 style="margin:0 0 8px; color:var(--accent-color); font-weight:bold; font-size:0.95rem;">🖥️ شناسه سخت‌افزاری سرور (Server Machine ID):</h4>
+              <p style="margin:0 0 10px; font-size:0.82rem; color:var(--text-muted);">جهت صدور یا ارتقای لایسنس در حالت سرور اختصاصی سازمان (On-Premise)، شناسه زیر را برای شرکت ارسال نمایید:</p>
+              <div style="display:flex; gap:8px; align-items:center; max-width:600px;">
+                <input type="text" id="licServerFingerprint" class="form-input" readonly style="font-family:monospace; font-weight:bold; font-size:0.95rem; text-align:center; background:var(--bg-card); color:var(--accent-color);" value="در حال خواندن..." />
+                <button class="btn btn-outline" type="button" onclick="copyServerFingerprint()" style="padding:0 16px; height:38px; font-weight:bold; flex-shrink:0;">📋 کپی شناسه</button>
+              </div>
+            </div>
+
+            <!-- License Activation / Renewal Box -->
+            <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; padding:18px;">
+              <h4 style="margin:0 0 10px; color:var(--text-main); font-weight:bold; font-size:0.95rem;">🔑 فعال‌سازی یا تمدید لایسنس جدید:</h4>
+              <p style="margin:0 0 10px; font-size:0.82rem; color:var(--text-muted);">کلید فعال‌سازی دریافت شده از شرکت را در کادر زیر وارد کرده و دکمه فعال‌سازی را بزنید:</p>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <textarea id="licActivationTokenInput" class="form-input" rows="3" placeholder="متن کلید لایسنس رمزنگاری شده (License Token)..." style="font-family:monospace; font-size:0.82rem; resize:vertical;"></textarea>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                  <button class="btn btn-success" type="button" onclick="activateLicenseFromUI()" style="padding:8px 24px; font-weight:bold; font-size:0.9rem;">🔐 فعال‌سازی و ارتقای آنی لایسنس</button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 

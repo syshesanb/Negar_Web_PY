@@ -35,5 +35,11 @@ class Settings:
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "negar-secret-key-2026-super-secure-key")
     STATIC_DIR: Path = BASE_DIR / "app" / "static"
+    
+    # Dual-Mode Deployment & Licensing Settings
+    # Modes: "ON_PREMISE" (Dedicated Server with Hardware Lock) or "CLOUD_SAAS" (Central Cloud Service)
+    DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "ON_PREMISE").upper()
+    LICENSE_SECRET_KEY: str = os.getenv("LICENSE_SECRET_KEY", "NEGAR_MASTER_LIC_KEY_2026_@HMAC_SECRET_987654321")
+    LICENSE_FILE_PATH: Path = BASE_DIR / "negar_license.lic"
 
 settings = Settings()

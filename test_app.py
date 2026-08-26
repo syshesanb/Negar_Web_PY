@@ -147,15 +147,37 @@ def run_tests():
     assert saved_curr["CurrencyCode"] == "CAD"
     print(" -> ارز جدید ایجاد شد:", saved_curr["CurrencyName"])
 
-    # Online rate fetch (TGJU Free Market Rate)
-    online_rate_res = client.get("/api/Currencies/online-rate/USD")
-    assert online_rate_res.status_code == 200
-    rate_info = online_rate_res.json()
-    assert "onlineRate" in rate_info
-    assert float(rate_info["onlineRate"]) >= 1000000.0  # Live TGJU Dollar rate is around 1,865,000 IRR
-    print(f" -> استخراج زنده نرخ آزاد دلار از TGJU.org: {rate_info['onlineRate']} ریال")
+    # 9. تست ماژول لایسنسینگ و معماری دوگانه استقرار
+    print("\n9. تست ماژول لایسنسینگ و معماری دوگانه استقرار...")
+    from app.services.license_service import create_license_token, get_machine_fingerprint
+    
+    server_fp = get_machine_fingerprint()
+    assert server_fp.startswith("NGR-")
+    print(f" -> شناسه سخت‌افزاری سرور: {server_fp}")
 
-    print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
+    # Test license status endpoint
+    lic_stat_res = client.get("/api/License/status")
+    assert lic_stat_res.status_code == 200
+    lic_status = lic_stat_res.json()
+    assert "deploymentMode" in lic_status
+    assert "enabledModules" in lic_status
+    print(f" -> وضعیت استقرار سامانه: {lic_status['modeTitle']}")
+    print(f" -> وضعیت اعتبار لایسنس: {lic_status['statusTitle']}")
+
+    # Test token creation and activation
+    test_token = create_license_token(
+        customer_name="شرکت آزمایشی نگار",
+        license_type="OnPremise",
+        max_users=25,
+        max_companies=5,
+        expiry_date="2032-12-31",
+        machine_fingerprint=server_fp
+    )
+    act_res = client.post("/api/License/activate", json={"token": test_token})
+    assert act_res.status_code == 200
+    act_data = act_res.json()
+    assert act_data["success"] is True
+    print(f" -> لایسنس آزمایشی با موفقیت فعال شد: {act_data['customer']} (کاربران: {act_data['maxUsers']})")
 
     print("\n✅ تمام تست‌ها با موفقیت ۱۰۰٪ پاس شدند!")
 

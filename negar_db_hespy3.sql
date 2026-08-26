@@ -162,6 +162,7 @@ INSERT INTO "Products" VALUES(17,1,'PRD-001','لپ‌تاپ گیمینگ ایس�
 INSERT INTO "Products" VALUES(18,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 INSERT INTO "Products" VALUES(19,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 INSERT INTO "Products" VALUES(20,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
+INSERT INTO "Products" VALUES(21,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 CREATE TABLE "PurchaseInvoiceDetails" (
 	"DetailID" INTEGER NOT NULL, 
 	"InvoiceID" INTEGER NOT NULL, 
@@ -258,6 +259,7 @@ INSERT INTO "Sanad1" VALUES(17,1,1,'2026-08-19 13:37:30.034320','سند افتت
 INSERT INTO "Sanad1" VALUES(18,1,1,'2026-08-22 08:14:24.387365','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 INSERT INTO "Sanad1" VALUES(19,1,1,'2026-08-26 12:05:00.656033','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 INSERT INTO "Sanad1" VALUES(20,1,1,'2026-08-26 12:26:24.420206','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
+INSERT INTO "Sanad1" VALUES(21,1,1,'2026-08-26 12:49:00.306086','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 CREATE TABLE "Sanad2" (
 	"DetailID" INTEGER NOT NULL, 
 	"EntryID" INTEGER NOT NULL, 
@@ -314,6 +316,8 @@ INSERT INTO "Sanad2" VALUES(37,19,125,5000000,0,1,NULL,'موجودی صندوق'
 INSERT INTO "Sanad2" VALUES(38,19,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
 INSERT INTO "Sanad2" VALUES(39,20,125,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
 INSERT INTO "Sanad2" VALUES(40,20,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(41,21,125,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(42,21,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
 CREATE TABLE "SarfaslHesab" (
 	"AccountID" INTEGER NOT NULL, 
 	"CompanyID" INTEGER NOT NULL, 
@@ -510,4 +514,5 @@ INSERT INTO "Warehouses" VALUES(17,1,'انبار مرکزی','تهران - خی�
 INSERT INTO "Warehouses" VALUES(18,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 INSERT INTO "Warehouses" VALUES(19,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 INSERT INTO "Warehouses" VALUES(20,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
+INSERT INTO "Warehouses" VALUES(21,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 COMMIT;

@@ -1062,6 +1062,7 @@ function showForm(formId) {
   if (formId === 'form-switch-year') renderSwitchYearOnlyForm();
   if (formId === 'form-account-levels') loadCodingSettings();
   if (formId === 'form-theme-manager') highlightCurrentTheme();
+  if (formId === 'form-license-info') loadLicenseInfo();
   if (formId === 'form-hesabdari-main') {
     const activeSub = document.querySelector('.hesabdari-subtabs-bar .subtab-item.active');
     const tabId = activeSub ? activeSub.getAttribute('data-tab') : 'sanad';
@@ -1082,6 +1083,113 @@ function highlightCurrentTheme(themeOverride) {
       }
     });
   } catch(e) {}
+}
+
+// ============================
+// LICENSE & DUAL-MODE MODULE
+// ============================
+const SYSTEM_MODULES_META = [
+  { id: 'accounting', name: 'حسابداری مالی و کدینگ', icon: '📊' },
+  { id: 'inventory', name: 'انبارداری و مدیریت کالا', icon: '📦' },
+  { id: 'sales', name: 'خرید، فروش و فاکتور', icon: '🛒' },
+  { id: 'treasury', name: 'خزانه، چک و بانک', icon: '🏦' },
+  { id: 'payroll', name: 'حقوق و دستمزد پرسنل', icon: '👥' },
+  { id: 'currencies', name: 'مدیریت ارزی و برابری', icon: '💱' },
+  { id: 'modyan', name: 'سامانه مودیان مالیاتی', icon: '🏛️' },
+  { id: 'users', name: 'مدیریت کاربران و امنیت', icon: '👤' }
+];
+
+async function loadLicenseInfo() {
+  try {
+    const res = await fetch('/api/License/status');
+    if (res.ok) {
+      const data = await res.json();
+      
+      const modeEl = document.getElementById('licDeploymentMode');
+      const statusEl = document.getElementById('licStatusTitle');
+      const customerEl = document.getElementById('licCustomerName');
+      const usersEl = document.getElementById('licUsersCount');
+      const compEl = document.getElementById('licCompaniesCount');
+      const expEl = document.getElementById('licExpiryDate');
+      const daysEl = document.getElementById('licDaysRemaining');
+      const fpEl = document.getElementById('licServerFingerprint');
+
+      if (modeEl) modeEl.textContent = data.modeTitle || data.deploymentMode;
+      if (statusEl) {
+        statusEl.textContent = data.statusTitle;
+        statusEl.style.color = data.isValid ? '#10b981' : '#ef4444';
+      }
+      if (customerEl) customerEl.textContent = data.customerName;
+      if (usersEl) usersEl.textContent = `${AppState.users.length} / ${data.maxUsers}`;
+      if (compEl) compEl.textContent = `${AppState.companies.length} / ${data.maxCompanies}`;
+      if (expEl) expEl.textContent = `تا تاریخ ${data.expiresAt}`;
+      if (daysEl) {
+        daysEl.textContent = `${data.daysRemaining} روز باقیمانده`;
+        daysEl.style.color = data.daysRemaining > 30 ? '#10b981' : (data.daysRemaining > 0 ? '#f59e0b' : '#ef4444');
+      }
+      if (fpEl) fpEl.value = data.serverFingerprint || '---';
+
+      // Render modules
+      const grid = document.getElementById('licModulesGrid');
+      if (grid) {
+        const enabled = data.enabledModules || [];
+        grid.innerHTML = SYSTEM_MODULES_META.map(m => {
+          const isAct = enabled.includes(m.id);
+          return `
+            <div style="background:var(--bg-card); border:1px solid ${isAct ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}; border-radius:8px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <div style="display:flex; align-items:center; gap:6px; font-weight:bold; font-size:0.84rem; color:var(--text-main);">
+                <span>${m.icon}</span>
+                <span>${m.name}</span>
+              </div>
+              <span class="badge" style="background:${isAct ? '#10b981' : 'var(--border-color)'}; color:${isAct ? '#fff' : 'var(--text-muted)'}; font-size:0.72rem; padding:2px 6px;">
+                ${isAct ? '✔ فعال' : 'غیرفعال'}
+              </span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch(e) {
+    console.warn('Error loading license status:', e);
+  }
+}
+
+function copyServerFingerprint() {
+  const fpInput = document.getElementById('licServerFingerprint');
+  if (!fpInput || !fpInput.value) return;
+  navigator.clipboard.writeText(fpInput.value).then(() => {
+    alert(`📋 شناسه سخت‌افزاری سرور در حافظه کپی شد:\n\n${fpInput.value}\n\nمی‌توانید این شناسه را جهت صدور لایسنس برای شرکت ارسال نمایید.`);
+  }).catch(() => {
+    fpInput.select();
+    document.execCommand('copy');
+    alert(`📋 شناسه سخت‌افزاری کپی شد: ${fpInput.value}`);
+  });
+}
+
+async function activateLicenseFromUI() {
+  const input = document.getElementById('licActivationTokenInput');
+  const token = (input?.value || '').trim();
+  if (!token) {
+    alert('لطفاً ابتدا متن کلید لایسنس (License Token) را وارد کنید.');
+    return;
+  }
+  try {
+    const res = await fetch('/api/License/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`🎉 ${data.message}\n\nاعتبار تا: ${data.expiresAt} (${data.daysRemaining} روز)\nحداکثر کاربر: ${data.maxUsers} نفر\nحداکثر شرکت: ${data.maxCompanies} شرکت`);
+      if (input) input.value = '';
+      loadLicenseInfo();
+    } else {
+      alert(`❌ خطا در فعال‌سازی لایسنس:\n\n${data.detail || data.message || 'کلید لایسنس نامعتبر است.'}`);
+    }
+  } catch(e) {
+    alert('خطا در ارتباط با سرور.');
+  }
 }
 
 // ============================
