@@ -35,6 +35,7 @@ class AuthService:
             userID=user.UserID,
             username=user.Username,
             fullName=user.FullName or user.Username,
+            jobTitle=user.JobTitle or "مدیر سیستم",
             userType=user.UserType,
             token=token,
         )

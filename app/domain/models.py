@@ -28,6 +28,7 @@ class UserAccount(Base):
     CreatedDate = Column(DateTime, default=datetime.utcnow)
     IsActive = Column(Boolean, default=True)
     FullName = Column(String(150), nullable=True)
+    JobTitle = Column(String(150), nullable=True)  # عنوان سازمانی / سمت شغلی
     CreatorIP = Column(String(50), nullable=True)
     MaxCompaniesAllowed = Column(Integer, default=0)
     MaxFiscalYearsPerCompany = Column(Integer, default=0)

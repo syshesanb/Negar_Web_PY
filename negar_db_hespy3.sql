@@ -18,7 +18,7 @@ CREATE TABLE "AppSettings" (
 	PRIMARY KEY ("SettingID"), 
 	UNIQUE ("SettingKey")
 );
-INSERT INTO "AppSettings" VALUES(1,'AppTheme','blue','Appearance');
+INSERT INTO "AppSettings" VALUES(1,'AppTheme','light','Appearance');
 CREATE TABLE "Companies" (
 	"CompanyID" INTEGER NOT NULL, 
 	"CompanyName" VARCHAR(200) NOT NULL, 
@@ -76,7 +76,7 @@ INSERT INTO "Currencies" VALUES(5,'AED','درهم امارات','د.إ',0,168000
 INSERT INTO "Currencies" VALUES(6,'TRY','لیر ترکیه','₺',0,18800,'1405/05/27',39000,'1405/05/27',1,'2026-08-18 01:41:47.016326',32500,'1405/05/27',39000,'1405/05/27',28015.3165,'1405/05/27');
 INSERT INTO "Currencies" VALUES(7,'CNY','یوان چین','¥',0,86000,'1405/05/27',277800,'1405/05/27',1,'2026-08-18 01:41:47.016326',215000,'1405/05/27',277800,'1405/05/27',198681.6547,'1405/05/27');
 INSERT INTO "Currencies" VALUES(8,'GBP','پوند انگلیس','£',0,775000,'1405/05/27',2529800,'1405/05/27',1,'2026-08-18 01:41:47.016326',2098000,'1405/05/27',2529800,'1405/05/27',1818311.5252,'1405/05/27');
-INSERT INTO "Currencies" VALUES(9,'CAD','دلار کانادا','C$',0,450000,'1405/05/27',452000,'1405/05/27',1,'2026-08-18 01:41:47.411143',1,'1405/05/28',1,'1405/05/28',1,'1405/05/28');
+INSERT INTO "Currencies" VALUES(9,'CAD','دلار کانادا','C$',0,450000,'1405/05/27',452000,'1405/05/27',1,'2026-08-18 01:41:47.411143',1,'1405/06/04',1,'1405/06/04',1,'1405/06/04');
 CREATE TABLE "FiscalYears" (
 	"FiscalYearID" INTEGER NOT NULL, 
 	"CompanyID" INTEGER NOT NULL, 
@@ -159,6 +159,9 @@ INSERT INTO "Products" VALUES(14,1,'PRD-001','لپ‌تاپ گیمینگ ایس�
 INSERT INTO "Products" VALUES(15,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 INSERT INTO "Products" VALUES(16,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 INSERT INTO "Products" VALUES(17,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
+INSERT INTO "Products" VALUES(18,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
+INSERT INTO "Products" VALUES(19,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
+INSERT INTO "Products" VALUES(20,1,'PRD-001','لپ‌تاپ گیمینگ ایسوس','دستگاه',75000000,NULL,1,NULL,NULL,'کالا',65000000,0,0,0,'عادی',NULL,0,0);
 CREATE TABLE "PurchaseInvoiceDetails" (
 	"DetailID" INTEGER NOT NULL, 
 	"InvoiceID" INTEGER NOT NULL, 
@@ -252,6 +255,9 @@ INSERT INTO "Sanad1" VALUES(14,1,1,'2026-08-18 02:51:07.709796','سند افتت
 INSERT INTO "Sanad1" VALUES(15,1,1,'2026-08-18 03:09:58.587828','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 INSERT INTO "Sanad1" VALUES(16,1,1,'2026-08-18 03:14:45.107626','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 INSERT INTO "Sanad1" VALUES(17,1,1,'2026-08-19 13:37:30.034320','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
+INSERT INTO "Sanad1" VALUES(18,1,1,'2026-08-22 08:14:24.387365','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
+INSERT INTO "Sanad1" VALUES(19,1,1,'2026-08-26 12:05:00.656033','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
+INSERT INTO "Sanad1" VALUES(20,1,1,'2026-08-26 12:26:24.420206','سند افتتاحیه آزمایشی',NULL,NULL,5000000,5000000,'متوازن','ثبت اولیه سرمایه و موجودی نقد','یادداشت',0);
 CREATE TABLE "Sanad2" (
 	"DetailID" INTEGER NOT NULL, 
 	"EntryID" INTEGER NOT NULL, 
@@ -302,6 +308,12 @@ INSERT INTO "Sanad2" VALUES(31,16,1,5000000,0,1,NULL,'موجودی صندوق',N
 INSERT INTO "Sanad2" VALUES(32,16,1,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
 INSERT INTO "Sanad2" VALUES(33,17,1,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
 INSERT INTO "Sanad2" VALUES(34,17,1,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(35,18,125,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(36,18,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(37,19,125,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(38,19,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(39,20,125,5000000,0,1,NULL,'موجودی صندوق',NULL,NULL);
+INSERT INTO "Sanad2" VALUES(40,20,125,0,5000000,2,NULL,'طرف حساب سرمایه',NULL,NULL);
 CREATE TABLE "SarfaslHesab" (
 	"AccountID" INTEGER NOT NULL, 
 	"CompanyID" INTEGER NOT NULL, 
@@ -439,6 +451,7 @@ INSERT INTO "SarfaslHesab" VALUES(121,1,'710101','اسناد وثیقه‌ای �
 INSERT INTO "SarfaslHesab" VALUES(122,1,'710102','طرف حساب اسناد انتظامی دریافتی','معین',44,1,'بستانکار');
 INSERT INTO "SarfaslHesab" VALUES(123,1,'710201','اسناد وثیقه‌ای و ضمانتی پرداختی','معین',45,1,'بدهکار');
 INSERT INTO "SarfaslHesab" VALUES(124,1,'710202','طرف حساب اسناد انتظامی پرداختی','معین',45,1,'بستانکار');
+INSERT INTO "SarfaslHesab" VALUES(125,1,'10101','صندوق مرکزی','معین',NULL,1,'بدهکار');
 CREATE TABLE "SarfaslShenavar" (
 	"ShenavarID" INTEGER NOT NULL, 
 	"CompanyID" INTEGER NOT NULL, 
@@ -459,11 +472,11 @@ CREATE TABLE "Users" (
 	"FullName" VARCHAR(150), 
 	"CreatorIP" VARCHAR(50), 
 	"MaxCompaniesAllowed" INTEGER, 
-	"MaxFiscalYearsPerCompany" INTEGER, 
+	"MaxFiscalYearsPerCompany" INTEGER, JobTitle VARCHAR(150), 
 	PRIMARY KEY ("UserID"), 
 	UNIQUE ("Username")
 );
-INSERT INTO "Users" VALUES(1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','SuperAdmin',NULL,'2026-08-17 21:04:05.523723',1,'مدیر کل سیستم',NULL,99,99);
+INSERT INTO "Users" VALUES(1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','SuperAdmin',NULL,'2026-08-17 21:04:05.523723',1,'مدیر کل سیستم',NULL,99,99,'مدیر ارشد سیستم و فناوری');
 CREATE TABLE "Warehouses" (
 	"WarehouseID" INTEGER NOT NULL, 
 	"CompanyID" INTEGER, 
@@ -494,4 +507,7 @@ INSERT INTO "Warehouses" VALUES(14,1,'انبار مرکزی','تهران - خی�
 INSERT INTO "Warehouses" VALUES(15,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 INSERT INTO "Warehouses" VALUES(16,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 INSERT INTO "Warehouses" VALUES(17,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
+INSERT INTO "Warehouses" VALUES(18,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
+INSERT INTO "Warehouses" VALUES(19,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
+INSERT INTO "Warehouses" VALUES(20,1,'انبار مرکزی','تهران - خیابان آزادی',1,'عمومی',NULL,NULL,0,NULL);
 COMMIT;

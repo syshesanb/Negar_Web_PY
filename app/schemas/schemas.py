@@ -17,6 +17,7 @@ class LoginResponse(BaseModel):
     userID: Optional[int] = None
     username: Optional[str] = None
     fullName: Optional[str] = None
+    jobTitle: Optional[str] = None
     userType: Optional[str] = None
     token: Optional[str] = None
 
@@ -43,6 +44,7 @@ class UserAccountBase(BaseModel):
     UserType: str = "User"
     IsActive: bool = True
     FullName: Optional[str] = None
+    JobTitle: Optional[str] = None
     MaxCompaniesAllowed: int = 0
     MaxFiscalYearsPerCompany: int = 0
 

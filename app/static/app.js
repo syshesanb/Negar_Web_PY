@@ -185,9 +185,9 @@ const EshkalLogger = {
 // AUTHENTICATION - Credentials
 // ============================
 const CREDENTIALS = [
-  { username: 'admin',        password: 'admin123',    fullName: 'ابر مدیر سیستم',         role: 'SuperAdmin' },
-  { username: 'accountant1',  password: 'acc2024',     fullName: 'علی رضایی (حسابدار)',     role: 'User' },
-  { username: 'storekeeper',  password: 'store2024',   fullName: 'رضا حسینی (انباردار)',    role: 'User' }
+  { username: 'admin',        password: 'admin123',    fullName: 'ابر مدیر سیستم',         jobTitle: 'مدیر ارشد سیستم و فناوری', role: 'SuperAdmin' },
+  { username: 'accountant1',  password: 'acc2024',     fullName: 'علی رضایی (حسابدار)',     jobTitle: 'سرپرست امور مالی و حسابداری', role: 'User' },
+  { username: 'storekeeper',  password: 'store2024',   fullName: 'رضا حسینی (انباردار)',    jobTitle: 'سرپرست انبار مرکزی', role: 'User' }
 ];
 
 let currentUser = null;  // will be set after successful login
@@ -236,7 +236,7 @@ function doLogin() {
 
       // Update header info
       const headerUser = document.getElementById('headerUsername');
-      if (headerUser) headerUser.textContent = found.fullName + ' (' + found.username + ')';
+      if (headerUser) headerUser.textContent = found.fullName + (found.jobTitle ? ` (${found.jobTitle})` : '') + ' [' + found.username + ']';
 
       // Animate out login, animate in app
       const overlay  = document.getElementById('loginOverlay');
@@ -409,9 +409,9 @@ const AppState = {
     { id: 4, year: '1400', startDate: '1400/01/01', endDate: '1400/12/29', company: '1001', notes: 'سال مالی اولیه تاسیس', status: 'بسته' }
   ],
   users: [
-    { id: 1, username: 'admin', fullName: 'مدیر ارشد سیستم', userType: 'SuperAdmin', isActive: true, ip: '127.0.0.1' },
-    { id: 2, username: 'accountant1', fullName: 'علی رضایی (حسابدار)', userType: 'User', isActive: true, ip: '192.168.1.10' },
-    { id: 3, username: 'storekeeper', fullName: 'رضا حسینی (انباردار)', userType: 'User', isActive: true, ip: '192.168.1.15' }
+    { id: 1, username: 'admin', fullName: 'ابر مدیر سیستم', jobTitle: 'مدیر ارشد فناوری و زیرساخت', userType: 'SuperAdmin', isActive: true, ip: '*' },
+    { id: 2, username: 'accountant1', fullName: 'علی رضایی', jobTitle: 'سرپرست امور مالی و حسابداری', userType: 'User', isActive: true, ip: '*' },
+    { id: 3, username: 'storekeeper', fullName: 'رضا حسینی', jobTitle: 'سرپرست انبار مرکزی', userType: 'User', isActive: true, ip: '*' }
   ],
   accounts: [
     { id: 1, code: '11', name: 'دارائیهای جاری', type: 'گروه', nature: 'بدهکار', parentId: null },
@@ -1184,8 +1184,9 @@ function renderUsersTable() {
     <tr>
       <td><b>${u.username}</b></td>
       <td>${u.fullName}</td>
+      <td><span style="font-weight:bold; color:var(--accent-color); font-size:0.85rem;">${u.jobTitle || 'کارشناس'}</span></td>
       <td><span class="badge badge-primary">${u.userType}</span></td>
-      <td>${u.ip || '127.0.0.1'}</td>
+      <td><code style="background:var(--bg-primary); padding:2px 6px; border-radius:4px; font-weight:bold;">${u.ip || '*'}</code></td>
       <td><span class="badge ${u.isActive ? 'badge-success' : 'badge-warning'}">${u.isActive ? 'فعال' : 'غیرفعال'}</span></td>
       <td>
         <div style="display:flex; gap:4px; justify-content:center;">
@@ -1212,18 +1213,20 @@ function openAddUserModal(userId = null) {
     document.getElementById('userEditId').value = user.id;
     document.getElementById('newUsername').value = user.username || '';
     document.getElementById('newFullName').value = user.fullName || '';
+    if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = user.jobTitle || '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = user.password || '';
     if (document.getElementById('newUserType')) document.getElementById('newUserType').value = user.userType || 'User';
-    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = user.ip || '127.0.0.1';
+    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = user.ip || '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = user.isActive !== false;
   } else {
     if (title) title.innerHTML = `👤 تعریف کاربر جدید`;
     document.getElementById('userEditId').value = '';
     document.getElementById('newUsername').value = '';
     document.getElementById('newFullName').value = '';
+    if (document.getElementById('newUserJobTitle')) document.getElementById('newUserJobTitle').value = '';
     if (document.getElementById('newUserPassword')) document.getElementById('newUserPassword').value = '';
     if (document.getElementById('newUserType')) document.getElementById('newUserType').value = 'User';
-    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = '127.0.0.1';
+    if (document.getElementById('newUserIp')) document.getElementById('newUserIp').value = '*';
     if (document.getElementById('newUserIsActive')) document.getElementById('newUserIsActive').checked = true;
   }
 
@@ -1246,9 +1249,10 @@ function saveNewUser() {
   const editId = document.getElementById('userEditId')?.value;
   const username = document.getElementById('newUsername')?.value?.trim();
   const fullName = document.getElementById('newFullName')?.value?.trim();
+  const jobTitle = document.getElementById('newUserJobTitle')?.value?.trim() || 'کارشناس سازمانی';
   const password = document.getElementById('newUserPassword')?.value;
   const userType = document.getElementById('newUserType')?.value || 'User';
-  const ip = document.getElementById('newUserIp')?.value?.trim() || '127.0.0.1';
+  const ip = document.getElementById('newUserIp')?.value?.trim() || '*';
   const isActive = document.getElementById('newUserIsActive')?.checked !== false;
 
   if (!username || !fullName) {
@@ -1268,11 +1272,12 @@ function saveNewUser() {
       }
       user.username = username;
       user.fullName = fullName;
+      user.jobTitle = jobTitle;
       if (password) user.password = password;
       user.userType = userType;
       user.ip = ip;
       user.isActive = isActive;
-      alert(`مشخصات کاربر "${fullName}" با موفقیت به‌روزرسانی شد.`);
+      alert(`مشخصات کاربر "${fullName}" با عنوان سازمانی "${jobTitle}" با موفقیت به‌روزرسانی شد.`);
     }
   } else {
     // CREATE
@@ -1284,12 +1289,13 @@ function saveNewUser() {
       id: Date.now(),
       username,
       fullName,
+      jobTitle,
       password: password || '123456',
       userType,
       isActive,
       ip
     });
-    alert(`کاربر جدید "${username}" با موفقیت اضافه شد.`);
+    alert(`کاربر جدید "${username}" با عنوان سازمانی "${jobTitle}" با موفقیت اضافه شد.`);
   }
 
   closeUserModal();
@@ -6942,7 +6948,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Set current user to admin (session bypass)
     currentUser = CREDENTIALS[0]; // admin
     const headerUser = document.getElementById('headerUsername');
-    if (headerUser) headerUser.textContent = currentUser.fullName + ' (' + currentUser.username + ')';
+    if (headerUser) headerUser.textContent = currentUser.fullName + (currentUser.jobTitle ? ` (${currentUser.jobTitle})` : '') + ' [' + currentUser.username + ']';
 
     if (savedCompCode && AppState.companies.some(c => c.code === savedCompCode)) {
       const comp = AppState.companies.find(c => c.code === savedCompCode);

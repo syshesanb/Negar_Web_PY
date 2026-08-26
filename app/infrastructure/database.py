@@ -168,6 +168,33 @@ def init_db():
     """Create all tables and seed default admin user and company if not present."""
     Base.metadata.create_all(bind=engine)
 
+    # Safe Schema Migrations (Ensure columns exist in existing SQLite/Postgres tables)
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            # 1. Users.JobTitle
+            try:
+                conn.execute(text("ALTER TABLE Users ADD COLUMN JobTitle VARCHAR(150);"))
+                conn.commit()
+            except Exception:
+                pass
+            # 2. Currencies extra columns
+            for col, col_type in [
+                ("CbiRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                ("CbiRateDate", "VARCHAR(20)"),
+                ("TgjuRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                ("TgjuRateDate", "VARCHAR(20)"),
+                ("GlobalRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                ("GlobalRateDate", "VARCHAR(20)")
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE Currencies ADD COLUMN {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     db = SessionLocal()
     try:
         # Check if admin user exists
@@ -179,6 +206,7 @@ def init_db():
                 Password=hashed_pw,
                 UserType="SuperAdmin",
                 FullName="مدیر کل سیستم",
+                JobTitle="مدیر ارشد سیستم و فناوری",
                 IsActive=True,
                 MaxCompaniesAllowed=99,
                 MaxFiscalYearsPerCompany=99,
@@ -217,6 +245,11 @@ def init_db():
             print(f"[INFO] کدینگ پیش‌فرض بارگذاری شد: {count} حساب برای شرکت {company.CompanyName}")
 
         else:
+            # Update Admin User JobTitle if empty
+            if not admin.JobTitle:
+                admin.JobTitle = "مدیر ارشد سیستم و فناوری"
+                db.commit()
+
             # بررسی و بارگذاری کدینگ برای شرکت‌هایی که کدینگ ندارند
             from app.domain.models import SarfaslHesab
             companies = db.query(Company).filter(Company.IsActive == True).all()
