@@ -142,9 +142,10 @@ if static_path.exists():
 
 
 def open_browser_delayed():
-    """Wait 1.5 seconds and open the web browser automatically."""
+    """Wait 1.5 seconds and open the web browser automatically with forced fresh login."""
     time.sleep(1.5)
-    url = "http://localhost:8000"
+    # Always open with ?logout=1 so every launch forces a new login regardless of prior sessions
+    url = "http://localhost:8000?logout=1"
     try:
         # Check standard Chrome path first
         chrome_paths = [

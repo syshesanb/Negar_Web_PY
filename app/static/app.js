@@ -8104,8 +8104,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const formParam = urlParams.get('form');
   const modeParam = urlParams.get('mode');
+  const logoutParam = urlParams.get('logout');
 
-  EshkalLogger.log('01_DOMContentLoaded_Start', { formParam, modeParam });
+  EshkalLogger.log('01_DOMContentLoaded_Start', { formParam, modeParam, logoutParam });
+
+  // ====================================================================
+  // FORCED FRESH LOGIN: If ?logout=1 is present in URL (set by the
+  // batch file or main.py every time the app is launched), wipe the
+  // session immediately and ensure the login screen is shown.
+  // This guarantees that every application launch requires authentication
+  // even if the browser tab was previously open.
+  // ====================================================================
+  if (logoutParam === '1') {
+    // Wipe all auth-related keys from localStorage
+    try {
+      localStorage.removeItem('negar_logged_in');
+      localStorage.removeItem('negar_active_company');
+      localStorage.removeItem('negar_active_year');
+    } catch(e) {}
+    // Ensure currentUser is null
+    currentUser = null;
+    // Make sure login overlay is visible and main app is hidden
+    const overlay = document.getElementById('loginOverlay');
+    const mainApp = document.getElementById('mainApp');
+    if (overlay) { overlay.style.display = 'flex'; overlay.classList.remove('login-fade-out'); }
+    if (mainApp)  { mainApp.style.display = 'none'; mainApp.classList.remove('app-fade-in'); }
+    // Remove the ?logout=1 from the URL bar without reloading the page
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+    // Focus on username field for smooth UX
+    setTimeout(() => { document.getElementById('loginUsername')?.focus(); }, 300);
+    // Stop further initialization — the user must log in first
+    return;
+  }
 
   // Schedule timed layout snapshots to capture what changes "after a few moments"
   [50, 150, 300, 500, 1000, 1500, 2000, 3000, 5000].forEach(delay => {
@@ -8113,6 +8144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       EshkalLogger.log(`Timed_Layout_Snapshot_${delay}ms`);
     }, delay);
   });
+
 
   // Load companies list from localStorage if updated previously
   try {
