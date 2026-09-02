@@ -21,8 +21,23 @@
           document.cookie = "negar_theme=" + finalTheme + "; path=/; max-age=31536000; SameSite=Lax";
         } catch(e) {}
 
+        // ---------------------------------------------------------------
+        // FORCED FRESH LOGIN: If ?logout=1 is present (added by the batch
+        // file / main.py on every launch), wipe auth data from localStorage
+        // RIGHT HERE — before any isLoggedIn check — so the login overlay
+        // is NEVER bypassed when the user relaunches the application.
+        // ---------------------------------------------------------------
+        var isLogoutRequest = window.location.search.indexOf('logout=1') !== -1;
+        if (isLogoutRequest) {
+          try {
+            localStorage.removeItem('negar_logged_in');
+            localStorage.removeItem('negar_active_company');
+            localStorage.removeItem('negar_active_year');
+          } catch(e) {}
+        }
+
         var isFormPage = window.location.search.indexOf('form=') !== -1;
-        var isLoggedIn = localStorage.getItem('negar_logged_in') === 'true';
+        var isLoggedIn = !isLogoutRequest && localStorage.getItem('negar_logged_in') === 'true';
         if (isFormPage || isLoggedIn) {
           document.write('<style>#loginOverlay{display:none !important;}#mainApp{display:flex !important; flex-direction:column; width:100%; height:100vh;}</style>');
         }
