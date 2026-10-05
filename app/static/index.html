@@ -2568,9 +2568,40 @@
         <div id="form-warehouses" class="form-section">
           <h2 class="form-heading">🏭 تعریف انبارها و جانمایی (WarehouseForm)</h2>
           <div class="card form-card">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+              <button class="btn btn-primary" onclick="openAddWarehouseRow()">+ انبار جدید</button>
+            </div>
             <div class="table-wrapper">
               <table><thead><tr><th>کد انبار</th><th>نام انبار</th><th>نوع انبار</th><th>انباردار</th><th>محل انبار</th><th>موجودی منفی</th><th>عملیات</th></tr></thead>
               <tbody id="warehousesTableBody"></tbody></table>
+            </div>
+            <div id="addWarehouseRow" style="display:none;" class="inline-form">
+              <h4 id="warehouseFormTitle">افزودن انبار جدید</h4>
+              <input type="hidden" id="editWarehouseId" value="" />
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">کد انبار:</label><input type="text" id="newWhCode" class="form-input" placeholder="WH-01" /></div>
+                <div class="form-group"><label class="form-label">نام انبار:</label><input type="text" id="newWhName" class="form-input" placeholder="نام انبار" /></div>
+                <div class="form-group"><label class="form-label">نوع انبار:</label>
+                  <select id="newWhType" class="form-select">
+                    <option value="عمومی">عمومی</option>
+                    <option value="مواد اولیه">مواد اولیه</option>
+                    <option value="محصول نهایی">محصول نهایی</option>
+                    <option value="ضایعات">ضایعات</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">انباردار:</label><input type="text" id="newWhKeeper" class="form-input" placeholder="نام انباردار" /></div>
+                <div class="form-group"><label class="form-label">محل انبار:</label><input type="text" id="newWhLocation" class="form-input" placeholder="آدرس یا جانمایی انبار" /></div>
+                <div class="form-group"><label class="form-label">مجوز موجودی منفی:</label>
+                  <select id="newWhAllowNeg" class="form-select">
+                    <option value="false">خیر</option>
+                    <option value="true">بله</option>
+                  </select>
+                </div>
+                <div class="form-group" style="align-self:flex-end;">
+                  <button class="btn btn-primary" onclick="saveWarehouse()">ذخیره</button>
+                  <button class="btn btn-outline" onclick="closeWarehouseRow()">لغو</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

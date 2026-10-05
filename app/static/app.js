@@ -1114,7 +1114,7 @@ function showForm(formId) {
   if (formId === 'form-product-groups') { renderProductGroupsTable(); loadProductGroups(); }
   if (formId === 'form-product-units') { renderProductUnitsTable(); loadProductUnits(); }
   if (formId === 'form-products') renderProductsTable();
-  if (formId === 'form-warehouses') renderWarehousesTable();
+  if (formId === 'form-warehouses') { renderWarehousesTable(); loadWarehouses(); }
   if (formId === 'form-purchase-invoice') renderPurchaseInvoicesTable();
   if (formId === 'form-sales-invoice') renderSalesInvoicesTable();
   if (formId === 'form-checks') renderChecksTable();
@@ -6895,9 +6895,34 @@ function deleteProduct(id) {
   }
 }
 
+function loadWarehouses() {
+  fetch('/api/Inventory/warehouses')
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.warehouses = data.map(d => ({
+          id: d.WarehouseID,
+          code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
+          name: d.WarehouseName,
+          type: d.WarehouseType || 'عمومی',
+          keeper: d.WarehouseKeeper || '-',
+          location: d.Location || '-',
+          allowNeg: d.AllowNegativeStock || false
+        }));
+        renderWarehousesTable();
+      }
+    })
+    .catch(err => console.log('Backend warehouses load fallback to local AppState:', err));
+}
+
 function renderWarehousesTable() {
   const tbody = document.getElementById('warehousesTableBody');
   if (!tbody) return;
+  if (!AppState.warehouses || AppState.warehouses.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">هیچ انباری تعریف نشده است.</td></tr>';
+    return;
+  }
+
   tbody.innerHTML = AppState.warehouses.map(w => `
     <tr>
       <td><b>${w.code}</b></td>
@@ -6906,9 +6931,125 @@ function renderWarehousesTable() {
       <td>${w.keeper}</td>
       <td>${w.location}</td>
       <td>${w.allowNeg ? 'بله' : 'خیر'}</td>
-      <td><button class="btn btn-outline" style="padding:3px 8px;">✏️ ویرایش</button></td>
+      <td>
+        <button class="btn btn-outline" style="padding:3px 8px;" onclick="editWarehouse(${w.id})">✏️ ویرایش</button>
+        <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteWarehouse(${w.id})">🗑️</button>
+      </td>
     </tr>
   `).join('');
+}
+
+function openAddWarehouseRow(editData = null) {
+  const formRow = document.getElementById('addWarehouseRow');
+  if (!formRow) return;
+
+  if (editData) {
+    document.getElementById('warehouseFormTitle').textContent = 'ویرایش مشخصات انبار';
+    document.getElementById('editWarehouseId').value = editData.id;
+    document.getElementById('newWhCode').value = editData.code || '';
+    document.getElementById('newWhName').value = editData.name || '';
+    document.getElementById('newWhType').value = editData.type || 'عمومی';
+    document.getElementById('newWhKeeper').value = editData.keeper === '-' ? '' : (editData.keeper || '');
+    document.getElementById('newWhLocation').value = editData.location === '-' ? '' : (editData.location || '');
+    document.getElementById('newWhAllowNeg').value = editData.allowNeg ? 'true' : 'false';
+  } else {
+    const nextNo = AppState.warehouses.length > 0 ? 'WH-' + String(AppState.warehouses.length + 1).padStart(2, '0') : 'WH-01';
+    document.getElementById('warehouseFormTitle').textContent = 'افزودن انبار جدید';
+    document.getElementById('editWarehouseId').value = '';
+    document.getElementById('newWhCode').value = nextNo;
+    document.getElementById('newWhName').value = '';
+    document.getElementById('newWhType').value = 'عمومی';
+    document.getElementById('newWhKeeper').value = '';
+    document.getElementById('newWhLocation').value = '';
+    document.getElementById('newWhAllowNeg').value = 'false';
+  }
+
+  formRow.style.display = 'block';
+  document.getElementById('newWhCode').focus();
+}
+
+function closeWarehouseRow() {
+  const formRow = document.getElementById('addWarehouseRow');
+  if (formRow) formRow.style.display = 'none';
+}
+
+function saveWarehouse() {
+  const editId = document.getElementById('editWarehouseId')?.value;
+  const code = document.getElementById('newWhCode')?.value?.trim();
+  const name = document.getElementById('newWhName')?.value?.trim();
+  const type = document.getElementById('newWhType')?.value || 'عمومی';
+  const keeper = document.getElementById('newWhKeeper')?.value?.trim() || '-';
+  const location = document.getElementById('newWhLocation')?.value?.trim() || '-';
+  const allowNeg = document.getElementById('newWhAllowNeg')?.value === 'true';
+
+  if (!code || !name) {
+    alert('کد انبار و نام انبار الزامی است.');
+    return;
+  }
+
+  if (editId) {
+    const id = Number(editId);
+    const existing = AppState.warehouses.find(w => w.id === id);
+    if (existing) {
+      existing.code = code;
+      existing.name = name;
+      existing.type = type;
+      existing.keeper = keeper;
+      existing.location = location;
+      existing.allowNeg = allowNeg;
+    }
+  } else {
+    const newId = AppState.warehouses.length > 0 ? Math.max(...AppState.warehouses.map(w => w.id)) + 1 : 1;
+    AppState.warehouses.push({
+      id: newId,
+      code,
+      name,
+      type,
+      keeper,
+      location,
+      allowNeg
+    });
+  }
+
+  const payload = {
+    WarehouseID: editId ? Number(editId) : null,
+    CompanyID: AppState.currentCompanyId || 1,
+    WarehouseName: name,
+    WarehouseType: type,
+    WarehouseKeeper: keeper,
+    Location: location,
+    AllowNegativeStock: allowNeg
+  };
+
+  fetch('/api/Inventory/warehouses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data && data.WarehouseID) {
+      const idx = AppState.warehouses.findIndex(w => w.name === name);
+      if (idx !== -1) AppState.warehouses[idx].id = data.WarehouseID;
+    }
+  }).catch(err => console.log('Backend warehouse sync skipped or offline:', err));
+
+  closeWarehouseRow();
+  renderWarehousesTable();
+  alert(`انبار "${name}" با موفقیت ذخیره شد.`);
+}
+
+function editWarehouse(id) {
+  const w = AppState.warehouses.find(x => x.id === id);
+  if (w) openAddWarehouseRow(w);
+}
+
+function deleteWarehouse(id) {
+  const w = AppState.warehouses.find(x => x.id === id);
+  if (!w) return;
+
+  if (confirm(`آیا از حذف انبار "${w.name}" اطمینان دارید؟`)) {
+    AppState.warehouses = AppState.warehouses.filter(x => x.id !== id);
+    renderWarehousesTable();
+  }
 }
 
 function renderPurchaseInvoicesTable() {
