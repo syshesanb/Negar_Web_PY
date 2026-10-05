@@ -2455,14 +2455,32 @@
           <h2 class="form-heading">🗂️ گروه‌بندی کالاها (ProductGroupsForm)</h2>
           <div class="card form-card">
             <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-              <button class="btn btn-primary">+ گروه جدید</button>
+              <button class="btn btn-primary" onclick="openAddProductGroupRow()">+ گروه جدید</button>
             </div>
             <div class="table-wrapper">
-              <table><thead><tr><th>کد گروه</th><th>نام گروه</th><th>گروه والد</th><th>عملیات</th></tr></thead>
-              <tbody>
-                <tr><td>GRP-01</td><td>لوازم جانبی کامپیوتر</td><td>-</td><td><button class="btn btn-outline" style="padding:3px 8px;">✏️</button> <button class="btn btn-outline" style="padding:3px 8px;color:red;">🗑️</button></td></tr>
-                <tr><td>GRP-02</td><td>لپ‌تاپ و نوت‌بوک</td><td>-</td><td><button class="btn btn-outline" style="padding:3px 8px;">✏️</button> <button class="btn btn-outline" style="padding:3px 8px;color:red;">🗑️</button></td></tr>
-              </tbody></table>
+              <table>
+                <thead>
+                  <tr><th>کد گروه</th><th>نام گروه</th><th>گروه والد</th><th>عملیات</th></tr>
+                </thead>
+                <tbody id="productGroupsTableBody"></tbody>
+              </table>
+            </div>
+            <div id="addProductGroupRow" style="display:none;" class="inline-form">
+              <h4 id="productGroupFormTitle">افزودن گروه کالای جدید</h4>
+              <input type="hidden" id="editProductGroupId" value="" />
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">کد گروه:</label><input type="text" id="newGroupCode" class="form-input" placeholder="GRP-01" /></div>
+                <div class="form-group"><label class="form-label">نام گروه:</label><input type="text" id="newGroupName" class="form-input" placeholder="عنوان گروه کالا" /></div>
+                <div class="form-group"><label class="form-label">گروه والد:</label>
+                  <select id="newGroupParent" class="form-select">
+                    <option value="">-- بدون والد (ریشه) --</option>
+                  </select>
+                </div>
+                <div class="form-group" style="align-self:flex-end;">
+                  <button class="btn btn-primary" onclick="saveProductGroup()">ذخیره</button>
+                  <button class="btn btn-outline" onclick="closeProductGroupRow()">لغو</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

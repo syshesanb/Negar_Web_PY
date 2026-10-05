@@ -80,8 +80,21 @@ def run_tests():
     assert saved_sanad["JamBestankar"] == 5000000.0
     print(f" -> سند شماره {saved_sanad['EntryID']} با وضعیت [{saved_sanad['TaeazSanad']}] ثبت شد.")
 
-    # 4. Test Product & Warehouse
-    print("\n4. تست تعریف انبار و کالا...")
+    # 4. Test Product Group, Product & Warehouse
+    print("\n4. تست تعریف گروه‌بندی کالا، انبار و کالا...")
+    pg_res = client.post("/api/Inventory/product-groups", json={
+        "CompanyID": 1,
+        "GroupCode": "GRP-01",
+        "GroupName": "لوازم جانبی کامپیوتر"
+    })
+    assert pg_res.status_code == 200, f"Save product group failed: {pg_res.text}"
+    saved_pg = pg_res.json()
+    print(" -> گروه کالا تعریف شد:", saved_pg["GroupName"])
+
+    pg_list_res = client.get("/api/Inventory/product-groups?companyId=1")
+    assert pg_list_res.status_code == 200
+    assert len(pg_list_res.json()) >= 1
+
     wh_res = client.post("/api/Inventory/warehouses", json={
         "CompanyID": 1,
         "WarehouseName": "انبار مرکزی",

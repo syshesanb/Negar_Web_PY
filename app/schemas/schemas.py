@@ -193,6 +193,27 @@ class SanadHeaderDTO(SanadHeaderBase):
 # =============================================================================
 # Inventory & Product Schemas
 # =============================================================================
+class ProductGroupBase(BaseModel):
+    CompanyID: Optional[int] = None
+    ParentID: Optional[int] = None
+    GroupCode: str
+    GroupName: str
+    Level: int = 1
+    IsActive: bool = True
+
+
+class ProductGroupCreateDTO(ProductGroupBase):
+    GroupID: Optional[int] = None
+
+
+class ProductGroupDTO(ProductGroupBase):
+    GroupID: int
+    ParentName: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ProductBase(BaseModel):
     CompanyID: Optional[int] = None
     ProductCode: str

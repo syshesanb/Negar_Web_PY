@@ -629,6 +629,10 @@ const AppState = {
     { account: '110101', desc: 'دریافت نقدی', debit: 50000000, credit: 0 },
     { account: '110301', desc: 'تسویه حساب مشتری', debit: 0, credit: 50000000 }
   ],
+  productGroups: [
+    { id: 1, code: 'GRP-01', name: 'لوازم جانبی کامپیوتر', parentId: null, parentName: '-' },
+    { id: 2, code: 'GRP-02', name: 'لپ‌تاپ و نوت‌بوک', parentId: null, parentName: '-' }
+  ],
   products: [
     { id: 1, code: 'PRD-101', name: 'لپ‌تاپ گیمینگ ایسوس ۱۵ اینچ', unit: 'دستگاه', price: 450000000, stock: 24, barcode: '690123456789' },
     { id: 2, code: 'PRD-102', name: 'مانیتور ۲۷ اینچ 4K سامسونگ', unit: 'عدد', price: 180000000, stock: 15, barcode: '690987654321' }
@@ -1097,6 +1101,7 @@ function showForm(formId) {
   if (formId === 'form-shenavar') renderShenavaarTable();
   if (formId === 'form-sanad1') renderSanadListTable();
   if (formId === 'form-sanad2') renderSanadEditorLines();
+  if (formId === 'form-product-groups') { renderProductGroupsTable(); loadProductGroups(); }
   if (formId === 'form-products') renderProductsTable();
   if (formId === 'form-warehouses') renderWarehousesTable();
   if (formId === 'form-purchase-invoice') renderPurchaseInvoicesTable();
@@ -1339,9 +1344,117 @@ function goBack() {
 // ============================
 
 const SYSTEM_PERMISSIONS_HIERARCHY = [
+  // ── سطح ۱: دقیقاً همنام آیتم‌های منوی اصلی نوار کناری ──────────────────
+  {
+    id: 'system',
+    title: '⚙️ سیستم',
+    icon: '⚙️',
+    children: [
+      {
+        id: 'system.tools',
+        title: '🔧 ابزارها و تنظیمات سیستم',
+        children: [
+          {
+            id: 'system.tools.actions',
+            title: '🔘 دکمه‌های سیستم',
+            children: [
+              { id: 'system.tools.btn_backup', title: '💾 پشتیبان‌گیری اطلاعات', isLeaf: true },
+              { id: 'system.tools.btn_restore', title: '🔄 بازیابی اطلاعات', isLeaf: true },
+              { id: 'system.tools.btn_theme', title: '🎨 مدیریت تم و ظاهر برنامه', isLeaf: true },
+              { id: 'system.tools.btn_lock', title: '🔒 قفل موقت برنامه', isLeaf: true },
+              { id: 'system.tools.btn_about', title: 'ℹ️ درباره نرم‌افزار', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'users',
+    title: '👥 کاربران',
+    icon: '👥',
+    children: [
+      {
+        id: 'users.mgmt',
+        title: '👤 تعریف و ویرایش کاربران سیستم',
+        children: [
+          {
+            id: 'users.mgmt.actions',
+            title: '🔘 دکمه‌های کاربران',
+            children: [
+              { id: 'users.mgmt.btn_new', title: '➕ تعریف کاربر جدید', isLeaf: true },
+              { id: 'users.mgmt.btn_edit', title: '✏️ ویرایش کاربر', isLeaf: true },
+              { id: 'users.mgmt.btn_toggle', title: '🟢/🔴 فعال یا غیرفعال‌سازی کاربر', isLeaf: true },
+              { id: 'users.mgmt.btn_delete', title: '🗑️ حذف کاربر', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'users.perms',
+        title: '🌳 درختواره سطوح دسترسی منوها',
+        children: [
+          {
+            id: 'users.perms.actions',
+            title: '🔘 دکمه‌های دسترسی',
+            children: [
+              { id: 'users.perms.btn_save', title: '💾 ذخیره تغییرات دسترسی‌ها', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'companies',
+    title: '🏢 شرکت‌ها و سال‌های مالی',
+    icon: '🏢',
+    children: [
+      {
+        id: 'companies.company',
+        title: '🏢 مشخصات شرکت‌ها (Company Form)',
+        children: [
+          {
+            id: 'companies.company.tabs',
+            title: '📑 تب‌پیج‌های ۶ گانه فرم شرکت',
+            children: [
+              { id: 'companies.company.tab_main', title: '🔹 تب ۱: مشخصات اصلی و کد اقتصادی', isLeaf: true },
+              { id: 'companies.company.tab_branch', title: '🔹 تب ۲: شعب، تلفن و نشانی', isLeaf: true },
+              { id: 'companies.company.tab_bank', title: '🔹 تب ۳: حساب بانکی و ارز مبنا', isLeaf: true },
+              { id: 'companies.company.tab_chart', title: '🔹 تب ۴: چارت سازمانی و کدینگ', isLeaf: true },
+              { id: 'companies.company.tab_perm', title: '🔹 تب ۵: مجوزها و تاییدها', isLeaf: true },
+              { id: 'companies.company.tab_sign', title: '🔹 تب ۶: مدیریت و امضاها', isLeaf: true }
+            ]
+          },
+          {
+            id: 'companies.company.actions',
+            title: '🔘 دکمه‌های مدیریت شرکت',
+            children: [
+              { id: 'companies.company.btn_new', title: '➕ تعریف شرکت جدید', isLeaf: true },
+              { id: 'companies.company.btn_edit', title: '✏️ ویرایش مشخصات شرکت', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'companies.fiscal_years',
+        title: '📅 مدیریت سال‌های مالی',
+        children: [
+          {
+            id: 'companies.fiscal_years.actions',
+            title: '🔘 دکمه‌های سال مالی',
+            children: [
+              { id: 'companies.fiscal_years.btn_new', title: '➕ افتتاح سال مالی جدید', isLeaf: true },
+              { id: 'companies.fiscal_years.btn_close', title: '🔒 بستن و انتهای دوره سال مالی', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   {
     id: 'accounting',
-    title: '📊 ماژول حسابداری مالی نگار (Hesabdari)',
+    title: '📊 حسابداری',
     icon: '📊',
     children: [
       {
@@ -1443,7 +1556,7 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
   },
   {
     id: 'inventory',
-    title: '📦 ماژول انبارداری، خرید و فروش کالا',
+    title: '📦 خرید و فروش و انبارداری',
     icon: '📦',
     children: [
       {
@@ -1485,95 +1598,73 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
             ]
           }
         ]
-      }
-    ]
-  },
-  {
-    id: 'sales',
-    title: '🛒 ماژول خرید و فروش و صدور فاکتور',
-    icon: '🛒',
-    children: [
+      },
       {
-        id: 'sales.invoice',
+        id: 'inventory.sales_invoice',
         title: '🧾 صدور فاکتور فروش (Sales Invoice)',
         children: [
           {
-            id: 'sales.invoice.tabs',
+            id: 'inventory.sales_invoice.tabs',
             title: '📑 تب‌پیج‌های فاکتور فروش',
             children: [
-              { id: 'sales.invoice.tab_header', title: '🔹 سربرگ فاکتور و خریدار', isLeaf: true },
-              { id: 'sales.invoice.tab_items', title: '🔹 اقلام کالا، تخفیفات و ارزش افزوده', isLeaf: true },
-              { id: 'sales.invoice.tab_payment', title: '🔹 نحوه تسویه و دریافت وجه', isLeaf: true }
+              { id: 'inventory.sales_invoice.tab_header', title: '🔹 سربرگ فاکتور و خریدار', isLeaf: true },
+              { id: 'inventory.sales_invoice.tab_items', title: '🔹 اقلام کالا، تخفیفات و ارزش افزوده', isLeaf: true },
+              { id: 'inventory.sales_invoice.tab_payment', title: '🔹 نحوه تسویه و دریافت وجه', isLeaf: true }
             ]
           },
           {
-            id: 'sales.invoice.actions',
+            id: 'inventory.sales_invoice.actions',
             title: '🔘 دکمه‌های فاکتور فروش',
             children: [
-              { id: 'sales.invoice.btn_new', title: '➕ صدور فاکتور فروش جدید', isLeaf: true },
-              { id: 'sales.invoice.btn_edit', title: '✏️ ویرایش فاکتور', isLeaf: true },
-              { id: 'sales.invoice.btn_cancel', title: '❌ ابطال فاکتور', isLeaf: true },
-              { id: 'sales.invoice.btn_print', title: '🖨️ چاپ فاکتور رسمی', isLeaf: true },
-              { id: 'sales.invoice.btn_send_tax', title: '🏛️ ارسال مستقیم به سامانه مودیان', isLeaf: true }
+              { id: 'inventory.sales_invoice.btn_new', title: '➕ صدور فاکتور فروش جدید', isLeaf: true },
+              { id: 'inventory.sales_invoice.btn_edit', title: '✏️ ویرایش فاکتور', isLeaf: true },
+              { id: 'inventory.sales_invoice.btn_cancel', title: '❌ ابطال فاکتور', isLeaf: true },
+              { id: 'inventory.sales_invoice.btn_print', title: '🖨️ چاپ فاکتور رسمی', isLeaf: true },
+              { id: 'inventory.sales_invoice.btn_send_tax', title: '🏛️ ارسال مستقیم به سامانه مودیان', isLeaf: true }
             ]
           }
         ]
       },
       {
-        id: 'sales.purchase',
+        id: 'inventory.purchase_invoice',
         title: '📥 فاکتور خرید و رسید انبار',
         children: [
           {
-            id: 'sales.purchase.actions',
+            id: 'inventory.purchase_invoice.actions',
             title: '🔘 دکمه‌های خرید',
             children: [
-              { id: 'sales.purchase.btn_new', title: '➕ ثبت فاکتور خرید جدید', isLeaf: true },
-              { id: 'sales.purchase.btn_edit', title: '✏️ ویرایش فاکتور خرید', isLeaf: true }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'treasury',
-    title: '🏦 ماژول خزانه‌داری، چک و بانک',
-    icon: '🏦',
-    children: [
-      {
-        id: 'treasury.checks',
-        title: '💳 مدیریت چک‌ها و اسناد دریافتنی/پرداختنی',
-        children: [
-          {
-            id: 'treasury.checks.tabs',
-            title: '📑 تب‌پیج‌های چک',
-            children: [
-              { id: 'treasury.checks.tab_in', title: '🔹 تب چک‌های دریافتی', isLeaf: true },
-              { id: 'treasury.checks.tab_out', title: '🔹 تب چک‌های پرداختی', isLeaf: true }
-            ]
-          },
-          {
-            id: 'treasury.checks.actions',
-            title: '🔘 عملیات و دکمه‌های چک',
-            children: [
-              { id: 'treasury.checks.btn_new', title: '➕ ثبت چک جدید', isLeaf: true },
-              { id: 'treasury.checks.btn_pass', title: '🟢 اعلام وصول چک', isLeaf: true },
-              { id: 'treasury.checks.btn_return', title: '🔴 برگشت زدن چک', isLeaf: true },
-              { id: 'treasury.checks.btn_spend', title: '🔄 خرج کردن چک به غیر', isLeaf: true }
+              { id: 'inventory.purchase_invoice.btn_new', title: '➕ ثبت فاکتور خرید جدید', isLeaf: true },
+              { id: 'inventory.purchase_invoice.btn_edit', title: '✏️ ویرایش فاکتور خرید', isLeaf: true }
             ]
           }
         ]
       },
       {
-        id: 'treasury.banks',
-        title: '🏛️ حساب‌های بانکی، صندوق و پوز',
+        id: 'inventory.currencies',
+        title: '💱 مدیریت ارزی و تسعیر نرخ',
         children: [
           {
-            id: 'treasury.banks.actions',
-            title: '🔘 دکمه‌های حساب بانکی',
+            id: 'inventory.currencies.actions',
+            title: '🔘 دکمه‌های ارزی',
             children: [
-              { id: 'treasury.banks.btn_new', title: '➕ افتتاح حساب بانکی/صندوق', isLeaf: true },
-              { id: 'treasury.banks.btn_edit', title: '✏️ ویرایش حساب بانکی', isLeaf: true }
+              { id: 'inventory.currencies.btn_new', title: '➕ تعریف ارز جدید', isLeaf: true },
+              { id: 'inventory.currencies.btn_tgju', title: '🌐 دریافت آنلاین نرخ آزاد از TGJU', isLeaf: true },
+              { id: 'inventory.currencies.btn_edit', title: '✏️ ثبت نرخ دستی و تاریخ اعمال', isLeaf: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'inventory.modyan',
+        title: '🏛️ سامانه مودیان مالیاتی (Tax System)',
+        children: [
+          {
+            id: 'inventory.modyan.actions',
+            title: '🔘 دکمه‌ها و ارتباط با کارپوشه',
+            children: [
+              { id: 'inventory.modyan.btn_sign', title: '🔐 امضای دیجیتال فاکتور با کلید اختصاصی', isLeaf: true },
+              { id: 'inventory.modyan.btn_send', title: '🚀 ارسال بسته‌های فاکتور به سازمان امور مالیاتی', isLeaf: true },
+              { id: 'inventory.modyan.btn_inquire', title: '🔍 استعلام وضعیت و شماره منحصر به فرد مالیاتی', isLeaf: true }
             ]
           }
         ]
@@ -1582,7 +1673,7 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
   },
   {
     id: 'payroll',
-    title: '👔 ماژول حقوق و دستمزد پرسنل',
+    title: '👔 حقوق و دستمزد',
     icon: '👔',
     children: [
       {
@@ -1625,21 +1716,22 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
     ]
   },
   {
-    id: 'currencies',
-    title: '💱 ماژول مدیریت ارزی و تسعیر',
-    icon: '💱',
+    id: 'assets',
+    title: '🏛 اموال',
+    icon: '🏛',
     children: [
       {
-        id: 'currencies.rates',
-        title: '📈 ارزها و نرخ‌های برابری آنلاین و دستی',
+        id: 'assets.registry',
+        title: '📋 دفتر اموال و دارایی‌های ثابت',
         children: [
           {
-            id: 'currencies.rates.actions',
-            title: '🔘 دکمه‌های ارزی',
+            id: 'assets.registry.actions',
+            title: '🔘 دکمه‌های اموال',
             children: [
-              { id: 'currencies.rates.btn_new', title: '➕ تعریف ارز جدید', isLeaf: true },
-              { id: 'currencies.rates.btn_tgju', title: '🌐 دریافت آنلاین نرخ آزاد از TGJU', isLeaf: true },
-              { id: 'currencies.rates.btn_edit', title: '✏️ ثبت نرخ دستی و تاریخ اعمال', isLeaf: true }
+              { id: 'assets.registry.btn_new', title: '➕ تعریف دارایی جدید', isLeaf: true },
+              { id: 'assets.registry.btn_edit', title: '✏️ ویرایش مشخصات دارایی', isLeaf: true },
+              { id: 'assets.registry.btn_depreciation', title: '📉 محاسبه استهلاک سالانه', isLeaf: true },
+              { id: 'assets.registry.btn_disposal', title: '🗑️ اسقاط و فروش دارایی', isLeaf: true }
             ]
           }
         ]
@@ -1647,98 +1739,88 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
     ]
   },
   {
-    id: 'modyan',
-    title: '🏛️ سامانه مودیان مالیاتی (Tax System)',
-    icon: '🏛️',
+    id: 'automation',
+    title: '✉️ اتوماسیون اداری',
+    icon: '✉️',
     children: [
       {
-        id: 'modyan.actions',
-        title: '🔘 دکمه‌ها و ارتباط با کارپوشه',
+        id: 'automation.letters',
+        title: '📨 مکاتبات اداری و نامه‌نگاری',
         children: [
-          { id: 'modyan.btn_sign', title: '🔐 امضای دیجیتال فاکتور با کلید اختصاصی', isLeaf: true },
-          { id: 'modyan.btn_send', title: '🚀 ارسال بسته‌های فاکتور به سازمان امور مالیاتی', isLeaf: true },
-          { id: 'modyan.btn_inquire', title: '🔍 استعلام وضعیت و شماره منحصر به فرد مالیاتی', isLeaf: true }
+          {
+            id: 'automation.letters.actions',
+            title: '🔘 دکمه‌های اتوماسیون',
+            children: [
+              { id: 'automation.letters.btn_new', title: '➕ تهیه نامه جدید', isLeaf: true },
+              { id: 'automation.letters.btn_send', title: '📤 ارسال نامه', isLeaf: true },
+              { id: 'automation.letters.btn_archive', title: '🗂️ بایگانی نامه', isLeaf: true }
+            ]
+          }
         ]
       }
     ]
   },
   {
-    id: 'companies',
-    title: '🏢 مدیریت شرکت‌ها و سال‌های مالی',
-    icon: '🏢',
+    id: 'crm',
+    title: '🤝 باشگاه مشتریان',
+    icon: '🤝',
     children: [
       {
-        id: 'companies.company',
-        title: '🏢 مشخصات شرکت‌ها (Company Form)',
+        id: 'crm.customers',
+        title: '👤 مدیریت مشتریان و مخاطبین',
         children: [
           {
-            id: 'companies.company.tabs',
-            title: '📑 تب‌پیج‌های ۶ گانه فرم شرکت',
+            id: 'crm.customers.actions',
+            title: '🔘 دکمه‌های مشتریان',
             children: [
-              { id: 'companies.company.tab_main', title: '🔹 تب ۱: مشخصات اصلی و کد اقتصادی', isLeaf: true },
-              { id: 'companies.company.tab_branch', title: '🔹 تب ۲: شعب، تلفن و نشانی', isLeaf: true },
-              { id: 'companies.company.tab_bank', title: '🔹 تب ۳: حساب بانکی و ارز مبنا', isLeaf: true },
-              { id: 'companies.company.tab_chart', title: '🔹 تب ۴: چارت سازمانی و کدینگ', isLeaf: true },
-              { id: 'companies.company.tab_perm', title: '🔹 تب ۵: مجوزها و تاییدها', isLeaf: true },
-              { id: 'companies.company.tab_sign', title: '🔹 تب ۶: مدیریت و امضاها', isLeaf: true }
+              { id: 'crm.customers.btn_new', title: '➕ ثبت مشتری جدید', isLeaf: true },
+              { id: 'crm.customers.btn_edit', title: '✏️ ویرایش اطلاعات مشتری', isLeaf: true },
+              { id: 'crm.customers.btn_history', title: '📋 سابقه خرید و تعاملات', isLeaf: true }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'treasury',
+    title: '💰 خزانه‌داری',
+    icon: '💰',
+    children: [
+      {
+        id: 'treasury.checks',
+        title: '💳 مدیریت چک‌ها و اسناد دریافتنی/پرداختنی',
+        children: [
+          {
+            id: 'treasury.checks.tabs',
+            title: '📑 تب‌پیج‌های چک',
+            children: [
+              { id: 'treasury.checks.tab_in', title: '🔹 تب چک‌های دریافتی', isLeaf: true },
+              { id: 'treasury.checks.tab_out', title: '🔹 تب چک‌های پرداختی', isLeaf: true }
             ]
           },
           {
-            id: 'companies.company.actions',
-            title: '🔘 دکمه‌های مدیریت شرکت',
+            id: 'treasury.checks.actions',
+            title: '🔘 عملیات و دکمه‌های چک',
             children: [
-              { id: 'companies.company.btn_new', title: '➕ تعریف شرکت جدید', isLeaf: true },
-              { id: 'companies.company.btn_edit', title: '✏️ ویرایش مشخصات شرکت', isLeaf: true }
+              { id: 'treasury.checks.btn_new', title: '➕ ثبت چک جدید', isLeaf: true },
+              { id: 'treasury.checks.btn_pass', title: '🟢 اعلام وصول چک', isLeaf: true },
+              { id: 'treasury.checks.btn_return', title: '🔴 برگشت زدن چک', isLeaf: true },
+              { id: 'treasury.checks.btn_spend', title: '🔄 خرج کردن چک به غیر', isLeaf: true }
             ]
           }
         ]
       },
       {
-        id: 'companies.fiscal_years',
-        title: '📅 مدیریت سال‌های مالی',
+        id: 'treasury.banks',
+        title: '🏛️ حساب‌های بانکی، صندوق و پوز',
         children: [
           {
-            id: 'companies.fiscal_years.actions',
-            title: '🔘 دکمه‌های سال مالی',
+            id: 'treasury.banks.actions',
+            title: '🔘 دکمه‌های حساب بانکی',
             children: [
-              { id: 'companies.fiscal_years.btn_new', title: '➕ افتتاح سال مالی جدید', isLeaf: true },
-              { id: 'companies.fiscal_years.btn_close', title: '🔒 بستن و انتهای دوره سال مالی', isLeaf: true }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'users',
-    title: '👥 مدیریت کاربران و دسترسی‌ها',
-    icon: '👥',
-    children: [
-      {
-        id: 'users.mgmt',
-        title: '👤 تعریف و ویرایش کاربران سیستم',
-        children: [
-          {
-            id: 'users.mgmt.actions',
-            title: '🔘 دکمه‌های کاربران',
-            children: [
-              { id: 'users.mgmt.btn_new', title: '➕ تعریف کاربر جدید', isLeaf: true },
-              { id: 'users.mgmt.btn_edit', title: '✏️ ویرایش کاربر', isLeaf: true },
-              { id: 'users.mgmt.btn_toggle', title: '🟢/🔴 فعال یا غیرفعال‌سازی کاربر', isLeaf: true },
-              { id: 'users.mgmt.btn_delete', title: '🗑️ حذف کاربر', isLeaf: true }
-            ]
-          }
-        ]
-      },
-      {
-        id: 'users.perms',
-        title: '🌳 درختواره سطوح دسترسی منوها',
-        children: [
-          {
-            id: 'users.perms.actions',
-            title: '🔘 دکمه‌های دسترسی',
-            children: [
-              { id: 'users.perms.btn_save', title: '💾 ذخیره تغییرات دسترسی‌ها', isLeaf: true }
+              { id: 'treasury.banks.btn_new', title: '➕ افتتاح حساب بانکی/صندوق', isLeaf: true },
+              { id: 'treasury.banks.btn_edit', title: '✏️ ویرایش حساب بانکی', isLeaf: true }
             ]
           }
         ]
@@ -1746,7 +1828,6 @@ const SYSTEM_PERMISSIONS_HIERARCHY = [
     ]
   }
 ];
-
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   if (!tbody) return;
@@ -6327,6 +6408,165 @@ function saveSanadEntry() {
 // ============================
 // INVENTORY MODULE
 // ============================
+function loadProductGroups() {
+  fetch('/api/Inventory/product-groups')
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.productGroups = data.map(d => ({
+          id: d.GroupID,
+          code: d.GroupCode,
+          name: d.GroupName,
+          parentId: d.ParentID,
+          parentName: d.ParentName || '-'
+        }));
+        renderProductGroupsTable();
+      }
+    })
+    .catch(err => console.log('Backend product groups load fallback to local AppState:', err));
+}
+
+function renderProductGroupsTable() {
+  const tbody = document.getElementById('productGroupsTableBody');
+  if (!tbody) return;
+
+  if (!AppState.productGroups || AppState.productGroups.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;">هیچ گروه کالایی یافت نشد.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = AppState.productGroups.map(g => {
+    const parentName = g.parentName || (g.parentId ? (AppState.productGroups.find(p => p.id === g.parentId)?.name || '-') : '-');
+    return `
+      <tr>
+        <td><b>${g.code}</b></td>
+        <td>${g.name}</td>
+        <td>${parentName}</td>
+        <td>
+          <button class="btn btn-outline" style="padding:3px 8px;" onclick="editProductGroup(${g.id})">✏️ ویرایش</button>
+          <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteProductGroup(${g.id})">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openAddProductGroupRow(editData = null) {
+  const formRow = document.getElementById('addProductGroupRow');
+  if (!formRow) return;
+
+  const parentSelect = document.getElementById('newGroupParent');
+  if (parentSelect) {
+    let options = '<option value="">-- بدون والد (ریشه) --</option>';
+    (AppState.productGroups || []).forEach(g => {
+      if (!editData || g.id !== editData.id) {
+        options += `<option value="${g.id}">${g.code} - ${g.name}</option>`;
+      }
+    });
+    parentSelect.innerHTML = options;
+  }
+
+  if (editData) {
+    document.getElementById('productGroupFormTitle').textContent = 'ویرایش مشخصات گروه کالا';
+    document.getElementById('editProductGroupId').value = editData.id;
+    document.getElementById('newGroupCode').value = editData.code || '';
+    document.getElementById('newGroupName').value = editData.name || '';
+    if (parentSelect) parentSelect.value = editData.parentId || '';
+  } else {
+    document.getElementById('productGroupFormTitle').textContent = 'افزودن گروه کالای جدید';
+    document.getElementById('editProductGroupId').value = '';
+    document.getElementById('newGroupCode').value = '';
+    document.getElementById('newGroupName').value = '';
+    if (parentSelect) parentSelect.value = '';
+  }
+
+  formRow.style.display = 'block';
+  document.getElementById('newGroupCode').focus();
+}
+
+function closeProductGroupRow() {
+  const formRow = document.getElementById('addProductGroupRow');
+  if (formRow) formRow.style.display = 'none';
+}
+
+function saveProductGroup() {
+  const editId = document.getElementById('editProductGroupId')?.value;
+  const code = document.getElementById('newGroupCode')?.value?.trim();
+  const name = document.getElementById('newGroupName')?.value?.trim();
+  const parentIdVal = document.getElementById('newGroupParent')?.value;
+  const parentId = parentIdVal ? Number(parentIdVal) : null;
+
+  if (!code || !name) {
+    alert('کد گروه و نام گروه الزامی است.');
+    return;
+  }
+
+  const parentName = parentId ? (AppState.productGroups.find(p => p.id === parentId)?.name || '-') : '-';
+
+  if (editId) {
+    const id = Number(editId);
+    const existing = AppState.productGroups.find(g => g.id === id);
+    if (existing) {
+      existing.code = code;
+      existing.name = name;
+      existing.parentId = parentId;
+      existing.parentName = parentName;
+    }
+  } else {
+    const newId = AppState.productGroups.length > 0 ? Math.max(...AppState.productGroups.map(g => g.id)) + 1 : 1;
+    AppState.productGroups.push({
+      id: newId,
+      code,
+      name,
+      parentId,
+      parentName
+    });
+  }
+
+  const payload = {
+    GroupID: editId ? Number(editId) : null,
+    CompanyID: AppState.currentCompanyId || 1,
+    GroupCode: code,
+    GroupName: name,
+    ParentID: parentId
+  };
+
+  fetch('/api/Inventory/product-groups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data && data.GroupID) {
+      const idx = AppState.productGroups.findIndex(g => g.code === code);
+      if (idx !== -1) {
+        AppState.productGroups[idx].id = data.GroupID;
+      }
+    }
+  }).catch(err => console.log('Backend sync skipped or offline:', err));
+
+  closeProductGroupRow();
+  renderProductGroupsTable();
+  alert(`گروه کالای "${name}" با موفقیت ذخیره شد.`);
+}
+
+function editProductGroup(id) {
+  const g = AppState.productGroups.find(x => x.id === id);
+  if (g) {
+    openAddProductGroupRow(g);
+  }
+}
+
+function deleteProductGroup(id) {
+  const g = AppState.productGroups.find(x => x.id === id);
+  if (!g) return;
+
+  if (confirm(`آیا از حذف گروه کالای "${g.name}" اطمینان دارید؟`)) {
+    AppState.productGroups = AppState.productGroups.filter(x => x.id !== id);
+    fetch(`/api/Inventory/product-groups/${id}`, { method: 'DELETE' }).catch(err => console.log(err));
+    renderProductGroupsTable();
+  }
+}
+
 function renderProductsTable() {
   const tbody = document.getElementById('productsTableBody');
   if (!tbody) return;

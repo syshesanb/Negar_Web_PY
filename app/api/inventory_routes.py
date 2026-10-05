@@ -5,6 +5,8 @@ from app.infrastructure.database import get_db
 from app.schemas.schemas import (
     ProductDTO,
     ProductCreateDTO,
+    ProductGroupDTO,
+    ProductGroupCreateDTO,
     WarehouseDTO,
     WarehouseCreateDTO,
     InventoryRecordDTO,
@@ -12,6 +14,33 @@ from app.schemas.schemas import (
 from app.services.inventory_service import InventoryService
 
 router = APIRouter()
+
+
+# -----------------------------------------------------------------------------
+# Product Groups (گروه‌بندی کالاها)
+# -----------------------------------------------------------------------------
+@router.get("/product-groups", response_model=List[ProductGroupDTO])
+def get_product_groups(
+    companyId: Optional[int] = Query(None, alias="companyId"),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    cid = companyId if companyId is not None else company_id
+    service = InventoryService(db)
+    return service.get_product_groups(cid)
+
+
+@router.post("/product-groups", response_model=ProductGroupDTO)
+def save_product_group(group: ProductGroupCreateDTO, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.save_product_group(group)
+
+
+@router.delete("/product-groups/{group_id}")
+def delete_product_group(group_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    success = service.delete_product_group(group_id)
+    return {"success": success}
 
 
 # -----------------------------------------------------------------------------
