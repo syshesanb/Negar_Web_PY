@@ -11140,11 +11140,11 @@ function renderPurchaseInvoiceDetailGrid() {
         <td style="text-align:center; font-size:0.85rem;">
           <span class="badge" style="background:var(--bg-secondary); color:var(--text-color);">${unitName}</span>
         </td>
-        <td style="padding:4px; text-align:center;">
-          <input type="number" min="0" step="1000" class="form-input" style="width:130px; text-align:left; padding:4px; font-size:0.85rem;" value="${line.price}" oninput="updatePurchDetailPrice(${idx}, this.value)" />
+        <td style="padding:4px; text-align:left; direction:ltr;">
+          <input type="text" dir="ltr" class="form-input" style="width:130px; text-align:left; direction:ltr; font-family:monospace, monospace; padding:4px 8px; font-size:0.85rem; font-weight:bold;" value="${(line.price || 0).toLocaleString('en-US')}" oninput="formatPurchDetailPrice(this, ${idx})" />
         </td>
-        <td style="text-align:left; font-weight:bold; color:var(--accent-color); font-size:0.85rem; padding:0 8px;">
-          ${lineTotal.toLocaleString()}
+        <td style="text-align:left; direction:ltr; font-weight:bold; color:var(--accent-color); font-size:0.85rem; padding:0 8px; font-family:monospace, monospace;">
+          <span class="purch-line-total" style="display:block; text-align:left; direction:ltr;">${lineTotal.toLocaleString('en-US')}</span>
         </td>
         <td style="text-align:center;">
           <button type="button" class="btn btn-outline" style="padding:2px 6px; color:var(--danger-color); border-color:var(--danger-color);" onclick="removePurchDetailRow(${idx})">🗑️</button>
@@ -11190,16 +11190,36 @@ function updatePurchDetailQty(idx, val) {
   const qty = Math.max(1, Number(val) || 1);
   if (currentPurchInvoiceLines[idx]) {
     currentPurchInvoiceLines[idx].qty = qty;
+    const lineTotal = qty * (currentPurchInvoiceLines[idx].price || 0);
+    const tbody = document.getElementById('purchaseInvoiceDetailBody');
+    if (tbody && tbody.children[idx]) {
+      const totalCell = tbody.children[idx].querySelector('.purch-line-total');
+      if (totalCell) totalCell.textContent = lineTotal.toLocaleString('en-US');
+    }
     calculatePurchInvoiceTotals();
   }
 }
 
-function updatePurchDetailPrice(idx, val) {
-  const price = Math.max(0, Number(val) || 0);
-  if (currentPurchInvoiceLines[idx]) {
-    currentPurchInvoiceLines[idx].price = price;
-    calculatePurchInvoiceTotals();
+function formatPurchDetailPrice(el, idx) {
+  const raw = el.value.replace(/[^\d]/g, '');
+  let num = 0;
+  if (raw) {
+    num = parseInt(raw, 10);
+    el.value = num.toLocaleString('en-US');
+  } else {
+    el.value = '0';
   }
+
+  if (currentPurchInvoiceLines[idx]) {
+    currentPurchInvoiceLines[idx].price = num;
+    const lineTotal = (currentPurchInvoiceLines[idx].qty || 0) * num;
+    const tbody = document.getElementById('purchaseInvoiceDetailBody');
+    if (tbody && tbody.children[idx]) {
+      const totalCell = tbody.children[idx].querySelector('.purch-line-total');
+      if (totalCell) totalCell.textContent = lineTotal.toLocaleString('en-US');
+    }
+  }
+  calculatePurchInvoiceTotals();
 }
 
 function calculatePurchInvoiceTotals() {
@@ -11211,7 +11231,7 @@ function calculatePurchInvoiceTotals() {
   const numEl = document.getElementById('purchInvoiceTotalNumber');
   const wordsEl = document.getElementById('purchInvoiceTotalWords');
 
-  if (numEl) numEl.textContent = grandTotal.toLocaleString() + ' ریال';
+  if (numEl) numEl.textContent = grandTotal.toLocaleString('en-US');
   if (wordsEl) wordsEl.textContent = '(' + (typeof numberToPersianWords === 'function' ? numberToPersianWords(grandTotal) : grandTotal) + ')';
 }
 
