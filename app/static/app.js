@@ -7042,21 +7042,7 @@ function deleteWarehouse(id) {
   }
 }
 
-function renderPurchaseInvoicesTable() {
-  const tbody = document.getElementById('purchaseInvoicesBody');
-  if (!tbody) return;
-  tbody.innerHTML = AppState.purchaseInvoices.map(inv => `
-    <tr>
-      <td><b>${inv.id}</b></td>
-      <td>${inv.date}</td>
-      <td>${inv.party}</td>
-      <td>${inv.warehouse}</td>
-      <td>${inv.total.toLocaleString()} ریال</td>
-      <td><span class="badge badge-success">${inv.status}</span></td>
-      <td><button class="btn btn-outline" style="padding:3px 8px;">📋 جزئیات</button></td>
-    </tr>
-  `).join('');
-}
+
 
 function renderSalesInvoicesTable() {
   const tbody = document.getElementById('salesInvoicesBody');
@@ -11062,6 +11048,8 @@ function generatePersonnelPayslip() {
 // WAREHOUSE & INVENTORY: INVOICES & CARDEX
 // ==========================================
 
+let currentPurchInvoiceLines = [];
+
 function renderPurchaseInvoicesTable() {
   const tbody = document.getElementById('purchaseInvoicesBody');
   if (!tbody) return;
@@ -11073,27 +11061,51 @@ function renderPurchaseInvoicesTable() {
         <td style="text-align:center; font-family:monospace; font-weight:bold;">${inv.id}</td>
         <td style="text-align:center; font-family:monospace;">${inv.date}</td>
         <td style="font-weight:bold;">${inv.party}</td>
-        <td style="text-align:center;">${inv.warehouse}</td>
-        <td style="text-align:left; font-weight:bold; color:#047857;">${totalVal.toLocaleString()}</td>
+        <td style="text-align:center;">${inv.warehouse || 'انبار مرکزی'}</td>
+        <td style="text-align:left; font-weight:bold; color:var(--accent-color);">${totalVal.toLocaleString()} ریال</td>
         <td style="text-align:center;"><span class="badge badge-success">${inv.status}</span></td>
+        <td style="text-align:center;">
+          <button class="btn btn-outline" style="padding:2px 8px; font-size:0.8rem;" onclick="editPurchaseInvoice('${inv.id}')">✏️ ویرایش</button>
+        </td>
       </tr>
     `;
   }).join('');
 }
 
-function openAddPurchaseInvoiceRow() {
+function openAddPurchaseInvoiceRow(editData = null) {
   const overlay = document.getElementById('purchaseInvoiceModalOverlay');
-  const select = document.getElementById('newPurchProduct');
-  if (overlay && select) {
-    overlay.style.display = 'flex';
-    select.innerHTML = AppState.products.map(p => `
-      <option value="${p.code}">${p.code} - ${p.name}</option>
-    `).join('');
-    
+  if (!overlay) return;
+
+  overlay.style.display = 'flex';
+
+  const titleEl = document.getElementById('purchInvoiceFormTitle');
+  if (editData) {
+    if (titleEl) titleEl.textContent = '📥 ویرایش فاکتور خرید';
+    document.getElementById('newPurchNo').value = editData.id;
+    document.getElementById('newPurchDate').value = editData.date || '1403/05/11';
+    document.getElementById('newPurchVendor').value = editData.party || 'بازرگانی واردات پارس';
+    document.getElementById('newPurchTempReceipt').value = editData.tempReceiptNo || 'REC-101';
+    document.getElementById('newPurchNotes').value = editData.notes || '';
+
+    currentPurchInvoiceLines = editData.lines ? JSON.parse(JSON.stringify(editData.lines)) : [
+      { prodCode: AppState.products[0]?.code || '', qty: 1, price: AppState.products[0]?.price || 0 }
+    ];
+  } else {
+    if (titleEl) titleEl.textContent = '📥 ثبت فاکتور خرید جدید';
     const nextNo = AppState.purchaseInvoices.length > 0 ? 'PINV-' + (4002 + AppState.purchaseInvoices.length) : 'PINV-4001';
     document.getElementById('newPurchNo').value = nextNo;
-    document.getElementById('newPurchPrice').value = AppState.products[0]?.price || 0;
+    document.getElementById('newPurchDate').value = '1403/05/11';
+    document.getElementById('newPurchVendor').value = 'بازرگانی واردات پارس';
+    document.getElementById('newPurchTempReceipt').value = 'REC-' + (100 + AppState.purchaseInvoices.length + 1);
+    document.getElementById('newPurchNotes').value = '';
+
+    const firstProd = AppState.products[0];
+    currentPurchInvoiceLines = [
+      { prodCode: firstProd?.code || '', qty: 1, price: firstProd?.price || 0 }
+    ];
   }
+
+  renderPurchaseInvoiceDetailGrid();
 }
 
 function closePurchaseInvoiceRow() {
@@ -11101,36 +11113,158 @@ function closePurchaseInvoiceRow() {
   if (overlay) overlay.style.display = 'none';
 }
 
-function saveNewPurchaseInvoice() {
-  const id = document.getElementById('newPurchNo').value.trim();
-  const date = document.getElementById('newPurchDate').value.trim();
-  const party = document.getElementById('newPurchVendor').value.trim();
-  const prodCode = document.getElementById('newPurchProduct').value;
-  const qty = Number(document.getElementById('newPurchQty').value);
-  const price = Number(document.getElementById('newPurchPrice').value);
+function renderPurchaseInvoiceDetailGrid() {
+  const tbody = document.getElementById('purchaseInvoiceDetailBody');
+  if (!tbody) return;
 
-  if (!id || !party || !qty || !price) {
-    alert('لطفاً اطلاعات فاکتور خرید را کامل کنید.');
+  tbody.innerHTML = currentPurchInvoiceLines.map((line, idx) => {
+    const prod = AppState.products.find(p => p.code === line.prodCode) || AppState.products[0];
+    const unitName = prod ? prod.unit : 'عدد';
+    const lineTotal = (line.qty || 0) * (line.price || 0);
+
+    const productOptions = AppState.products.map(p => 
+      `<option value="${p.code}" ${p.code === line.prodCode ? 'selected' : ''}>${p.code} - ${p.name}</option>`
+    ).join('');
+
+    return `
+      <tr>
+        <td style="text-align:center; font-weight:bold; font-size:0.85rem;">${idx + 1}</td>
+        <td style="padding:4px;">
+          <select class="form-select" style="width:100%; padding:4px 8px; font-size:0.85rem;" onchange="updatePurchDetailProduct(${idx}, this.value)">
+            ${productOptions}
+          </select>
+        </td>
+        <td style="padding:4px; text-align:center;">
+          <input type="number" min="1" class="form-input" style="width:70px; text-align:center; padding:4px; font-size:0.85rem;" value="${line.qty}" oninput="updatePurchDetailQty(${idx}, this.value)" />
+        </td>
+        <td style="text-align:center; font-size:0.85rem;">
+          <span class="badge" style="background:var(--bg-secondary); color:var(--text-color);">${unitName}</span>
+        </td>
+        <td style="padding:4px; text-align:center;">
+          <input type="number" min="0" step="1000" class="form-input" style="width:130px; text-align:left; padding:4px; font-size:0.85rem;" value="${line.price}" oninput="updatePurchDetailPrice(${idx}, this.value)" />
+        </td>
+        <td style="text-align:left; font-weight:bold; color:var(--accent-color); font-size:0.85rem; padding:0 8px;">
+          ${lineTotal.toLocaleString()}
+        </td>
+        <td style="text-align:center;">
+          <button type="button" class="btn btn-outline" style="padding:2px 6px; color:var(--danger-color); border-color:var(--danger-color);" onclick="removePurchDetailRow(${idx})">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  calculatePurchInvoiceTotals();
+}
+
+function addPurchaseInvoiceDetailRow() {
+  const firstProd = AppState.products[0];
+  currentPurchInvoiceLines.push({
+    prodCode: firstProd?.code || '',
+    qty: 1,
+    price: firstProd?.price || 0
+  });
+  renderPurchaseInvoiceDetailGrid();
+}
+
+function removePurchDetailRow(idx) {
+  if (currentPurchInvoiceLines.length > 1) {
+    currentPurchInvoiceLines.splice(idx, 1);
+    renderPurchaseInvoiceDetailGrid();
+  } else {
+    alert('فاکتور خرید باید حداقل دارای یک ردیف کالا باشد.');
+  }
+}
+
+function updatePurchDetailProduct(idx, code) {
+  const prod = AppState.products.find(p => p.code === code);
+  if (currentPurchInvoiceLines[idx]) {
+    currentPurchInvoiceLines[idx].prodCode = code;
+    if (prod && prod.price) {
+      currentPurchInvoiceLines[idx].price = prod.price;
+    }
+    renderPurchaseInvoiceDetailGrid();
+  }
+}
+
+function updatePurchDetailQty(idx, val) {
+  const qty = Math.max(1, Number(val) || 1);
+  if (currentPurchInvoiceLines[idx]) {
+    currentPurchInvoiceLines[idx].qty = qty;
+    calculatePurchInvoiceTotals();
+  }
+}
+
+function updatePurchDetailPrice(idx, val) {
+  const price = Math.max(0, Number(val) || 0);
+  if (currentPurchInvoiceLines[idx]) {
+    currentPurchInvoiceLines[idx].price = price;
+    calculatePurchInvoiceTotals();
+  }
+}
+
+function calculatePurchInvoiceTotals() {
+  let grandTotal = 0;
+  (currentPurchInvoiceLines || []).forEach(line => {
+    grandTotal += (Number(line.qty) || 0) * (Number(line.price) || 0);
+  });
+
+  const numEl = document.getElementById('purchInvoiceTotalNumber');
+  const wordsEl = document.getElementById('purchInvoiceTotalWords');
+
+  if (numEl) numEl.textContent = grandTotal.toLocaleString() + ' ریال';
+  if (wordsEl) wordsEl.textContent = '(' + (typeof numberToPersianWords === 'function' ? numberToPersianWords(grandTotal) : grandTotal) + ')';
+}
+
+function saveNewPurchaseInvoice() {
+  const id = document.getElementById('newPurchNo')?.value?.trim();
+  const date = document.getElementById('newPurchDate')?.value?.trim();
+  const party = document.getElementById('newPurchVendor')?.value?.trim();
+  const tempReceiptNo = document.getElementById('newPurchTempReceipt')?.value?.trim() || '-';
+  const notes = document.getElementById('newPurchNotes')?.value?.trim() || '';
+
+  if (!id || !party || !currentPurchInvoiceLines || currentPurchInvoiceLines.length === 0) {
+    alert('لطفاً اطلاعات اصلی فاکتور و حداقل یک ردیف کالا را تکمیل کنید.');
     return;
   }
 
-  const total = qty * price;
-  AppState.purchaseInvoices.push({
+  let total = 0;
+  currentPurchInvoiceLines.forEach(l => {
+    total += (Number(l.qty) || 0) * (Number(l.price) || 0);
+  });
+
+  const existingIdx = AppState.purchaseInvoices.findIndex(inv => inv.id === id);
+  const invData = {
     id,
     date,
     party,
+    tempReceiptNo,
     total,
+    notes,
     warehouse: 'انبار مرکزی',
     status: 'ثبت نهایی',
-    lines: [{ prodCode, qty, price }]
-  });
+    lines: JSON.parse(JSON.stringify(currentPurchInvoiceLines))
+  };
 
-  const prod = AppState.products.find(p => p.code === prodCode);
-  if (prod) prod.stock += qty;
+  if (existingIdx !== -1) {
+    AppState.purchaseInvoices[existingIdx] = invData;
+  } else {
+    AppState.purchaseInvoices.push(invData);
+  }
+
+  // Update product stock
+  currentPurchInvoiceLines.forEach(line => {
+    const prod = AppState.products.find(p => p.code === line.prodCode);
+    if (prod) prod.stock += line.qty;
+  });
 
   alert(`فاکتور خرید ${id} با موفقیت ثبت و به موجودی انبار اضافه شد.`);
   closePurchaseInvoiceRow();
   renderPurchaseInvoicesTable();
+}
+
+function editPurchaseInvoice(id) {
+  const inv = AppState.purchaseInvoices.find(x => x.id === id);
+  if (inv) openAddPurchaseInvoiceRow(inv);
 }
 
 function renderSalesInvoicesTable() {
