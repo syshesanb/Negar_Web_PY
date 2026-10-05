@@ -6463,8 +6463,8 @@ function renderProductGroupsTable() {
 }
 
 function openAddProductGroupRow(editData = null) {
-  const formRow = document.getElementById('addProductGroupRow');
-  if (!formRow) return;
+  const overlay = document.getElementById('productGroupModalOverlay');
+  if (!overlay) return;
 
   const parentSelect = document.getElementById('newGroupParent');
   if (parentSelect) {
@@ -6491,13 +6491,13 @@ function openAddProductGroupRow(editData = null) {
     if (parentSelect) parentSelect.value = '';
   }
 
-  formRow.style.display = 'block';
+  overlay.style.display = 'flex';
   document.getElementById('newGroupCode').focus();
 }
 
 function closeProductGroupRow() {
-  const formRow = document.getElementById('addProductGroupRow');
-  if (formRow) formRow.style.display = 'none';
+  const overlay = document.getElementById('productGroupModalOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function saveProductGroup() {
@@ -6634,8 +6634,8 @@ function renderProductUnitsTable() {
 }
 
 function openAddProductUnitRow(editData = null) {
-  const formRow = document.getElementById('addProductUnitRow');
-  if (!formRow) return;
+  const overlay = document.getElementById('productUnitModalOverlay');
+  if (!overlay) return;
 
   const parentSelect = document.getElementById('newUnitParent');
   if (parentSelect) {
@@ -6668,13 +6668,13 @@ function openAddProductUnitRow(editData = null) {
     if (parentSelect) parentSelect.value = '';
   }
 
-  formRow.style.display = 'block';
+  overlay.style.display = 'flex';
   document.getElementById('newUnitCode').focus();
 }
 
 function closeProductUnitRow() {
-  const formRow = document.getElementById('addProductUnitRow');
-  if (formRow) formRow.style.display = 'none';
+  const overlay = document.getElementById('productUnitModalOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function saveProductUnit() {
@@ -6789,8 +6789,8 @@ function renderProductsTable() {
 }
 
 function openAddProductRow(editData = null) {
-  const formRow = document.getElementById('addProductRow');
-  if (!formRow) return;
+  const overlay = document.getElementById('productModalOverlay');
+  if (!overlay) return;
 
   const secUnitSelect = document.getElementById('newProdSecondaryUnit');
   if (secUnitSelect) {
@@ -6821,8 +6821,13 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdStock').value = '0';
   }
 
-  formRow.style.display = 'block';
+  overlay.style.display = 'flex';
   document.getElementById('newProdCode').focus();
+}
+
+function closeProductRow() {
+  const overlay = document.getElementById('productModalOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function saveNewProduct() {
@@ -6863,7 +6868,7 @@ function saveNewProduct() {
     });
   }
 
-  document.getElementById('addProductRow').style.display = 'none';
+  closeProductRow();
   renderProductsTable();
   alert(`کالای دو واحدی "${name}" با موفقیت ذخیره شد.`);
 }
@@ -6871,21 +6876,6 @@ function saveNewProduct() {
 function editProduct(id) {
   const p = AppState.products.find(x => x.id === id);
   if (p) openAddProductRow(p);
-}
-
-function saveNewProduct() {
-  const code = document.getElementById('newProdCode')?.value?.trim();
-  const name = document.getElementById('newProdName')?.value?.trim();
-  const unit = document.getElementById('newProdUnit')?.value;
-  const price = Number(document.getElementById('newProdPrice')?.value || 0);
-  const stock = Number(document.getElementById('newProdStock')?.value || 0);
-  if (!code || !name) { alert('کد کالا و نام کالا الزامی است.'); return; }
-  AppState.products.push({ id: Date.now(), code, name, unit, price, stock, barcode: '690' + Math.floor(Math.random() * 1e9) });
-  document.getElementById('newProdCode').value = '';
-  document.getElementById('newProdName').value = '';
-  document.getElementById('addProductRow').style.display = 'none';
-  renderProductsTable();
-  alert(`کالای "${name}" با موفقیت ثبت شد.`);
 }
 
 function deleteProduct(id) {
@@ -6940,8 +6930,8 @@ function renderWarehousesTable() {
 }
 
 function openAddWarehouseRow(editData = null) {
-  const formRow = document.getElementById('addWarehouseRow');
-  if (!formRow) return;
+  const overlay = document.getElementById('warehouseModalOverlay');
+  if (!overlay) return;
 
   if (editData) {
     document.getElementById('warehouseFormTitle').textContent = 'ویرایش مشخصات انبار';
@@ -6964,13 +6954,13 @@ function openAddWarehouseRow(editData = null) {
     document.getElementById('newWhAllowNeg').value = 'false';
   }
 
-  formRow.style.display = 'block';
+  overlay.style.display = 'flex';
   document.getElementById('newWhCode').focus();
 }
 
 function closeWarehouseRow() {
-  const formRow = document.getElementById('addWarehouseRow');
-  if (formRow) formRow.style.display = 'none';
+  const overlay = document.getElementById('warehouseModalOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function saveWarehouse() {
@@ -11092,10 +11082,10 @@ function renderPurchaseInvoicesTable() {
 }
 
 function openAddPurchaseInvoiceRow() {
-  const form = document.getElementById('addPurchaseInvoiceRow');
+  const overlay = document.getElementById('purchaseInvoiceModalOverlay');
   const select = document.getElementById('newPurchProduct');
-  if (form && select) {
-    form.style.display = 'block';
+  if (overlay && select) {
+    overlay.style.display = 'flex';
     select.innerHTML = AppState.products.map(p => `
       <option value="${p.code}">${p.code} - ${p.name}</option>
     `).join('');
@@ -11104,6 +11094,11 @@ function openAddPurchaseInvoiceRow() {
     document.getElementById('newPurchNo').value = nextNo;
     document.getElementById('newPurchPrice').value = AppState.products[0]?.price || 0;
   }
+}
+
+function closePurchaseInvoiceRow() {
+  const overlay = document.getElementById('purchaseInvoiceModalOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function saveNewPurchaseInvoice() {
@@ -11134,7 +11129,7 @@ function saveNewPurchaseInvoice() {
   if (prod) prod.stock += qty;
 
   alert(`فاکتور خرید ${id} با موفقیت ثبت و به موجودی انبار اضافه شد.`);
-  document.getElementById('addPurchaseInvoiceRow').style.display = 'none';
+  closePurchaseInvoiceRow();
   renderPurchaseInvoicesTable();
 }
 

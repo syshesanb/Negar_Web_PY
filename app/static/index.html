@@ -2469,22 +2469,35 @@
                 <tbody id="productGroupsTableBody"></tbody>
               </table>
             </div>
-            <div id="addProductGroupRow" style="display:none;" class="inline-form">
-              <h4 id="productGroupFormTitle">افزودن گروه کالای جدید</h4>
+          </div>
+        </div>
+
+        <!-- POPUP MODAL: PRODUCT GROUP -->
+        <div id="productGroupModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
+          <div class="card form-card" style="max-width:750px; width:92%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+              <h3 id="productGroupFormTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+                🗂️ افزودن گروه کالای جدید
+              </h3>
+              <button type="button" onclick="closeProductGroupRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                ✖
+              </button>
+            </div>
+            <div style="padding:24px; overflow-y:auto; flex:1;">
               <input type="hidden" id="editProductGroupId" value="" />
-              <div class="form-row">
-                <div class="form-group"><label class="form-label">کد گروه:</label><input type="text" id="newGroupCode" class="form-input" placeholder="GRP-01" /></div>
-                <div class="form-group"><label class="form-label">نام گروه:</label><input type="text" id="newGroupName" class="form-input" placeholder="عنوان گروه کالا" /></div>
-                <div class="form-group"><label class="form-label">گروه والد:</label>
+              <div class="form-row" style="display:flex; flex-wrap:wrap; gap:16px;">
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">کد گروه:</label><input type="text" id="newGroupCode" class="form-input" placeholder="GRP-01" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام گروه:</label><input type="text" id="newGroupName" class="form-input" placeholder="عنوان گروه کالا" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">گروه والد:</label>
                   <select id="newGroupParent" class="form-select">
                     <option value="">-- بدون والد (ریشه) --</option>
                   </select>
                 </div>
-                <div class="form-group" style="align-self:flex-end;">
-                  <button class="btn btn-primary" onclick="saveProductGroup()">ذخیره</button>
-                  <button class="btn btn-outline" onclick="closeProductGroupRow()">لغو</button>
-                </div>
               </div>
+            </div>
+            <div style="padding:14px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px;">
+              <button class="btn btn-primary" onclick="saveProductGroup()">ذخیره</button>
+              <button class="btn btn-outline" onclick="closeProductGroupRow()">انصراف</button>
             </div>
           </div>
         </div>
@@ -2503,30 +2516,43 @@
                 <tbody id="productUnitsTableBody"></tbody>
               </table>
             </div>
-            <div id="addProductUnitRow" style="display:none;" class="inline-form">
-              <h4 id="productUnitFormTitle">افزودن واحد اندازه‌گیری جدید</h4>
+          </div>
+        </div>
+
+        <!-- POPUP MODAL: PRODUCT UNIT -->
+        <div id="productUnitModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
+          <div class="card form-card" style="max-width:800px; width:92%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+              <h3 id="productUnitFormTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+                📏 افزودن واحد اندازه‌گیری جدید
+              </h3>
+              <button type="button" onclick="closeProductUnitRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                ✖
+              </button>
+            </div>
+            <div style="padding:24px; overflow-y:auto; flex:1;">
               <input type="hidden" id="editProductUnitId" value="" />
-              <div class="form-row">
-                <div class="form-group"><label class="form-label">کد واحد:</label><input type="text" id="newUnitCode" class="form-input" placeholder="UNT-01" /></div>
-                <div class="form-group"><label class="form-label">نام واحد:</label><input type="text" id="newUnitName" class="form-input" placeholder="مثلاً: کیلوگرم، گرم، گونی" /></div>
-                <div class="form-group"><label class="form-label">نماد / علامت:</label><input type="text" id="newUnitSymbol" class="form-input" placeholder="مثلاً: kg یا gr" /></div>
-                <div class="form-group"><label class="form-label">واحد والد:</label>
+              <div class="form-row" style="display:flex; flex-wrap:wrap; gap:16px;">
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">کد واحد:</label><input type="text" id="newUnitCode" class="form-input" placeholder="UNT-01" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام واحد:</label><input type="text" id="newUnitName" class="form-input" placeholder="مثلاً: کیلوگرم، گرم، گونی" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نماد / علامت:</label><input type="text" id="newUnitSymbol" class="form-input" placeholder="مثلاً: kg یا gr" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">واحد والد:</label>
                   <select id="newUnitParent" class="form-select">
                     <option value="">-- بدون والد (واحد اصلی/پایه) --</option>
                   </select>
                 </div>
-                <div class="form-group"><label class="form-label">نوع ضریب تبدیل:</label>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نوع ضریب تبدیل:</label>
                   <select id="newUnitRatioType" class="form-select">
                     <option value="ثابت">🟢 ثابت (دقیق و همیشگی)</option>
                     <option value="شناور">🟡 شناور (متغیر / وزن تخمینی)</option>
                   </select>
                 </div>
-                <div class="form-group"><label class="form-label">ضریب تبدیل به والد:</label><input type="number" step="0.0001" id="newUnitRatio" class="form-input" value="1.0" /></div>
-                <div class="form-group" style="align-self:flex-end;">
-                  <button class="btn btn-primary" onclick="saveProductUnit()">ذخیره</button>
-                  <button class="btn btn-outline" onclick="closeProductUnitRow()">لغو</button>
-                </div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">ضریب تبدیل به والد:</label><input type="number" step="0.0001" id="newUnitRatio" class="form-input" value="1.0" /></div>
               </div>
+            </div>
+            <div style="padding:14px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px;">
+              <button class="btn btn-primary" onclick="saveProductUnit()">ذخیره</button>
+              <button class="btn btn-outline" onclick="closeProductUnitRow()">انصراف</button>
             </div>
           </div>
         </div>
@@ -2541,26 +2567,39 @@
               <table><thead><tr><th>کد کالا</th><th>نام کالا</th><th>واحد اصلی</th><th>واحد فرعی (دوم)</th><th>ضریب فرعی</th><th>قیمت فروش</th><th>موجودی</th><th>عملیات</th></tr></thead>
               <tbody id="productsTableBody"></tbody></table>
             </div>
-            <div id="addProductRow" style="display:none;" class="inline-form">
-              <h4>افزودن / ویرایش کالا (سیستم دو واحدی)</h4>
+          </div>
+        </div>
+
+        <!-- POPUP MODAL: PRODUCT -->
+        <div id="productModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
+          <div class="card form-card" style="max-width:850px; width:92%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+              <h3 id="productFormTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+                📦 افزودن / ویرایش کالا (سیستم دو واحدی)
+              </h3>
+              <button type="button" onclick="closeProductRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                ✖
+              </button>
+            </div>
+            <div style="padding:24px; overflow-y:auto; flex:1;">
               <input type="hidden" id="editProductId" value="" />
-              <div class="form-row">
-                <div class="form-group"><label class="form-label">کد کالا:</label><input type="text" id="newProdCode" class="form-input" /></div>
-                <div class="form-group"><label class="form-label">نام کالا:</label><input type="text" id="newProdName" class="form-input" /></div>
-                <div class="form-group"><label class="form-label">واحد اصلی (پایه):</label>
+              <div class="form-row" style="display:flex; flex-wrap:wrap; gap:16px;">
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">کد کالا:</label><input type="text" id="newProdCode" class="form-input" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام کالا:</label><input type="text" id="newProdName" class="form-input" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">واحد اصلی (پایه):</label>
                   <select id="newProdUnit" class="form-select"><option value="کیلوگرم">کیلوگرم</option><option value="عدد">عدد</option><option value="متر">متر</option><option value="دستگاه">دستگاه</option></select>
                 </div>
-                <div class="form-group"><label class="form-label">واحد فرعی (شناور/دوم):</label>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">واحد فرعی (شناور/دوم):</label>
                   <select id="newProdSecondaryUnit" class="form-select"><option value="">-- بدون واحد فرعی --</option></select>
                 </div>
-                <div class="form-group"><label class="form-label">ضریب واحد فرعی:</label><input type="number" step="0.0001" id="newProdSecondaryRatio" class="form-input" value="1.0" placeholder="مثلا 20 کیلو" /></div>
-                <div class="form-group"><label class="form-label">قیمت (ریال):</label><input type="number" id="newProdPrice" class="form-input" /></div>
-                <div class="form-group"><label class="form-label">موجودی:</label><input type="number" id="newProdStock" class="form-input" value="0" /></div>
-                <div class="form-group" style="align-self:flex-end;">
-                  <button class="btn btn-primary" onclick="saveNewProduct()">ذخیره</button>
-                  <button class="btn btn-outline" onclick="document.getElementById('addProductRow').style.display='none'">لغو</button>
-                </div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">ضریب واحد فرعی:</label><input type="number" step="0.0001" id="newProdSecondaryRatio" class="form-input" value="1.0" placeholder="مثلا 20 کیلو" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">قیمت (ریال):</label><input type="number" id="newProdPrice" class="form-input" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">موجودی:</label><input type="number" id="newProdStock" class="form-input" value="0" /></div>
               </div>
+            </div>
+            <div style="padding:14px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px;">
+              <button class="btn btn-primary" onclick="saveNewProduct()">ذخیره</button>
+              <button class="btn btn-outline" onclick="closeProductRow()">انصراف</button>
             </div>
           </div>
         </div>
@@ -2575,13 +2614,26 @@
               <table><thead><tr><th>کد انبار</th><th>نام انبار</th><th>نوع انبار</th><th>انباردار</th><th>محل انبار</th><th>موجودی منفی</th><th>عملیات</th></tr></thead>
               <tbody id="warehousesTableBody"></tbody></table>
             </div>
-            <div id="addWarehouseRow" style="display:none;" class="inline-form">
-              <h4 id="warehouseFormTitle">افزودن انبار جدید</h4>
+          </div>
+        </div>
+
+        <!-- POPUP MODAL: WAREHOUSE -->
+        <div id="warehouseModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
+          <div class="card form-card" style="max-width:800px; width:92%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+              <h3 id="warehouseFormTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+                🏭 افزودن انبار جدید
+              </h3>
+              <button type="button" onclick="closeWarehouseRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                ✖
+              </button>
+            </div>
+            <div style="padding:24px; overflow-y:auto; flex:1;">
               <input type="hidden" id="editWarehouseId" value="" />
-              <div class="form-row">
-                <div class="form-group"><label class="form-label">کد انبار:</label><input type="text" id="newWhCode" class="form-input" placeholder="WH-01" /></div>
-                <div class="form-group"><label class="form-label">نام انبار:</label><input type="text" id="newWhName" class="form-input" placeholder="نام انبار" /></div>
-                <div class="form-group"><label class="form-label">نوع انبار:</label>
+              <div class="form-row" style="display:flex; flex-wrap:wrap; gap:16px;">
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">کد انبار:</label><input type="text" id="newWhCode" class="form-input" placeholder="WH-01" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام انبار:</label><input type="text" id="newWhName" class="form-input" placeholder="نام انبار" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نوع انبار:</label>
                   <select id="newWhType" class="form-select">
                     <option value="عمومی">عمومی</option>
                     <option value="مواد اولیه">مواد اولیه</option>
@@ -2589,19 +2641,19 @@
                     <option value="ضایعات">ضایعات</option>
                   </select>
                 </div>
-                <div class="form-group"><label class="form-label">انباردار:</label><input type="text" id="newWhKeeper" class="form-input" placeholder="نام انباردار" /></div>
-                <div class="form-group"><label class="form-label">محل انبار:</label><input type="text" id="newWhLocation" class="form-input" placeholder="آدرس یا جانمایی انبار" /></div>
-                <div class="form-group"><label class="form-label">مجوز موجودی منفی:</label>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">انباردار:</label><input type="text" id="newWhKeeper" class="form-input" placeholder="نام انباردار" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">محل انبار:</label><input type="text" id="newWhLocation" class="form-input" placeholder="آدرس یا جانمایی انبار" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">مجوز موجودی منفی:</label>
                   <select id="newWhAllowNeg" class="form-select">
                     <option value="false">خیر</option>
                     <option value="true">بله</option>
                   </select>
                 </div>
-                <div class="form-group" style="align-self:flex-end;">
-                  <button class="btn btn-primary" onclick="saveWarehouse()">ذخیره</button>
-                  <button class="btn btn-outline" onclick="closeWarehouseRow()">لغو</button>
-                </div>
               </div>
+            </div>
+            <div style="padding:14px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px;">
+              <button class="btn btn-primary" onclick="saveWarehouse()">ذخیره</button>
+              <button class="btn btn-outline" onclick="closeWarehouseRow()">انصراف</button>
             </div>
           </div>
         </div>
@@ -2635,26 +2687,36 @@
               <table><thead><tr><th>شماره فاکتور</th><th>تاریخ</th><th>تامین‌کننده</th><th>انبار</th><th>مبلغ کل (ریال)</th><th>وضعیت</th></tr></thead>
               <tbody id="purchaseInvoicesBody"></tbody></table>
             </div>
+          </div>
+        </div>
 
-            <!-- Add Purchase Invoice form -->
-            <div id="addPurchaseInvoiceRow" style="display:none; margin-top:20px; border-top:1px dashed var(--border-color); padding-top:15px;" class="inline-form">
-              <h4 style="margin-bottom:10px; color:var(--accent-color);">ثبت فاکتور خرید جدید</h4>
-              <div class="form-row">
-                <div class="form-group"><label class="form-label">شماره فاکتور:</label><input type="text" id="newPurchNo" class="form-input" style="background:var(--bg-primary);" /></div>
-                <div class="form-group"><label class="form-label">تاریخ:</label><input type="text" id="newPurchDate" class="form-input" style="background:var(--bg-primary);" value="1403/05/11" /></div>
-                <div class="form-group"><label class="form-label">تامین‌کننده:</label><input type="text" id="newPurchVendor" class="form-input" style="background:var(--bg-primary);" value="بازرگانی واردات پارس" /></div>
-                <div class="form-group"><label class="form-label">انتخاب کالا:</label>
+        <!-- POPUP MODAL: PURCHASE INVOICE -->
+        <div id="purchaseInvoiceModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
+          <div class="card form-card" style="max-width:850px; width:92%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+                📥 ثبت فاکتور خرید جدید
+              </h3>
+              <button type="button" onclick="closePurchaseInvoiceRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                ✖
+              </button>
+            </div>
+            <div style="padding:24px; overflow-y:auto; flex:1;">
+              <div class="form-row" style="display:flex; flex-wrap:wrap; gap:16px;">
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">شماره فاکتور:</label><input type="text" id="newPurchNo" class="form-input" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">تاریخ:</label><input type="text" id="newPurchDate" class="form-input" value="1403/05/11" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">تامین‌کننده:</label><input type="text" id="newPurchVendor" class="form-input" value="بازرگانی واردات پارس" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">انتخاب کالا:</label>
                   <select id="newPurchProduct" class="form-select"></select>
                 </div>
-                <div class="form-group"><label class="form-label">تعداد:</label><input type="number" id="newPurchQty" class="form-input" style="background:var(--bg-primary);" value="1" /></div>
-                <div class="form-group"><label class="form-label">قیمت واحد:</label><input type="number" id="newPurchPrice" class="form-input" style="background:var(--bg-primary);" /></div>
-                <div class="form-group" style="align-self:flex-end; display:flex; gap:6px;">
-                  <button class="btn btn-primary" onclick="saveNewPurchaseInvoice()">ثبت فاکتور</button>
-                  <button class="btn btn-outline" onclick="document.getElementById('addPurchaseInvoiceRow').style.display='none'">لغو</button>
-                </div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">تعداد:</label><input type="number" id="newPurchQty" class="form-input" value="1" /></div>
+                <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">قیمت واحد:</label><input type="number" id="newPurchPrice" class="form-input" /></div>
               </div>
             </div>
-
+            <div style="padding:14px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px;">
+              <button class="btn btn-primary" onclick="saveNewPurchaseInvoice()">ثبت فاکتور</button>
+              <button class="btn btn-outline" onclick="closePurchaseInvoiceRow()">انصراف</button>
+            </div>
           </div>
         </div>
 
