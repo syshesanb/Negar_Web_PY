@@ -2692,100 +2692,85 @@
 
         <!-- POPUP MODAL: PURCHASE INVOICE -->
         <div id="purchaseInvoiceModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
-          <div class="card form-card" style="max-width:960px; width:95%; height:88vh; max-height:92vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+          <div class="card form-card" style="max-width:980px; width:96%; height:90vh; max-height:94vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
             
-            <!-- Header -->
-            <div style="padding:14px 20px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-              <h3 id="purchInvoiceFormTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
+            <!-- Top Header Bar with Action Controls -->
+            <div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+              <h3 id="purchInvoiceFormTitle" style="margin:0; font-size:1.1rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
                 📥 ثبت فاکتور خرید جدید
               </h3>
-              <button type="button" onclick="closePurchaseInvoiceRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
-                ✖
-              </button>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="btn btn-primary" onclick="saveNewPurchaseInvoice()" style="padding:5px 14px; font-size:0.85rem;">💾 ثبت فاکتور</button>
+                <button type="button" class="btn btn-primary" onclick="addPurchaseInvoiceDetailRow()" style="padding:5px 14px; font-size:0.85rem; background:var(--accent-color); border-color:var(--accent-color);">➕ افزودن ردیف کالا</button>
+                <button type="button" class="btn btn-outline" onclick="closePurchaseInvoiceRow()" style="padding:5px 14px; font-size:0.85rem;">انصراف</button>
+                <button type="button" onclick="closePurchaseInvoiceRow()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s; margin-right:4px;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
+                  ✖
+                </button>
+              </div>
             </div>
 
-            <!-- Modal Content (Main area has flex container without scroll; scroll is scoped to middle detail panel) -->
-            <div style="padding:16px; display:flex; flex-direction:column; flex:1; gap:12px; overflow:hidden;">
+            <!-- Modal Content Body -->
+            <div style="padding:10px; display:flex; flex-direction:column; flex:1; gap:8px; overflow:hidden;">
               
-              <!-- 1. TOP PANEL: Fixed Shared Information -->
-              <div style="flex-shrink:0; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:8px; padding:12px 16px;">
-                <div style="font-weight:bold; font-size:0.85rem; color:var(--accent-color); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                  📌 اطلاعات اصلی و عمومی فاکتور خرید
-                </div>
-                <div class="form-row" style="display:flex; flex-wrap:wrap; gap:12px;">
-                  <div class="form-group" style="flex:1; min-width:180px; margin-bottom:0;">
-                    <label class="form-label" style="font-size:0.8rem;">شماره فاکتور:</label>
-                    <input type="text" id="newPurchNo" class="form-input" style="padding:6px 10px; font-weight:bold;" />
+              <!-- 1. TOP PANEL: Compact Input Fields (No Title Header) -->
+              <div style="flex-shrink:0; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:8px 12px;">
+                <div class="form-row" style="display:flex; flex-wrap:wrap; gap:10px;">
+                  <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.78rem; margin-bottom:2px;">شماره فاکتور:</label>
+                    <input type="text" id="newPurchNo" class="form-input" style="padding:4px 8px; font-weight:bold; font-size:0.85rem;" />
+                  </div>
+                  <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.78rem; margin-bottom:2px;">تاریخ:</label>
+                    <input type="text" id="newPurchDate" class="form-input" value="1403/05/11" style="padding:4px 8px; font-size:0.85rem;" />
                   </div>
                   <div class="form-group" style="flex:1; min-width:180px; margin-bottom:0;">
-                    <label class="form-label" style="font-size:0.8rem;">تاریخ:</label>
-                    <input type="text" id="newPurchDate" class="form-input" value="1403/05/11" style="padding:6px 10px;" />
+                    <label class="form-label" style="font-size:0.78rem; margin-bottom:2px;">تامین‌کننده:</label>
+                    <input type="text" id="newPurchVendor" class="form-input" value="بازرگانی واردات پارس" style="padding:4px 8px; font-size:0.85rem;" />
                   </div>
-                  <div class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
-                    <label class="form-label" style="font-size:0.8rem;">تامین‌کننده:</label>
-                    <input type="text" id="newPurchVendor" class="form-input" value="بازرگانی واردات پارس" style="padding:6px 10px;" />
-                  </div>
-                  <div class="form-group" style="flex:1; min-width:180px; margin-bottom:0;">
-                    <label class="form-label" style="font-size:0.8rem;">شماره رسید موقت:</label>
-                    <input type="text" id="newPurchTempReceipt" class="form-input" placeholder="REC-101" value="REC-101" style="padding:6px 10px;" />
+                  <div class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.78rem; margin-bottom:2px;">شماره رسید موقت:</label>
+                    <input type="text" id="newPurchTempReceipt" class="form-input" placeholder="REC-101" value="REC-101" style="padding:4px 8px; font-size:0.85rem;" />
                   </div>
                 </div>
               </div>
 
-              <!-- 2. MIDDLE PANEL: Detail DataGrid with Scoped Vertical Scroll ONLY -->
-              <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-shrink:0; margin-bottom:8px;">
-                  <div style="font-weight:bold; font-size:0.85rem; color:var(--accent-color); display:flex; align-items:center; gap:6px;">
-                    📦 اقلام و دیتیل فاکتور (DataGrid)
-                  </div>
-                  <button type="button" class="btn btn-primary" onclick="addPurchaseInvoiceDetailRow()" style="padding:4px 12px; font-size:0.8rem;">
-                    ➕ افزودن ردیف کالا
-                  </button>
-                </div>
-
-                <!-- Scrollable Table Container -->
-                <div class="table-wrapper" style="flex:1; overflow-y:auto; overflow-x:auto; border:1px solid var(--border-color); border-radius:6px; margin:0;">
+              <!-- 2. MIDDLE PANEL: DataGrid Table (Maximized Vertical Height) -->
+              <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-color); border-radius:6px; padding:6px;">
+                <div class="table-wrapper" style="flex:1; overflow-y:auto; overflow-x:auto; border:1px solid var(--border-color); border-radius:4px; margin:0;">
                   <table style="width:100%; border-collapse:collapse;">
                     <thead style="position:sticky; top:0; z-index:10; background:var(--bg-secondary);">
                       <tr>
-                        <th style="width:40px; text-align:center;">#</th>
-                        <th style="min-width:220px;">نام و کد کالا</th>
-                        <th style="width:90px; text-align:center;">تعداد</th>
-                        <th style="width:100px; text-align:center;">واحد اصلی</th>
-                        <th style="width:140px; text-align:center;">قیمت واحد (ریال)</th>
-                        <th style="width:150px; text-align:center;">مبلغ کل (ریال)</th>
-                        <th style="width:60px; text-align:center;">عملیات</th>
+                        <th style="width:36px; text-align:center; padding:6px;">#</th>
+                        <th style="min-width:220px; padding:6px;">نام و کد کالا</th>
+                        <th style="width:80px; text-align:center; padding:6px;">تعداد</th>
+                        <th style="width:90px; text-align:center; padding:6px;">واحد اصلی</th>
+                        <th style="width:130px; text-align:center; padding:6px;">قیمت واحد (ریال)</th>
+                        <th style="width:140px; text-align:center; padding:6px;">مبلغ کل (ریال)</th>
+                        <th style="width:50px; text-align:center; padding:6px;">عملیات</th>
                       </tr>
                     </thead>
                     <tbody id="purchaseInvoiceDetailBody"></tbody>
+                    <tfoot style="position:sticky; bottom:0; z-index:10; background:var(--bg-secondary); border-top:2px solid var(--border-color); font-weight:bold;">
+                      <tr>
+                        <td colspan="5" style="padding:6px 12px; text-align:right;">
+                          <span style="font-size:0.8rem; color:var(--text-muted);">جمع کل (به حروف):</span>
+                          <span id="purchInvoiceTotalWords" style="color:#0284c7; margin-right:8px; font-size:0.85rem;">(صفر ریال)</span>
+                        </td>
+                        <td style="padding:6px 8px; text-align:left; color:var(--accent-color); font-size:0.95rem;">
+                          <span id="purchInvoiceTotalNumber">0 ریال</span>
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
 
-              <!-- 3. BOTTOM PANEL: Summary Totals & Remarks -->
-              <div style="flex-shrink:0; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:8px; padding:12px 16px;">
-                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:bold; font-size:0.85rem; color:var(--text-muted);">جمع کل فاکتور (به عدد):</span>
-                    <span id="purchInvoiceTotalNumber" style="font-weight:bold; font-size:1.1rem; color:var(--accent-color);">0 ریال</span>
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:bold; font-size:0.85rem; color:var(--text-muted);">جمع کل (به حروف):</span>
-                    <span id="purchInvoiceTotalWords" style="font-weight:bold; font-size:0.85rem; color:#0284c7;">(صفر ریال)</span>
-                  </div>
-                </div>
-                <div>
-                  <label class="form-label" style="font-size:0.8rem; margin-bottom:4px; display:block;">توضیحات فاکتور:</label>
-                  <input type="text" id="newPurchNotes" class="form-input" placeholder="توضیحات اختیاری فاکتور خرید..." style="width:100%; padding:6px 10px;" />
-                </div>
+              <!-- 3. BOTTOM PANEL: Compact Notes Input (No Title Header) -->
+              <div style="flex-shrink:0; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:6px 12px;">
+                <input type="text" id="newPurchNotes" class="form-input" placeholder="توضیحات اختیاری فاکتور خرید..." style="width:100%; padding:5px 10px; font-size:0.85rem;" />
               </div>
 
-            </div>
-
-            <!-- Footer -->
-            <div style="padding:12px 20px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:12px; flex-shrink:0;">
-              <button class="btn btn-primary" onclick="saveNewPurchaseInvoice()">ثبت فاکتور</button>
-              <button class="btn btn-outline" onclick="closePurchaseInvoiceRow()">انصراف</button>
             </div>
 
           </div>
