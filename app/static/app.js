@@ -11140,11 +11140,11 @@ function renderPurchaseInvoiceDetailGrid() {
         <td style="text-align:center; font-size:0.85rem;">
           <span class="badge" style="background:var(--bg-secondary); color:var(--text-color);">${unitName}</span>
         </td>
-        <td style="padding:4px; text-align:left; direction:ltr;">
-          <input type="text" dir="ltr" class="form-input" style="width:130px; text-align:left; direction:ltr; font-family:monospace, monospace; padding:4px 8px; font-size:0.85rem; font-weight:bold;" value="${(line.price || 0).toLocaleString('en-US')}" oninput="formatPurchDetailPrice(this, ${idx})" />
+        <td style="padding:4px; text-align:right;">
+          <input type="text" class="form-input" style="width:130px; text-align:right; font-family:monospace, monospace; padding:4px 8px; font-size:0.85rem; font-weight:bold;" value="${(line.price || 0).toLocaleString('en-US')}" oninput="formatPurchDetailPrice(this, ${idx})" />
         </td>
-        <td style="text-align:left; direction:ltr; font-weight:bold; color:var(--accent-color); font-size:0.85rem; padding:0 8px; font-family:monospace, monospace;">
-          <span class="purch-line-total" style="display:block; text-align:left; direction:ltr;">${lineTotal.toLocaleString('en-US')}</span>
+        <td style="text-align:right; font-weight:bold; color:var(--accent-color); font-size:0.85rem; padding:0 8px; font-family:monospace, monospace;">
+          <span class="purch-line-total" style="display:block; text-align:right;">${lineTotal.toLocaleString('en-US')}</span>
         </td>
         <td style="text-align:center;">
           <button type="button" class="btn btn-outline" style="padding:2px 6px; color:var(--danger-color); border-color:var(--danger-color);" onclick="removePurchDetailRow(${idx})">🗑️</button>
