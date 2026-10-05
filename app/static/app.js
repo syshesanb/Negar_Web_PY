@@ -633,6 +633,14 @@ const AppState = {
     { id: 1, code: 'GRP-01', name: 'لوازم جانبی کامپیوتر', parentId: null, parentName: '-' },
     { id: 2, code: 'GRP-02', name: 'لپ‌تاپ و نوت‌بوک', parentId: null, parentName: '-' }
   ],
+  productUnits: [
+    { id: 1, code: 'UNT-01', name: 'وزن', symbol: 'W', parentId: null, parentName: '-', ratio: 1.0 },
+    { id: 2, code: 'UNT-01-01', name: 'کیلوگرم', symbol: 'kg', parentId: 1, parentName: 'وزن', ratio: 1.0 },
+    { id: 3, code: 'UNT-01-02', name: 'گرم', symbol: 'g', parentId: 2, parentName: 'کیلوگرم', ratio: 0.001 },
+    { id: 4, code: 'UNT-02', name: 'تعداد', symbol: 'عدد', parentId: null, parentName: '-', ratio: 1.0 },
+    { id: 5, code: 'UNT-02-01', name: 'بسته', symbol: 'بسته', parentId: 4, parentName: 'تعداد', ratio: 10.0 },
+    { id: 6, code: 'UNT-02-02', name: 'کارتن', symbol: 'کارتن', parentId: 4, parentName: 'تعداد', ratio: 100.0 }
+  ],
   products: [
     { id: 1, code: 'PRD-101', name: 'لپ‌تاپ گیمینگ ایسوس ۱۵ اینچ', unit: 'دستگاه', price: 450000000, stock: 24, barcode: '690123456789' },
     { id: 2, code: 'PRD-102', name: 'مانیتور ۲۷ اینچ 4K سامسونگ', unit: 'عدد', price: 180000000, stock: 15, barcode: '690987654321' }
@@ -947,6 +955,7 @@ function updateDocumentTitle(formId, customSubTitle) {
     'form-sanad1': 'ثبت و مدیریت اسناد حسابداری',
     'form-sanad2': 'ثبت و صدور سند حسابداری',
     'form-product-groups': 'گروه‌بندی کالاها',
+    'form-product-units': 'واحدهای اندازه‌گیری (درختی)',
     'form-products': 'تعریف و مدیریت کالاها',
     'form-warehouses': 'مدیریت انبارها',
     'form-cardex': 'کاردکس کالا',
@@ -1102,6 +1111,7 @@ function showForm(formId) {
   if (formId === 'form-sanad1') renderSanadListTable();
   if (formId === 'form-sanad2') renderSanadEditorLines();
   if (formId === 'form-product-groups') { renderProductGroupsTable(); loadProductGroups(); }
+  if (formId === 'form-product-units') { renderProductUnitsTable(); loadProductUnits(); }
   if (formId === 'form-products') renderProductsTable();
   if (formId === 'form-warehouses') renderWarehousesTable();
   if (formId === 'form-purchase-invoice') renderPurchaseInvoicesTable();
@@ -6564,6 +6574,184 @@ function deleteProductGroup(id) {
     AppState.productGroups = AppState.productGroups.filter(x => x.id !== id);
     fetch(`/api/Inventory/product-groups/${id}`, { method: 'DELETE' }).catch(err => console.log(err));
     renderProductGroupsTable();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Product Units (واحدهای اندازه‌گیری درختی)
+// -----------------------------------------------------------------------------
+function loadProductUnits() {
+  fetch('/api/Inventory/product-units')
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.productUnits = data.map(d => ({
+          id: d.UnitID,
+          code: d.UnitCode,
+          name: d.UnitName,
+          symbol: d.Symbol || '',
+          parentId: d.ParentID,
+          parentName: d.ParentName || '-',
+          ratio: d.ConversionRatio || 1.0
+        }));
+        renderProductUnitsTable();
+      }
+    })
+    .catch(err => console.log('Backend product units load fallback to local AppState:', err));
+}
+
+function renderProductUnitsTable() {
+  const tbody = document.getElementById('productUnitsTableBody');
+  if (!tbody) return;
+
+  if (!AppState.productUnits || AppState.productUnits.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">هیچ واحد اندازه‌گیری یافت نشد.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = AppState.productUnits.map(u => {
+    const parentName = u.parentName || (u.parentId ? (AppState.productUnits.find(p => p.id === u.parentId)?.name || '-') : '-');
+    return `
+      <tr>
+        <td><b>${u.code}</b></td>
+        <td>${u.name}</td>
+        <td><span class="badge" style="background:#e0f2fe;color:#0369a1;">${u.symbol || '-'}</span></td>
+        <td>${parentName}</td>
+        <td>${u.ratio}</td>
+        <td>
+          <button class="btn btn-outline" style="padding:3px 8px;" onclick="editProductUnit(${u.id})">✏️ ویرایش</button>
+          <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteProductUnit(${u.id})">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openAddProductUnitRow(editData = null) {
+  const formRow = document.getElementById('addProductUnitRow');
+  if (!formRow) return;
+
+  const parentSelect = document.getElementById('newUnitParent');
+  if (parentSelect) {
+    let options = '<option value="">-- بدون والد (واحد اصلی/پایه) --</option>';
+    (AppState.productUnits || []).forEach(u => {
+      if (!editData || u.id !== editData.id) {
+        options += `<option value="${u.id}">${u.code} - ${u.name} (${u.symbol || ''})</option>`;
+      }
+    });
+    parentSelect.innerHTML = options;
+  }
+
+  if (editData) {
+    document.getElementById('productUnitFormTitle').textContent = 'ویرایش مشخصات واحد اندازه‌گیری';
+    document.getElementById('editProductUnitId').value = editData.id;
+    document.getElementById('newUnitCode').value = editData.code || '';
+    document.getElementById('newUnitName').value = editData.name || '';
+    document.getElementById('newUnitSymbol').value = editData.symbol || '';
+    document.getElementById('newUnitRatio').value = editData.ratio || 1.0;
+    if (parentSelect) parentSelect.value = editData.parentId || '';
+  } else {
+    document.getElementById('productUnitFormTitle').textContent = 'افزودن واحد اندازه‌گیری جدید';
+    document.getElementById('editProductUnitId').value = '';
+    document.getElementById('newUnitCode').value = '';
+    document.getElementById('newUnitName').value = '';
+    document.getElementById('newUnitSymbol').value = '';
+    document.getElementById('newUnitRatio').value = 1.0;
+    if (parentSelect) parentSelect.value = '';
+  }
+
+  formRow.style.display = 'block';
+  document.getElementById('newUnitCode').focus();
+}
+
+function closeProductUnitRow() {
+  const formRow = document.getElementById('addProductUnitRow');
+  if (formRow) formRow.style.display = 'none';
+}
+
+function saveProductUnit() {
+  const editId = document.getElementById('editProductUnitId')?.value;
+  const code = document.getElementById('newUnitCode')?.value?.trim();
+  const name = document.getElementById('newUnitName')?.value?.trim();
+  const symbol = document.getElementById('newUnitSymbol')?.value?.trim() || '';
+  const ratio = Number(document.getElementById('newUnitRatio')?.value || 1.0);
+  const parentIdVal = document.getElementById('newUnitParent')?.value;
+  const parentId = parentIdVal ? Number(parentIdVal) : null;
+
+  if (!code || !name) {
+    alert('کد واحد و نام واحد الزامی است.');
+    return;
+  }
+
+  const parentName = parentId ? (AppState.productUnits.find(u => u.id === parentId)?.name || '-') : '-';
+
+  if (editId) {
+    const id = Number(editId);
+    const existing = AppState.productUnits.find(u => u.id === id);
+    if (existing) {
+      existing.code = code;
+      existing.name = name;
+      existing.symbol = symbol;
+      existing.ratio = ratio;
+      existing.parentId = parentId;
+      existing.parentName = parentName;
+    }
+  } else {
+    const newId = AppState.productUnits.length > 0 ? Math.max(...AppState.productUnits.map(u => u.id)) + 1 : 1;
+    AppState.productUnits.push({
+      id: newId,
+      code,
+      name,
+      symbol,
+      ratio,
+      parentId,
+      parentName
+    });
+  }
+
+  const payload = {
+    UnitID: editId ? Number(editId) : null,
+    CompanyID: AppState.currentCompanyId || 1,
+    UnitCode: code,
+    UnitName: name,
+    Symbol: symbol,
+    ConversionRatio: ratio,
+    ParentID: parentId
+  };
+
+  fetch('/api/Inventory/product-units', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data && data.UnitID) {
+      const idx = AppState.productUnits.findIndex(u => u.code === code);
+      if (idx !== -1) {
+        AppState.productUnits[idx].id = data.UnitID;
+      }
+    }
+  }).catch(err => console.log('Backend sync skipped or offline:', err));
+
+  closeProductUnitRow();
+  renderProductUnitsTable();
+  alert(`واحد اندازه‌گیری "${name}" با موفقیت ذخیره شد.`);
+}
+
+function editProductUnit(id) {
+  const u = AppState.productUnits.find(x => x.id === id);
+  if (u) {
+    openAddProductUnitRow(u);
+  }
+}
+
+function deleteProductUnit(id) {
+  const u = AppState.productUnits.find(x => x.id === id);
+  if (!u) return;
+
+  if (confirm(`آیا از حذف واحد اندازه‌گیری "${u.name}" اطمینان دارید؟`)) {
+    AppState.productUnits = AppState.productUnits.filter(x => x.id !== id);
+    fetch(`/api/Inventory/product-units/${id}`, { method: 'DELETE' }).catch(err => console.log(err));
+    renderProductUnitsTable();
   }
 }
 

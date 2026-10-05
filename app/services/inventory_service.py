@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from app.domain.models import Product, ProductGroup, Warehouse, InventoryRecord
-from app.schemas.schemas import ProductCreateDTO, ProductGroupCreateDTO, WarehouseCreateDTO
+from app.domain.models import Product, ProductGroup, ProductUnit, Warehouse, InventoryRecord
+from app.schemas.schemas import ProductCreateDTO, ProductGroupCreateDTO, ProductUnitCreateDTO, WarehouseCreateDTO
 
 
 class InventoryService:
@@ -73,6 +73,81 @@ class InventoryService:
         pg = self.db.query(ProductGroup).filter(ProductGroup.GroupID == group_id).first()
         if pg:
             self.db.delete(pg)
+            self.db.commit()
+            return True
+        return False
+
+    # -------------------------------------------------------------------------
+    # Product Units (واحدهای اندازه‌گیری)
+    # -------------------------------------------------------------------------
+    def get_product_units(self, company_id: Optional[int] = None) -> List[dict]:
+        query = self.db.query(ProductUnit)
+        if company_id is not None:
+            query = query.filter(ProductUnit.CompanyID == company_id)
+        units = query.order_by(ProductUnit.UnitCode).all()
+
+        result = []
+        for u in units:
+            parent_name = u.ParentUnit.UnitName if u.ParentUnit else "-"
+            result.append({
+                "UnitID": u.UnitID,
+                "CompanyID": u.CompanyID,
+                "ParentID": u.ParentID,
+                "UnitCode": u.UnitCode,
+                "UnitName": u.UnitName,
+                "Symbol": u.Symbol,
+                "ConversionRatio": float(u.ConversionRatio or 1.0),
+                "Level": u.Level,
+                "IsActive": u.IsActive,
+                "ParentName": parent_name,
+            })
+        return result
+
+    def save_product_unit(self, dto: ProductUnitCreateDTO) -> dict:
+        if dto.UnitID and dto.UnitID > 0:
+            pu = self.db.query(ProductUnit).filter(ProductUnit.UnitID == dto.UnitID).first()
+            if pu:
+                for field, val in dto.dict(exclude_unset=True).items():
+                    if hasattr(pu, field):
+                        setattr(pu, field, val)
+                self.db.commit()
+                self.db.refresh(pu)
+                parent_name = pu.ParentUnit.UnitName if pu.ParentUnit else "-"
+                return {
+                    "UnitID": pu.UnitID,
+                    "CompanyID": pu.CompanyID,
+                    "ParentID": pu.ParentID,
+                    "UnitCode": pu.UnitCode,
+                    "UnitName": pu.UnitName,
+                    "Symbol": pu.Symbol,
+                    "ConversionRatio": float(pu.ConversionRatio or 1.0),
+                    "Level": pu.Level,
+                    "IsActive": pu.IsActive,
+                    "ParentName": parent_name,
+                }
+
+        new_pu = ProductUnit(**dto.dict(exclude={"UnitID"}))
+        self.db.add(new_pu)
+        self.db.commit()
+        self.db.refresh(new_pu)
+        parent_name = new_pu.ParentUnit.UnitName if new_pu.ParentUnit else "-"
+        return {
+            "UnitID": new_pu.UnitID,
+            "CompanyID": new_pu.CompanyID,
+            "ParentID": new_pu.ParentID,
+            "UnitCode": new_pu.UnitCode,
+            "UnitName": new_pu.UnitName,
+            "Symbol": new_pu.Symbol,
+            "ConversionRatio": float(new_pu.ConversionRatio or 1.0),
+            "Level": new_pu.Level,
+            "IsActive": new_pu.IsActive,
+            "ParentName": parent_name,
+        }
+
+    def delete_product_unit(self, unit_id: int) -> bool:
+        pu = self.db.query(ProductUnit).filter(ProductUnit.UnitID == unit_id).first()
+        if pu:
+            self.db.delete(pu)
             self.db.commit()
             return True
         return False

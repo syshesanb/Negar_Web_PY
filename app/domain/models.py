@@ -132,6 +132,22 @@ class ProductGroup(Base):
     ParentGroup = relationship("ProductGroup", remote_side=[GroupID], backref="ChildGroups")
 
 
+class ProductUnit(Base):
+    __tablename__ = "ProductUnits"
+
+    UnitID = Column(Integer, primary_key=True, autoincrement=True)
+    CompanyID = Column(Integer, ForeignKey("Companies.CompanyID", ondelete="CASCADE"), nullable=False)
+    ParentID = Column(Integer, ForeignKey("ProductUnits.UnitID", ondelete="CASCADE"), nullable=True)
+    UnitCode = Column(String(50), nullable=False)
+    UnitName = Column(String(150), nullable=False)
+    Symbol = Column(String(50), nullable=True)
+    ConversionRatio = Column(Numeric(18, 4), default=1.0)
+    Level = Column(Integer, nullable=False, default=1)
+    IsActive = Column(Boolean, default=True)
+
+    ParentUnit = relationship("ProductUnit", remote_side=[UnitID], backref="ChildUnits")
+
+
 class Product(Base):
     __tablename__ = "Products"
 

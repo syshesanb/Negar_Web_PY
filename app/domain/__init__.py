@@ -5,6 +5,7 @@ from app.domain.models import (
     Company,
     FiscalYear,
     ProductGroup,
+    ProductUnit,
     Product,
     Warehouse,
     InventoryRecord,

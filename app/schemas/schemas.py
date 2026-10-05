@@ -214,6 +214,29 @@ class ProductGroupDTO(ProductGroupBase):
         from_attributes = True
 
 
+class ProductUnitBase(BaseModel):
+    CompanyID: Optional[int] = None
+    ParentID: Optional[int] = None
+    UnitCode: str
+    UnitName: str
+    Symbol: Optional[str] = None
+    ConversionRatio: float = 1.0
+    Level: int = 1
+    IsActive: bool = True
+
+
+class ProductUnitCreateDTO(ProductUnitBase):
+    UnitID: Optional[int] = None
+
+
+class ProductUnitDTO(ProductUnitBase):
+    UnitID: int
+    ParentName: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ProductBase(BaseModel):
     CompanyID: Optional[int] = None
     ProductCode: str

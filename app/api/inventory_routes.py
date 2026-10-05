@@ -7,6 +7,8 @@ from app.schemas.schemas import (
     ProductCreateDTO,
     ProductGroupDTO,
     ProductGroupCreateDTO,
+    ProductUnitDTO,
+    ProductUnitCreateDTO,
     WarehouseDTO,
     WarehouseCreateDTO,
     InventoryRecordDTO,
@@ -40,6 +42,33 @@ def save_product_group(group: ProductGroupCreateDTO, db: Session = Depends(get_d
 def delete_product_group(group_id: int, db: Session = Depends(get_db)):
     service = InventoryService(db)
     success = service.delete_product_group(group_id)
+    return {"success": success}
+
+
+# -----------------------------------------------------------------------------
+# Product Units (واحدهای اندازه‌گیری درختی)
+# -----------------------------------------------------------------------------
+@router.get("/product-units", response_model=List[ProductUnitDTO])
+def get_product_units(
+    companyId: Optional[int] = Query(None, alias="companyId"),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    cid = companyId if companyId is not None else company_id
+    service = InventoryService(db)
+    return service.get_product_units(cid)
+
+
+@router.post("/product-units", response_model=ProductUnitDTO)
+def save_product_unit(unit: ProductUnitCreateDTO, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.save_product_unit(unit)
+
+
+@router.delete("/product-units/{unit_id}")
+def delete_product_unit(unit_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    success = service.delete_product_unit(unit_id)
     return {"success": success}
 
 

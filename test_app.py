@@ -95,6 +95,31 @@ def run_tests():
     assert pg_list_res.status_code == 200
     assert len(pg_list_res.json()) >= 1
 
+    # Product Unit Tests (Root & Child)
+    pu_parent_res = client.post("/api/Inventory/product-units", json={
+        "CompanyID": 1,
+        "UnitCode": "UNT-01",
+        "UnitName": "وزن",
+        "Symbol": "W",
+        "ConversionRatio": 1.0
+    })
+    assert pu_parent_res.status_code == 200, f"Save parent unit failed: {pu_parent_res.text}"
+    saved_pu_parent = pu_parent_res.json()
+    print(" -> واحد اصلی تعریف شد:", saved_pu_parent["UnitName"])
+
+    pu_child_res = client.post("/api/Inventory/product-units", json={
+        "CompanyID": 1,
+        "ParentID": saved_pu_parent["UnitID"],
+        "UnitCode": "UNT-01-01",
+        "UnitName": "کیلوگرم",
+        "Symbol": "kg",
+        "ConversionRatio": 1.0
+    })
+    assert pu_child_res.status_code == 200, f"Save child unit failed: {pu_child_res.text}"
+    saved_pu_child = pu_child_res.json()
+    assert saved_pu_child["ParentName"] == "وزن"
+    print(" -> واحد فرزند تعریف شد:", saved_pu_child["UnitName"], "با والد:", saved_pu_child["ParentName"])
+
     wh_res = client.post("/api/Inventory/warehouses", json={
         "CompanyID": 1,
         "WarehouseName": "انبار مرکزی",
