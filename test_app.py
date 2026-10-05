@@ -113,12 +113,28 @@ def run_tests():
         "UnitCode": "UNT-01-01",
         "UnitName": "کیلوگرم",
         "Symbol": "kg",
-        "ConversionRatio": 1.0
+        "ConversionRatio": 1.0,
+        "RatioType": "ثابت"
     })
     assert pu_child_res.status_code == 200, f"Save child unit failed: {pu_child_res.text}"
     saved_pu_child = pu_child_res.json()
     assert saved_pu_child["ParentName"] == "وزن"
     print(" -> واحد فرزند تعریف شد:", saved_pu_child["UnitName"], "با والد:", saved_pu_child["ParentName"])
+
+    pu_float_res = client.post("/api/Inventory/product-units", json={
+        "CompanyID": 1,
+        "ParentID": saved_pu_child["UnitID"],
+        "UnitCode": "UNT-01-02",
+        "UnitName": "گونی برنج",
+        "Symbol": "گونی",
+        "ConversionRatio": 20.0,
+        "RatioType": "شناور",
+        "IsFloating": True
+    })
+    assert pu_float_res.status_code == 200, f"Save floating unit failed: {pu_float_res.text}"
+    saved_pu_float = pu_float_res.json()
+    assert saved_pu_float["RatioType"] == "شناور"
+    print(" -> واحد شناور (متغیر) تعریف شد:", saved_pu_float["UnitName"], f"[{saved_pu_float['RatioType']}]")
 
     wh_res = client.post("/api/Inventory/warehouses", json={
         "CompanyID": 1,

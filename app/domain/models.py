@@ -142,6 +142,8 @@ class ProductUnit(Base):
     UnitName = Column(String(150), nullable=False)
     Symbol = Column(String(50), nullable=True)
     ConversionRatio = Column(Numeric(18, 4), default=1.0)
+    RatioType = Column(String(20), default="ثابت")
+    IsFloating = Column(Boolean, default=False)
     Level = Column(Integer, nullable=False, default=1)
     IsActive = Column(Boolean, default=True)
 
@@ -156,6 +158,9 @@ class Product(Base):
     ProductCode = Column(String(50), nullable=False)
     ProductName = Column(String(200), nullable=False)
     Unit = Column(String(50), default="عدد")
+    SecondaryUnitID = Column(Integer, ForeignKey("ProductUnits.UnitID", ondelete="SET NULL"), nullable=True)
+    SecondaryUnitName = Column(String(50), nullable=True)
+    SecondaryUnitRatio = Column(Numeric(18, 4), default=1.0)
     DefaultPrice = Column(Numeric(18, 2), default=0.0)
     Category = Column(String(100), nullable=True)
     IsActive = Column(Boolean, default=True)
@@ -168,6 +173,8 @@ class Product(Base):
     MaxStock = Column(Numeric(18, 2), default=0.0)
     TrackingType = Column(String(50), default="عادی")
     TechnicalName = Column(String(200), nullable=True)
+
+    SecondaryUnit = relationship("ProductUnit", foreign_keys=[SecondaryUnitID])
     TaxPercent = Column(Numeric(5, 2), default=0.0)
     TollPercent = Column(Numeric(5, 2), default=0.0)
 
@@ -225,6 +232,8 @@ class PurchaseInvoiceDetail(Base):
     InvoiceID = Column(Integer, ForeignKey("PurchaseInvoices.InvoiceID", ondelete="CASCADE"), nullable=False)
     ProductID = Column(Integer, ForeignKey("Products.ProductID"), nullable=False)
     Quantity = Column(Numeric(18, 4), default=0.0)
+    SecondaryQuantity = Column(Numeric(18, 4), nullable=True)
+    SecondaryUnitName = Column(String(50), nullable=True)
     UnitPrice = Column(Numeric(18, 2), default=0.0)
     TotalPrice = Column(Numeric(18, 2), default=0.0)
 
@@ -254,6 +263,8 @@ class SalesInvoiceDetail(Base):
     InvoiceID = Column(Integer, ForeignKey("SalesInvoices.InvoiceID", ondelete="CASCADE"), nullable=False)
     ProductID = Column(Integer, ForeignKey("Products.ProductID"), nullable=False)
     Quantity = Column(Numeric(18, 4), default=0.0)
+    SecondaryQuantity = Column(Numeric(18, 4), nullable=True)
+    SecondaryUnitName = Column(String(50), nullable=True)
     UnitPrice = Column(Numeric(18, 2), default=0.0)
     TotalPrice = Column(Numeric(18, 2), default=0.0)
     CostAtSaleTime = Column(Numeric(18, 2), default=0.0)

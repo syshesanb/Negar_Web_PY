@@ -634,16 +634,17 @@ const AppState = {
     { id: 2, code: 'GRP-02', name: 'لپ‌تاپ و نوت‌بوک', parentId: null, parentName: '-' }
   ],
   productUnits: [
-    { id: 1, code: 'UNT-01', name: 'وزن', symbol: 'W', parentId: null, parentName: '-', ratio: 1.0 },
-    { id: 2, code: 'UNT-01-01', name: 'کیلوگرم', symbol: 'kg', parentId: 1, parentName: 'وزن', ratio: 1.0 },
-    { id: 3, code: 'UNT-01-02', name: 'گرم', symbol: 'g', parentId: 2, parentName: 'کیلوگرم', ratio: 0.001 },
-    { id: 4, code: 'UNT-02', name: 'تعداد', symbol: 'عدد', parentId: null, parentName: '-', ratio: 1.0 },
-    { id: 5, code: 'UNT-02-01', name: 'بسته', symbol: 'بسته', parentId: 4, parentName: 'تعداد', ratio: 10.0 },
-    { id: 6, code: 'UNT-02-02', name: 'کارتن', symbol: 'کارتن', parentId: 4, parentName: 'تعداد', ratio: 100.0 }
+    { id: 1, code: 'UNT-01', name: 'وزن', symbol: 'W', parentId: null, parentName: '-', ratio: 1.0, ratioType: 'ثابت' },
+    { id: 2, code: 'UNT-01-01', name: 'کیلوگرم', symbol: 'kg', parentId: 1, parentName: 'وزن', ratio: 1.0, ratioType: 'ثابت' },
+    { id: 3, code: 'UNT-01-02', name: 'گرم', symbol: 'g', parentId: 2, parentName: 'کیلوگرم', ratio: 0.001, ratioType: 'ثابت' },
+    { id: 4, code: 'UNT-01-03', name: 'گونی برنج', symbol: 'گونی', parentId: 2, parentName: 'کیلوگرم', ratio: 20.0, ratioType: 'شناور' },
+    { id: 5, code: 'UNT-02', name: 'تعداد', symbol: 'عدد', parentId: null, parentName: '-', ratio: 1.0, ratioType: 'ثابت' },
+    { id: 6, code: 'UNT-02-01', name: 'بسته', symbol: 'بسته', parentId: 5, parentName: 'تعداد', ratio: 10.0, ratioType: 'ثابت' },
+    { id: 7, code: 'UNT-02-02', name: 'کارتن', symbol: 'کارتن', parentId: 5, parentName: 'تعداد', ratio: 100.0, ratioType: 'ثابت' }
   ],
   products: [
-    { id: 1, code: 'PRD-101', name: 'لپ‌تاپ گیمینگ ایسوس ۱۵ اینچ', unit: 'دستگاه', price: 450000000, stock: 24, barcode: '690123456789' },
-    { id: 2, code: 'PRD-102', name: 'مانیتور ۲۷ اینچ 4K سامسونگ', unit: 'عدد', price: 180000000, stock: 15, barcode: '690987654321' }
+    { id: 1, code: 'PRD-101', name: 'لپ‌تاپ گیمینگ ایسوس ۱۵ اینچ', unit: 'دستگاه', secondaryUnit: '-', secondaryRatio: 1, price: 450000000, stock: 24, barcode: '690123456789' },
+    { id: 2, code: 'PRD-102', name: 'برنج هاشمی درجه یک', unit: 'کیلوگرم', secondaryUnit: 'گونی برنج', secondaryRatio: 20.0, price: 1200000, stock: 500, barcode: '690987654321' }
   ],
   warehouses: [
     { id: 1, code: 'WH-01', name: 'انبار مرکزی کالا', type: 'عمومی', keeper: 'رضا حسینی', location: 'تهران - سالن اصلی', allowNeg: false }
@@ -6592,7 +6593,8 @@ function loadProductUnits() {
           symbol: d.Symbol || '',
           parentId: d.ParentID,
           parentName: d.ParentName || '-',
-          ratio: d.ConversionRatio || 1.0
+          ratio: d.ConversionRatio || 1.0,
+          ratioType: d.RatioType || (d.IsFloating ? 'شناور' : 'ثابت')
         }));
         renderProductUnitsTable();
       }
@@ -6605,18 +6607,22 @@ function renderProductUnitsTable() {
   if (!tbody) return;
 
   if (!AppState.productUnits || AppState.productUnits.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">هیچ واحد اندازه‌گیری یافت نشد.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">هیچ واحد اندازه‌گیری یافت نشد.</td></tr>';
     return;
   }
 
   tbody.innerHTML = AppState.productUnits.map(u => {
     const parentName = u.parentName || (u.parentId ? (AppState.productUnits.find(p => p.id === u.parentId)?.name || '-') : '-');
+    const ratioTypeBadge = u.ratioType === 'شناور' 
+      ? '<span class="badge" style="background:#fef3c7;color:#92400e;padding:2px 6px;">🟡 شناور (متغیر)</span>' 
+      : '<span class="badge" style="background:#dcfce7;color:#166534;padding:2px 6px;">🟢 ثابت</span>';
     return `
       <tr>
         <td><b>${u.code}</b></td>
         <td>${u.name}</td>
         <td><span class="badge" style="background:#e0f2fe;color:#0369a1;">${u.symbol || '-'}</span></td>
         <td>${parentName}</td>
+        <td>${ratioTypeBadge}</td>
         <td>${u.ratio}</td>
         <td>
           <button class="btn btn-outline" style="padding:3px 8px;" onclick="editProductUnit(${u.id})">✏️ ویرایش</button>
@@ -6649,6 +6655,7 @@ function openAddProductUnitRow(editData = null) {
     document.getElementById('newUnitName').value = editData.name || '';
     document.getElementById('newUnitSymbol').value = editData.symbol || '';
     document.getElementById('newUnitRatio').value = editData.ratio || 1.0;
+    if (document.getElementById('newUnitRatioType')) document.getElementById('newUnitRatioType').value = editData.ratioType || 'ثابت';
     if (parentSelect) parentSelect.value = editData.parentId || '';
   } else {
     document.getElementById('productUnitFormTitle').textContent = 'افزودن واحد اندازه‌گیری جدید';
@@ -6657,6 +6664,7 @@ function openAddProductUnitRow(editData = null) {
     document.getElementById('newUnitName').value = '';
     document.getElementById('newUnitSymbol').value = '';
     document.getElementById('newUnitRatio').value = 1.0;
+    if (document.getElementById('newUnitRatioType')) document.getElementById('newUnitRatioType').value = 'ثابت';
     if (parentSelect) parentSelect.value = '';
   }
 
@@ -6674,6 +6682,7 @@ function saveProductUnit() {
   const code = document.getElementById('newUnitCode')?.value?.trim();
   const name = document.getElementById('newUnitName')?.value?.trim();
   const symbol = document.getElementById('newUnitSymbol')?.value?.trim() || '';
+  const ratioType = document.getElementById('newUnitRatioType')?.value || 'ثابت';
   const ratio = Number(document.getElementById('newUnitRatio')?.value || 1.0);
   const parentIdVal = document.getElementById('newUnitParent')?.value;
   const parentId = parentIdVal ? Number(parentIdVal) : null;
@@ -6693,6 +6702,7 @@ function saveProductUnit() {
       existing.name = name;
       existing.symbol = symbol;
       existing.ratio = ratio;
+      existing.ratioType = ratioType;
       existing.parentId = parentId;
       existing.parentName = parentName;
     }
@@ -6704,6 +6714,7 @@ function saveProductUnit() {
       name,
       symbol,
       ratio,
+      ratioType,
       parentId,
       parentName
     });
@@ -6716,6 +6727,8 @@ function saveProductUnit() {
     UnitName: name,
     Symbol: symbol,
     ConversionRatio: ratio,
+    RatioType: ratioType,
+    IsFloating: ratioType === 'شناور',
     ParentID: parentId
   };
 
@@ -6734,7 +6747,7 @@ function saveProductUnit() {
 
   closeProductUnitRow();
   renderProductUnitsTable();
-  alert(`واحد اندازه‌گیری "${name}" با موفقیت ذخیره شد.`);
+  alert(`واحد اندازه‌گیری "${name}" (${ratioType === 'شناور' ? 'شناور' : 'ثابت'}) با موفقیت ذخیره شد.`);
 }
 
 function editProductUnit(id) {
@@ -6763,20 +6776,101 @@ function renderProductsTable() {
       <td><b>${p.code}</b></td>
       <td>${p.name}</td>
       <td>${p.unit}</td>
-      <td style="font-size:0.8rem;">${p.barcode}</td>
-      <td>${p.price.toLocaleString()} ریال</td>
-      <td>${p.stock}</td>
+      <td><span class="badge" style="background:#fef3c7;color:#92400e;">${p.secondaryUnit || '-'}</span></td>
+      <td>${p.secondaryRatio || 1}</td>
+      <td>${p.price ? p.price.toLocaleString() : 0} ریال</td>
+      <td>${p.stock || 0}</td>
       <td>
-        <button class="btn btn-outline" style="padding:3px 8px;">✏️ ویرایش</button>
+        <button class="btn btn-outline" style="padding:3px 8px;" onclick="editProduct(${p.id})">✏️ ویرایش</button>
         <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteProduct(${p.id})">🗑️</button>
       </td>
     </tr>
   `).join('');
 }
 
-function openAddProductRow() {
-  document.getElementById('addProductRow').style.display = 'block';
+function openAddProductRow(editData = null) {
+  const formRow = document.getElementById('addProductRow');
+  if (!formRow) return;
+
+  const secUnitSelect = document.getElementById('newProdSecondaryUnit');
+  if (secUnitSelect) {
+    let opts = '<option value="">-- بدون واحد فرعی --</option>';
+    (AppState.productUnits || []).forEach(u => {
+      opts += `<option value="${u.name}">${u.code} - ${u.name} (${u.ratioType === 'شناور' ? '🟡 شناور' : '🟢 ثابت'})</option>`;
+    });
+    secUnitSelect.innerHTML = opts;
+  }
+
+  if (editData) {
+    document.getElementById('editProductId').value = editData.id;
+    document.getElementById('newProdCode').value = editData.code || '';
+    document.getElementById('newProdName').value = editData.name || '';
+    document.getElementById('newProdUnit').value = editData.unit || 'کیلوگرم';
+    if (secUnitSelect) secUnitSelect.value = editData.secondaryUnit || '';
+    document.getElementById('newProdSecondaryRatio').value = editData.secondaryRatio || 1.0;
+    document.getElementById('newProdPrice').value = editData.price || 0;
+    document.getElementById('newProdStock').value = editData.stock || 0;
+  } else {
+    document.getElementById('editProductId').value = '';
+    document.getElementById('newProdCode').value = '';
+    document.getElementById('newProdName').value = '';
+    document.getElementById('newProdUnit').value = 'کیلوگرم';
+    if (secUnitSelect) secUnitSelect.value = '';
+    document.getElementById('newProdSecondaryRatio').value = 1.0;
+    document.getElementById('newProdPrice').value = '';
+    document.getElementById('newProdStock').value = '0';
+  }
+
+  formRow.style.display = 'block';
   document.getElementById('newProdCode').focus();
+}
+
+function saveNewProduct() {
+  const editId = document.getElementById('editProductId')?.value;
+  const code = document.getElementById('newProdCode')?.value?.trim();
+  const name = document.getElementById('newProdName')?.value?.trim();
+  const unit = document.getElementById('newProdUnit')?.value || 'کیلوگرم';
+  const secondaryUnit = document.getElementById('newProdSecondaryUnit')?.value || '-';
+  const secondaryRatio = Number(document.getElementById('newProdSecondaryRatio')?.value || 1.0);
+  const price = Number(document.getElementById('newProdPrice')?.value || 0);
+  const stock = Number(document.getElementById('newProdStock')?.value || 0);
+
+  if (!code || !name) { alert('کد کالا و نام کالا الزامی است.'); return; }
+
+  if (editId) {
+    const id = Number(editId);
+    const existing = AppState.products.find(p => p.id === id);
+    if (existing) {
+      existing.code = code;
+      existing.name = name;
+      existing.unit = unit;
+      existing.secondaryUnit = secondaryUnit;
+      existing.secondaryRatio = secondaryRatio;
+      existing.price = price;
+      existing.stock = stock;
+    }
+  } else {
+    AppState.products.push({
+      id: Date.now(),
+      code,
+      name,
+      unit,
+      secondaryUnit,
+      secondaryRatio,
+      price,
+      stock,
+      barcode: '690' + Math.floor(Math.random() * 1e9)
+    });
+  }
+
+  document.getElementById('addProductRow').style.display = 'none';
+  renderProductsTable();
+  alert(`کالای دو واحدی "${name}" با موفقیت ذخیره شد.`);
+}
+
+function editProduct(id) {
+  const p = AppState.products.find(x => x.id === id);
+  if (p) openAddProductRow(p);
 }
 
 function saveNewProduct() {

@@ -2498,7 +2498,7 @@
             <div class="table-wrapper">
               <table>
                 <thead>
-                  <tr><th>کد واحد</th><th>نام واحد</th><th>نماد/علامت</th><th>واحد والد</th><th>ضریب تبدیل به والد</th><th>عملیات</th></tr>
+                  <tr><th>کد واحد</th><th>نام واحد</th><th>نماد/علامت</th><th>واحد والد</th><th>نوع ضریب</th><th>ضریب تبدیل به والد</th><th>عملیات</th></tr>
                 </thead>
                 <tbody id="productUnitsTableBody"></tbody>
               </table>
@@ -2508,11 +2508,17 @@
               <input type="hidden" id="editProductUnitId" value="" />
               <div class="form-row">
                 <div class="form-group"><label class="form-label">کد واحد:</label><input type="text" id="newUnitCode" class="form-input" placeholder="UNT-01" /></div>
-                <div class="form-group"><label class="form-label">نام واحد:</label><input type="text" id="newUnitName" class="form-input" placeholder="مثلاً: کیلوگرم، گرم، بسته" /></div>
+                <div class="form-group"><label class="form-label">نام واحد:</label><input type="text" id="newUnitName" class="form-input" placeholder="مثلاً: کیلوگرم، گرم، گونی" /></div>
                 <div class="form-group"><label class="form-label">نماد / علامت:</label><input type="text" id="newUnitSymbol" class="form-input" placeholder="مثلاً: kg یا gr" /></div>
                 <div class="form-group"><label class="form-label">واحد والد:</label>
                   <select id="newUnitParent" class="form-select">
                     <option value="">-- بدون والد (واحد اصلی/پایه) --</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">نوع ضریب تبدیل:</label>
+                  <select id="newUnitRatioType" class="form-select">
+                    <option value="ثابت">🟢 ثابت (دقیق و همیشگی)</option>
+                    <option value="شناور">🟡 شناور (متغیر / وزن تخمینی)</option>
                   </select>
                 </div>
                 <div class="form-group"><label class="form-label">ضریب تبدیل به والد:</label><input type="number" step="0.0001" id="newUnitRatio" class="form-input" value="1.0" /></div>
@@ -2532,15 +2538,22 @@
               <button class="btn btn-primary" onclick="openAddProductRow()">+ کالای جدید</button>
             </div>
             <div class="table-wrapper">
-              <table><thead><tr><th>کد کالا</th><th>نام کالا</th><th>واحد</th><th>بارکد</th><th>قیمت فروش</th><th>موجودی</th><th>عملیات</th></tr></thead>
+              <table><thead><tr><th>کد کالا</th><th>نام کالا</th><th>واحد اصلی</th><th>واحد فرعی (دوم)</th><th>ضریب فرعی</th><th>قیمت فروش</th><th>موجودی</th><th>عملیات</th></tr></thead>
               <tbody id="productsTableBody"></tbody></table>
             </div>
             <div id="addProductRow" style="display:none;" class="inline-form">
-              <h4>افزودن کالای جدید</h4>
+              <h4>افزودن / ویرایش کالا (سیستم دو واحدی)</h4>
+              <input type="hidden" id="editProductId" value="" />
               <div class="form-row">
                 <div class="form-group"><label class="form-label">کد کالا:</label><input type="text" id="newProdCode" class="form-input" /></div>
                 <div class="form-group"><label class="form-label">نام کالا:</label><input type="text" id="newProdName" class="form-input" /></div>
-                <div class="form-group"><label class="form-label">واحد:</label><input type="text" id="newProdUnit" class="form-input" value="عدد" /></div>
+                <div class="form-group"><label class="form-label">واحد اصلی (پایه):</label>
+                  <select id="newProdUnit" class="form-select"><option value="کیلوگرم">کیلوگرم</option><option value="عدد">عدد</option><option value="متر">متر</option><option value="دستگاه">دستگاه</option></select>
+                </div>
+                <div class="form-group"><label class="form-label">واحد فرعی (شناور/دوم):</label>
+                  <select id="newProdSecondaryUnit" class="form-select"><option value="">-- بدون واحد فرعی --</option></select>
+                </div>
+                <div class="form-group"><label class="form-label">ضریب واحد فرعی:</label><input type="number" step="0.0001" id="newProdSecondaryRatio" class="form-input" value="1.0" placeholder="مثلا 20 کیلو" /></div>
                 <div class="form-group"><label class="form-label">قیمت (ریال):</label><input type="number" id="newProdPrice" class="form-input" /></div>
                 <div class="form-group"><label class="form-label">موجودی:</label><input type="number" id="newProdStock" class="form-input" value="0" /></div>
                 <div class="form-group" style="align-self:flex-end;">

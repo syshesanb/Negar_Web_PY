@@ -221,6 +221,8 @@ class ProductUnitBase(BaseModel):
     UnitName: str
     Symbol: Optional[str] = None
     ConversionRatio: float = 1.0
+    RatioType: str = "ثابت"
+    IsFloating: bool = False
     Level: int = 1
     IsActive: bool = True
 
@@ -242,6 +244,9 @@ class ProductBase(BaseModel):
     ProductCode: str
     ProductName: str
     Unit: str = "عدد"
+    SecondaryUnitID: Optional[int] = None
+    SecondaryUnitName: Optional[str] = None
+    SecondaryUnitRatio: float = 1.0
     DefaultPrice: float = 0.0
     Category: Optional[str] = None
     IsActive: bool = True

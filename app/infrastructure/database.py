@@ -267,20 +267,29 @@ def init_db():
                     count = seed_default_chart_of_accounts(db, comp.CompanyID)
                     print(f"[INFO] کدینگ پیش‌فرض بارگذاری شد: {count} حساب برای شرکت {comp.CompanyName}")
 
-        # Ensure new columns exist in Currencies table
+        # Ensure new columns exist in Currencies, ProductUnits, Products, InvoiceDetails tables
         try:
             from sqlalchemy import text
             with engine.connect() as conn:
-                for col, col_type in [
-                    ("CbiRate", "NUMERIC(18, 4) DEFAULT 1.0"),
-                    ("CbiRateDate", "VARCHAR(20)"),
-                    ("TgjuRate", "NUMERIC(18, 4) DEFAULT 1.0"),
-                    ("TgjuRateDate", "VARCHAR(20)"),
-                    ("GlobalRate", "NUMERIC(18, 4) DEFAULT 1.0"),
-                    ("GlobalRateDate", "VARCHAR(20)")
+                for tbl, col, col_type in [
+                    ("Currencies", "CbiRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("Currencies", "CbiRateDate", "VARCHAR(20)"),
+                    ("Currencies", "TgjuRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("Currencies", "TgjuRateDate", "VARCHAR(20)"),
+                    ("Currencies", "GlobalRate", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("Currencies", "GlobalRateDate", "VARCHAR(20)"),
+                    ("ProductUnits", "RatioType", "VARCHAR(20) DEFAULT 'ثابت'"),
+                    ("ProductUnits", "IsFloating", "BOOLEAN DEFAULT 0"),
+                    ("Products", "SecondaryUnitID", "INTEGER"),
+                    ("Products", "SecondaryUnitName", "VARCHAR(50)"),
+                    ("Products", "SecondaryUnitRatio", "NUMERIC(18, 4) DEFAULT 1.0"),
+                    ("PurchaseInvoiceDetails", "SecondaryQuantity", "NUMERIC(18, 4)"),
+                    ("PurchaseInvoiceDetails", "SecondaryUnitName", "VARCHAR(50)"),
+                    ("SalesInvoiceDetails", "SecondaryQuantity", "NUMERIC(18, 4)"),
+                    ("SalesInvoiceDetails", "SecondaryUnitName", "VARCHAR(50)"),
                 ]:
                     try:
-                        conn.execute(text(f"ALTER TABLE Currencies ADD COLUMN {col} {col_type};"))
+                        conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};"))
                         conn.commit()
                     except Exception:
                         pass
