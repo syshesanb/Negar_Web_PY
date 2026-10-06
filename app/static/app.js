@@ -6470,6 +6470,59 @@ function renderProductGroupsTable() {
   }).join('');
 }
 
+function getNextProductGroupCode(parentId = null) {
+  const groups = AppState.productGroups || [];
+  if (!parentId) {
+    let maxNum = 0;
+    groups.forEach(g => {
+      if (g.code) {
+        const match = g.code.match(/^GRP-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        } else {
+          const parts = g.code.split('-');
+          if (parts.length === 2 && !isNaN(parts[1])) {
+            const num = parseInt(parts[1], 10);
+            if (num > maxNum) maxNum = num;
+          }
+        }
+      }
+    });
+    const nextNum = maxNum + 1;
+    return `GRP-${String(nextNum).padStart(2, '0')}`;
+  } else {
+    const parent = groups.find(g => g.id === Number(parentId));
+    if (!parent || !parent.code) return 'GRP-01';
+
+    const parentCode = parent.code;
+    let maxChildNum = 0;
+
+    groups.forEach(g => {
+      if (g.code && (g.parentId === Number(parentId) || g.code.startsWith(parentCode + '-'))) {
+        const subStr = g.code.substring(parentCode.length + 1);
+        const firstSeg = subStr.split('-')[0];
+        if (!isNaN(firstSeg) && firstSeg !== '') {
+          const num = parseInt(firstSeg, 10);
+          if (num > maxChildNum) maxChildNum = num;
+        }
+      }
+    });
+
+    const nextChildNum = maxChildNum + 1;
+    return `${parentCode}-${String(nextChildNum).padStart(2, '0')}`;
+  }
+}
+
+function handleGroupParentChange(parentIdVal) {
+  const editId = document.getElementById('editProductGroupId')?.value;
+  if (!editId) {
+    const parentId = parentIdVal ? Number(parentIdVal) : null;
+    const codeEl = document.getElementById('newGroupCode');
+    if (codeEl) codeEl.value = getNextProductGroupCode(parentId);
+  }
+}
+
 function openAddProductGroupRow(editData = null) {
   const overlay = document.getElementById('productGroupModalOverlay');
   if (!overlay) return;
@@ -6494,9 +6547,9 @@ function openAddProductGroupRow(editData = null) {
   } else {
     document.getElementById('productGroupFormTitle').textContent = 'افزودن گروه کالای جدید';
     document.getElementById('editProductGroupId').value = '';
-    document.getElementById('newGroupCode').value = '';
-    document.getElementById('newGroupName').value = '';
     if (parentSelect) parentSelect.value = '';
+    document.getElementById('newGroupCode').value = getNextProductGroupCode(null);
+    document.getElementById('newGroupName').value = '';
   }
 
   overlay.style.display = 'flex';
@@ -6656,6 +6709,59 @@ function renderProductUnitsTable() {
   }).join('');
 }
 
+function getNextProductUnitCode(parentId = null) {
+  const units = AppState.productUnits || [];
+  if (!parentId) {
+    let maxNum = 0;
+    units.forEach(u => {
+      if (u.code) {
+        const match = u.code.match(/^UNT-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        } else {
+          const parts = u.code.split('-');
+          if (parts.length === 2 && !isNaN(parts[1])) {
+            const num = parseInt(parts[1], 10);
+            if (num > maxNum) maxNum = num;
+          }
+        }
+      }
+    });
+    const nextNum = maxNum + 1;
+    return `UNT-${String(nextNum).padStart(2, '0')}`;
+  } else {
+    const parent = units.find(u => u.id === Number(parentId));
+    if (!parent || !parent.code) return 'UNT-01';
+
+    const parentCode = parent.code;
+    let maxChildNum = 0;
+
+    units.forEach(u => {
+      if (u.code && (u.parentId === Number(parentId) || u.code.startsWith(parentCode + '-'))) {
+        const subStr = u.code.substring(parentCode.length + 1);
+        const firstSeg = subStr.split('-')[0];
+        if (!isNaN(firstSeg) && firstSeg !== '') {
+          const num = parseInt(firstSeg, 10);
+          if (num > maxChildNum) maxChildNum = num;
+        }
+      }
+    });
+
+    const nextChildNum = maxChildNum + 1;
+    return `${parentCode}-${String(nextChildNum).padStart(2, '0')}`;
+  }
+}
+
+function handleUnitParentChange(parentIdVal) {
+  const editId = document.getElementById('editProductUnitId')?.value;
+  if (!editId) {
+    const parentId = parentIdVal ? Number(parentIdVal) : null;
+    const codeEl = document.getElementById('newUnitCode');
+    if (codeEl) codeEl.value = getNextProductUnitCode(parentId);
+  }
+}
+
 function openAddProductUnitRow(editData = null) {
   const overlay = document.getElementById('productUnitModalOverlay');
   if (!overlay) return;
@@ -6683,12 +6789,12 @@ function openAddProductUnitRow(editData = null) {
   } else {
     document.getElementById('productUnitFormTitle').textContent = 'افزودن واحد اندازه‌گیری جدید';
     document.getElementById('editProductUnitId').value = '';
-    document.getElementById('newUnitCode').value = '';
+    if (parentSelect) parentSelect.value = '';
+    document.getElementById('newUnitCode').value = getNextProductUnitCode(null);
     document.getElementById('newUnitName').value = '';
     document.getElementById('newUnitSymbol').value = '';
     document.getElementById('newUnitRatio').value = 1.0;
     if (document.getElementById('newUnitRatioType')) document.getElementById('newUnitRatioType').value = 'ثابت';
-    if (parentSelect) parentSelect.value = '';
   }
 
   overlay.style.display = 'flex';

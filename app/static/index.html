@@ -2489,7 +2489,7 @@
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">کد گروه:</label><input type="text" id="newGroupCode" class="form-input" placeholder="GRP-01" /></div>
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام گروه:</label><input type="text" id="newGroupName" class="form-input" placeholder="عنوان گروه کالا" /></div>
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">گروه والد:</label>
-                  <select id="newGroupParent" class="form-select">
+                  <select id="newGroupParent" class="form-select" onchange="handleGroupParentChange(this.value)">
                     <option value="">-- بدون والد (ریشه) --</option>
                   </select>
                 </div>
@@ -2537,7 +2537,7 @@
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نام واحد:</label><input type="text" id="newUnitName" class="form-input" placeholder="مثلاً: کیلوگرم، گرم، گونی" /></div>
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">نماد / علامت:</label><input type="text" id="newUnitSymbol" class="form-input" placeholder="مثلاً: kg یا gr" /></div>
                 <div class="form-group" style="flex:1; min-width:200px;"><label class="form-label">واحد والد:</label>
-                  <select id="newUnitParent" class="form-select">
+                  <select id="newUnitParent" class="form-select" onchange="handleUnitParentChange(this.value)">
                     <option value="">-- بدون والد (واحد اصلی/پایه) --</option>
                   </select>
                 </div>
