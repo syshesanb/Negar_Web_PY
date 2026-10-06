@@ -6924,6 +6924,30 @@ function renderProductsTable() {
   `).join('');
 }
 
+function getNextProductCode() {
+  const products = AppState.products || [];
+  let maxNum = 0;
+  products.forEach(p => {
+    if (p.code) {
+      const match = p.code.match(/^PRD-(\d+)$/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      } else {
+        const digits = p.code.match(/\d+/);
+        if (digits) {
+          const num = parseInt(digits[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+  });
+
+  if (maxNum === 0) return 'PRD-101';
+  const nextNum = maxNum + 1;
+  return `PRD-${nextNum}`;
+}
+
 function openAddProductRow(editData = null) {
   const overlay = document.getElementById('productModalOverlay');
   if (!overlay) return;
@@ -6948,7 +6972,7 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdStock').value = editData.stock || 0;
   } else {
     document.getElementById('editProductId').value = '';
-    document.getElementById('newProdCode').value = '';
+    document.getElementById('newProdCode').value = getNextProductCode();
     document.getElementById('newProdName').value = '';
     document.getElementById('newProdUnit').value = 'کیلوگرم';
     if (secUnitSelect) secUnitSelect.value = '';
@@ -6977,6 +7001,13 @@ function saveNewProduct() {
   const stock = Number(document.getElementById('newProdStock')?.value || 0);
 
   if (!code || !name) { alert('کد کالا و نام کالا الزامی است.'); return; }
+
+  // Check for duplicate product code
+  const duplicate = AppState.products.find(p => p.code === code && (!editId || p.id !== Number(editId)));
+  if (duplicate) {
+    alert(`کد کالای "${code}" قبلاً ثبت شده است. کد کالا باید یکتا و غیرتکراری باشد.`);
+    return;
+  }
 
   if (editId) {
     const id = Number(editId);
