@@ -112,6 +112,15 @@ def save_warehouse(warehouse: WarehouseCreateDTO, db: Session = Depends(get_db))
     return service.save_warehouse(warehouse)
 
 
+@router.delete("/warehouses/{warehouse_id}")
+def delete_warehouse(warehouse_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    success = service.delete_warehouse(warehouse_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    return {"message": "Warehouse deleted successfully"}
+
+
 # -----------------------------------------------------------------------------
 # Stock (موجودی انبار)
 # -----------------------------------------------------------------------------

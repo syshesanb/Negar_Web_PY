@@ -256,11 +256,36 @@ class InventoryService:
                 self.db.refresh(wh)
                 return wh
 
+        # Check for existing warehouse with exact same name to prevent duplicates
+        existing = (
+            self.db.query(Warehouse)
+            .filter(
+                Warehouse.CompanyID == (dto.CompanyID or 1),
+                Warehouse.WarehouseName == dto.WarehouseName,
+            )
+            .first()
+        )
+        if existing:
+            for field, val in dto.dict(exclude_unset=True).items():
+                if hasattr(existing, field) and val is not None:
+                    setattr(existing, field, val)
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
+
         new_wh = Warehouse(**dto.dict(exclude={"WarehouseID"}))
         self.db.add(new_wh)
         self.db.commit()
         self.db.refresh(new_wh)
         return new_wh
+
+    def delete_warehouse(self, warehouse_id: int) -> bool:
+        wh = self.db.query(Warehouse).filter(Warehouse.WarehouseID == warehouse_id).first()
+        if wh:
+            self.db.delete(wh)
+            self.db.commit()
+            return True
+        return False
 
     # -------------------------------------------------------------------------
     # Stock / Inventory

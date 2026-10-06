@@ -7057,15 +7057,23 @@ function loadWarehouses() {
     .then(res => res.json())
     .then(data => {
       if (Array.isArray(data) && data.length > 0) {
-        AppState.warehouses = data.map(d => ({
-          id: d.WarehouseID,
-          code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
-          name: d.WarehouseName,
-          type: d.WarehouseType || 'عمومی',
-          keeper: d.WarehouseKeeper || '-',
-          location: d.Location || '-',
-          allowNeg: d.AllowNegativeStock || false
-        }));
+        const uniqueWarehouses = [];
+        const seenNames = new Set();
+        data.forEach(d => {
+          if (!seenNames.has(d.WarehouseName)) {
+            seenNames.add(d.WarehouseName);
+            uniqueWarehouses.push({
+              id: d.WarehouseID,
+              code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
+              name: d.WarehouseName,
+              type: d.WarehouseType || 'عمومی',
+              keeper: d.WarehouseKeeper || '-',
+              location: d.Location || '-',
+              allowNeg: d.AllowNegativeStock || false
+            });
+          }
+        });
+        AppState.warehouses = uniqueWarehouses;
         renderWarehousesTable();
       }
     })
@@ -7205,6 +7213,7 @@ function deleteWarehouse(id) {
 
   if (confirm(`آیا از حذف انبار "${w.name}" اطمینان دارید؟`)) {
     AppState.warehouses = AppState.warehouses.filter(x => x.id !== id);
+    fetch(`/api/Inventory/warehouses/${id}`, { method: 'DELETE' }).catch(err => console.log('Backend warehouse delete error:', err));
     renderWarehousesTable();
   }
 }
