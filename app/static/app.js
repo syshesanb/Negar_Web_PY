@@ -6424,13 +6424,21 @@ function loadProductGroups() {
     .then(res => res.json())
     .then(data => {
       if (Array.isArray(data) && data.length > 0) {
-        AppState.productGroups = data.map(d => ({
-          id: d.GroupID,
-          code: d.GroupCode,
-          name: d.GroupName,
-          parentId: d.ParentID,
-          parentName: d.ParentName || '-'
-        }));
+        const uniqueGroups = [];
+        const seenCodes = new Set();
+        data.forEach(d => {
+          if (!seenCodes.has(d.GroupCode)) {
+            seenCodes.add(d.GroupCode);
+            uniqueGroups.push({
+              id: d.GroupID,
+              code: d.GroupCode,
+              name: d.GroupName,
+              parentId: d.ParentID,
+              parentName: d.ParentName || '-'
+            });
+          }
+        });
+        AppState.productGroups = uniqueGroups;
         renderProductGroupsTable();
       }
     })
@@ -6512,6 +6520,13 @@ function saveProductGroup() {
     return;
   }
 
+  // Check for duplicate group code
+  const duplicate = AppState.productGroups.find(g => g.code === code && (!editId || g.id !== Number(editId)));
+  if (duplicate) {
+    alert(`کد گروه "${code}" قبلاً ثبت شده است. کد گروه باید یکتا و غیرتکراری باشد.`);
+    return;
+  }
+
   const parentName = parentId ? (AppState.productGroups.find(p => p.id === parentId)?.name || '-') : '-';
 
   if (editId) {
@@ -6586,16 +6601,24 @@ function loadProductUnits() {
     .then(res => res.json())
     .then(data => {
       if (Array.isArray(data) && data.length > 0) {
-        AppState.productUnits = data.map(d => ({
-          id: d.UnitID,
-          code: d.UnitCode,
-          name: d.UnitName,
-          symbol: d.Symbol || '',
-          parentId: d.ParentID,
-          parentName: d.ParentName || '-',
-          ratio: d.ConversionRatio || 1.0,
-          ratioType: d.RatioType || (d.IsFloating ? 'شناور' : 'ثابت')
-        }));
+        const uniqueUnits = [];
+        const seenCodes = new Set();
+        data.forEach(d => {
+          if (!seenCodes.has(d.UnitCode)) {
+            seenCodes.add(d.UnitCode);
+            uniqueUnits.push({
+              id: d.UnitID,
+              code: d.UnitCode,
+              name: d.UnitName,
+              symbol: d.Symbol || '',
+              parentId: d.ParentID,
+              parentName: d.ParentName || '-',
+              ratio: d.ConversionRatio || 1.0,
+              ratioType: d.RatioType || (d.IsFloating ? 'شناور' : 'ثابت')
+            });
+          }
+        });
+        AppState.productUnits = uniqueUnits;
         renderProductUnitsTable();
       }
     })
@@ -6689,6 +6712,13 @@ function saveProductUnit() {
 
   if (!code || !name) {
     alert('کد واحد و نام واحد الزامی است.');
+    return;
+  }
+
+  // Check for duplicate unit code
+  const duplicate = AppState.productUnits.find(u => u.code === code && (!editId || u.id !== Number(editId)));
+  if (duplicate) {
+    alert(`کد واحد "${code}" قبلاً ثبت شده است. کد واحد باید یکتا و غیرتکراری باشد.`);
     return;
   }
 

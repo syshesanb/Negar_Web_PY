@@ -53,6 +53,30 @@ class InventoryService:
                     "ParentName": parent_name,
                 }
 
+        # Check if GroupCode already exists for this CompanyID
+        existing = (
+            self.db.query(ProductGroup)
+            .filter(ProductGroup.CompanyID == dto.CompanyID, ProductGroup.GroupCode == dto.GroupCode)
+            .first()
+        )
+        if existing:
+            for field, val in dto.dict(exclude_unset=True, exclude={"GroupID"}).items():
+                if hasattr(existing, field):
+                    setattr(existing, field, val)
+            self.db.commit()
+            self.db.refresh(existing)
+            parent_name = existing.ParentGroup.GroupName if existing.ParentGroup else "-"
+            return {
+                "GroupID": existing.GroupID,
+                "CompanyID": existing.CompanyID,
+                "ParentID": existing.ParentID,
+                "GroupCode": existing.GroupCode,
+                "GroupName": existing.GroupName,
+                "Level": existing.Level,
+                "IsActive": existing.IsActive,
+                "ParentName": parent_name,
+            }
+
         new_pg = ProductGroup(**dto.dict(exclude={"GroupID"}))
         self.db.add(new_pg)
         self.db.commit()
@@ -129,6 +153,34 @@ class InventoryService:
                     "IsActive": pu.IsActive,
                     "ParentName": parent_name,
                 }
+
+        # Check if UnitCode already exists for this CompanyID
+        existing = (
+            self.db.query(ProductUnit)
+            .filter(ProductUnit.CompanyID == dto.CompanyID, ProductUnit.UnitCode == dto.UnitCode)
+            .first()
+        )
+        if existing:
+            for field, val in dto.dict(exclude_unset=True, exclude={"UnitID"}).items():
+                if hasattr(existing, field):
+                    setattr(existing, field, val)
+            self.db.commit()
+            self.db.refresh(existing)
+            parent_name = existing.ParentUnit.UnitName if existing.ParentUnit else "-"
+            return {
+                "UnitID": existing.UnitID,
+                "CompanyID": existing.CompanyID,
+                "ParentID": existing.ParentID,
+                "UnitCode": existing.UnitCode,
+                "UnitName": existing.UnitName,
+                "Symbol": existing.Symbol,
+                "ConversionRatio": float(existing.ConversionRatio or 1.0),
+                "RatioType": existing.RatioType or ("شناور" if existing.IsFloating else "ثابت"),
+                "IsFloating": bool(existing.IsFloating or existing.RatioType == "شناور"),
+                "Level": existing.Level,
+                "IsActive": existing.IsActive,
+                "ParentName": parent_name,
+            }
 
         new_pu = ProductUnit(**dto.dict(exclude={"UnitID"}))
         self.db.add(new_pu)
