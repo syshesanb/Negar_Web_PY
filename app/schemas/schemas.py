@@ -259,8 +259,10 @@ class ProductBase(BaseModel):
     MaxStock: float = 0.0
     TrackingType: str = "عادی"
     TechnicalName: Optional[str] = None
+    DefaultLocationCode: Optional[str] = None
     TaxPercent: float = 0.0
     TollPercent: float = 0.0
+
 
 
 class ProductCreateDTO(ProductBase):

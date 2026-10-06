@@ -173,6 +173,7 @@ class Product(Base):
     MaxStock = Column(Numeric(18, 2), default=0.0)
     TrackingType = Column(String(50), default="عادی")
     TechnicalName = Column(String(200), nullable=True)
+    DefaultLocationCode = Column(String(100), nullable=True)
 
     SecondaryUnit = relationship("ProductUnit", foreign_keys=[SecondaryUnitID])
     TaxPercent = Column(Numeric(5, 2), default=0.0)
@@ -216,6 +217,7 @@ class InventoryRecord(Base):
     InventoryID = Column(Integer, primary_key=True, autoincrement=True)
     ProductID = Column(Integer, ForeignKey("Products.ProductID", ondelete="CASCADE"), nullable=False)
     WarehouseID = Column(Integer, ForeignKey("Warehouses.WarehouseID", ondelete="CASCADE"), nullable=False)
+    LocationCode = Column(String(100), nullable=True)
     Quantity = Column(Numeric(18, 4), default=0.0)
     AverageCost = Column(Numeric(18, 2), default=0.0)
     LastUpdate = Column(DateTime, default=datetime.utcnow)
@@ -235,6 +237,8 @@ class PurchaseInvoice(Base):
     TotalAmount = Column(Numeric(18, 2), default=0.0)
     CreatedBy = Column(Integer, nullable=True)
     WarehouseID = Column(Integer, nullable=True)
+    TempReceiptNumber = Column(String(100), nullable=True)
+    TempLocationCode = Column(String(100), nullable=True)
 
     Details = relationship("PurchaseInvoiceDetail", back_populates="Invoice", cascade="all, delete-orphan")
 
@@ -245,6 +249,7 @@ class PurchaseInvoiceDetail(Base):
     DetailID = Column(Integer, primary_key=True, autoincrement=True)
     InvoiceID = Column(Integer, ForeignKey("PurchaseInvoices.InvoiceID", ondelete="CASCADE"), nullable=False)
     ProductID = Column(Integer, ForeignKey("Products.ProductID"), nullable=False)
+    LocationCode = Column(String(100), nullable=True)
     Quantity = Column(Numeric(18, 4), default=0.0)
     SecondaryQuantity = Column(Numeric(18, 4), nullable=True)
     SecondaryUnitName = Column(String(50), nullable=True)
@@ -253,6 +258,7 @@ class PurchaseInvoiceDetail(Base):
 
     Invoice = relationship("PurchaseInvoice", back_populates="Details")
     Product = relationship("Product")
+
 
 
 class SalesInvoice(Base):

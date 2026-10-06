@@ -200,6 +200,21 @@ def init_db():
                     conn.commit()
                 except Exception:
                     pass
+
+            # 3. Location & Receipt columns migration
+            for tbl, col, col_type in [
+                ("Products", "DefaultLocationCode", "VARCHAR(100)"),
+                ("Inventory", "LocationCode", "VARCHAR(100)"),
+                ("PurchaseInvoices", "TempReceiptNumber", "VARCHAR(100)"),
+                ("PurchaseInvoices", "TempLocationCode", "VARCHAR(100)"),
+                ("PurchaseInvoiceDetails", "LocationCode", "VARCHAR(100)")
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    pass
+
     except Exception:
         pass
 

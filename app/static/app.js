@@ -6916,6 +6916,7 @@ function renderProductsTable() {
       <td>${p.secondaryRatio || 1}</td>
       <td>${p.price ? p.price.toLocaleString() : 0} ریال</td>
       <td>${p.stock || 0}</td>
+      <td><span class="badge badge-success" style="font-size:0.78rem;">${p.defaultLocationCode || p.locationCode || 'تعیین نشده'}</span></td>
       <td>
         <button class="btn btn-outline" style="padding:3px 8px;" onclick="editProduct(${p.id})">✏️ ویرایش</button>
         <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteProduct(${p.id})">🗑️</button>
@@ -6961,6 +6962,20 @@ function openAddProductRow(editData = null) {
     secUnitSelect.innerHTML = opts;
   }
 
+  const defaultLocSelect = document.getElementById('newProdDefaultLocation');
+  if (defaultLocSelect) {
+    let locOpts = '<option value="">-- بدون جایگاه پیش‌فرض --</option>';
+    const allLocations = AppState.warehouseLocations || [];
+    if (allLocations.length === 0) {
+      locOpts += '<option value="WH01-S01-R01-Q01-T01-P01">WH01-S01-R01-Q01-T01-P01 (انبار مرکزی)</option>';
+    } else {
+      allLocations.forEach(loc => {
+        locOpts += `<option value="${loc.code}">${loc.code} (${loc.zone || ''})</option>`;
+      });
+    }
+    defaultLocSelect.innerHTML = locOpts;
+  }
+
   if (editData) {
     document.getElementById('editProductId').value = editData.id;
     document.getElementById('newProdCode').value = editData.code || '';
@@ -6970,6 +6985,7 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdSecondaryRatio').value = editData.secondaryRatio || 1.0;
     document.getElementById('newProdPrice').value = editData.price || 0;
     document.getElementById('newProdStock').value = editData.stock || 0;
+    if (defaultLocSelect) defaultLocSelect.value = editData.defaultLocationCode || editData.locationCode || '';
   } else {
     document.getElementById('editProductId').value = '';
     document.getElementById('newProdCode').value = getNextProductCode();
@@ -6979,6 +6995,7 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdSecondaryRatio').value = 1.0;
     document.getElementById('newProdPrice').value = '';
     document.getElementById('newProdStock').value = '0';
+    if (defaultLocSelect) defaultLocSelect.value = '';
   }
 
   overlay.style.display = 'flex';
@@ -6999,6 +7016,7 @@ function saveNewProduct() {
   const secondaryRatio = Number(document.getElementById('newProdSecondaryRatio')?.value || 1.0);
   const price = Number(document.getElementById('newProdPrice')?.value || 0);
   const stock = Number(document.getElementById('newProdStock')?.value || 0);
+  const defaultLocationCode = document.getElementById('newProdDefaultLocation')?.value || '';
 
   if (!code || !name) { alert('کد کالا و نام کالا الزامی است.'); return; }
 
@@ -7020,6 +7038,8 @@ function saveNewProduct() {
       existing.secondaryRatio = secondaryRatio;
       existing.price = price;
       existing.stock = stock;
+      existing.defaultLocationCode = defaultLocationCode;
+      existing.locationCode = defaultLocationCode;
     }
   } else {
     AppState.products.push({
@@ -7031,6 +7051,8 @@ function saveNewProduct() {
       secondaryRatio,
       price,
       stock,
+      defaultLocationCode,
+      locationCode: defaultLocationCode,
       barcode: '690' + Math.floor(Math.random() * 1e9)
     });
   }
@@ -7039,6 +7061,7 @@ function saveNewProduct() {
   renderProductsTable();
   alert(`کالای دو واحدی "${name}" با موفقیت ذخیره شد.`);
 }
+
 
 function editProduct(id) {
   const p = AppState.products.find(x => x.id === id);
@@ -11870,6 +11893,9 @@ function openAddPurchaseInvoiceRow(editData = null) {
     document.getElementById('newPurchDate').value = editData.date || '1403/05/11';
     document.getElementById('newPurchVendor').value = editData.party || 'بازرگانی واردات پارس';
     document.getElementById('newPurchTempReceipt').value = editData.tempReceiptNo || 'REC-101';
+    if (document.getElementById('newPurchTempLocation')) {
+      document.getElementById('newPurchTempLocation').value = editData.tempLocationCode || 'WH01-DOCK';
+    }
     document.getElementById('newPurchNotes').value = editData.notes || '';
 
     currentPurchInvoiceLines = editData.lines ? JSON.parse(JSON.stringify(editData.lines)) : [
@@ -11882,11 +11908,15 @@ function openAddPurchaseInvoiceRow(editData = null) {
     document.getElementById('newPurchDate').value = '1403/05/11';
     document.getElementById('newPurchVendor').value = 'بازرگانی واردات پارس';
     document.getElementById('newPurchTempReceipt').value = 'REC-' + (100 + AppState.purchaseInvoices.length + 1);
+    if (document.getElementById('newPurchTempLocation')) {
+      document.getElementById('newPurchTempLocation').value = 'WH01-DOCK';
+    }
     document.getElementById('newPurchNotes').value = '';
 
     const firstProd = AppState.products[0];
+    const defLoc = firstProd ? (firstProd.defaultLocationCode || firstProd.locationCode || '') : '';
     currentPurchInvoiceLines = [
-      { prodCode: firstProd?.code || '', qty: 1, price: firstProd?.price || 0 }
+      { prodCode: firstProd?.code || '', locationCode: defLoc, qty: 1, price: firstProd?.price || 0 }
     ];
   }
 
@@ -11902,6 +11932,8 @@ function renderPurchaseInvoiceDetailGrid() {
   const tbody = document.getElementById('purchaseInvoiceDetailBody');
   if (!tbody) return;
 
+  const allLocations = AppState.warehouseLocations || [];
+
   tbody.innerHTML = currentPurchInvoiceLines.map((line, idx) => {
     const prod = AppState.products.find(p => p.code === line.prodCode) || AppState.products[0];
     const unitName = prod ? prod.unit : 'عدد';
@@ -11911,12 +11943,28 @@ function renderPurchaseInvoiceDetailGrid() {
       `<option value="${p.code}" ${p.code === line.prodCode ? 'selected' : ''}>${p.code} - ${p.name}</option>`
     ).join('');
 
+    const selectedLoc = line.locationCode || (prod ? (prod.defaultLocationCode || prod.locationCode) : '') || (allLocations[0]?.code || 'WH01-S01-R01-Q01-T01-P01');
+
+    let locationOptions = '';
+    if (allLocations.length > 0) {
+      locationOptions = allLocations.map(loc =>
+        `<option value="${loc.code}" ${loc.code === selectedLoc ? 'selected' : ''}>${loc.code}</option>`
+      ).join('');
+    } else {
+      locationOptions = `<option value="${selectedLoc}">${selectedLoc}</option>`;
+    }
+
     return `
       <tr>
         <td style="text-align:center; font-weight:bold; font-size:0.85rem;">${idx + 1}</td>
         <td style="padding:4px;">
           <select class="form-select" style="width:100%; padding:4px 8px; font-size:0.85rem;" onchange="updatePurchDetailProduct(${idx}, this.value)">
             ${productOptions}
+          </select>
+        </td>
+        <td style="padding:4px;">
+          <select class="form-select" style="width:100%; padding:4px 8px; font-size:0.82rem; font-weight:bold; color:var(--accent-color);" onchange="updatePurchDetailLocation(${idx}, this.value)">
+            ${locationOptions}
           </select>
         </td>
         <td style="padding:4px; text-align:center;">
@@ -11941,10 +11989,18 @@ function renderPurchaseInvoiceDetailGrid() {
   calculatePurchInvoiceTotals();
 }
 
+function updatePurchDetailLocation(idx, locCode) {
+  if (currentPurchInvoiceLines[idx]) {
+    currentPurchInvoiceLines[idx].locationCode = locCode;
+  }
+}
+
 function addPurchaseInvoiceDetailRow() {
   const firstProd = AppState.products[0];
+  const defLoc = firstProd ? (firstProd.defaultLocationCode || firstProd.locationCode || '') : '';
   currentPurchInvoiceLines.push({
     prodCode: firstProd?.code || '',
+    locationCode: defLoc,
     qty: 1,
     price: firstProd?.price || 0
   });
@@ -11964,8 +12020,11 @@ function updatePurchDetailProduct(idx, code) {
   const prod = AppState.products.find(p => p.code === code);
   if (currentPurchInvoiceLines[idx]) {
     currentPurchInvoiceLines[idx].prodCode = code;
-    if (prod && prod.price) {
-      currentPurchInvoiceLines[idx].price = prod.price;
+    if (prod) {
+      if (prod.price) currentPurchInvoiceLines[idx].price = prod.price;
+      if (prod.defaultLocationCode || prod.locationCode) {
+        currentPurchInvoiceLines[idx].locationCode = prod.defaultLocationCode || prod.locationCode;
+      }
     }
     renderPurchaseInvoiceDetailGrid();
   }
@@ -12025,6 +12084,7 @@ function saveNewPurchaseInvoice() {
   const date = document.getElementById('newPurchDate')?.value?.trim();
   const party = document.getElementById('newPurchVendor')?.value?.trim();
   const tempReceiptNo = document.getElementById('newPurchTempReceipt')?.value?.trim() || '-';
+  const tempLocationCode = document.getElementById('newPurchTempLocation')?.value || 'WH01-DOCK';
   const notes = document.getElementById('newPurchNotes')?.value?.trim() || '';
 
   if (!id || !party || !currentPurchInvoiceLines || currentPurchInvoiceLines.length === 0) {
@@ -12043,6 +12103,7 @@ function saveNewPurchaseInvoice() {
     date,
     party,
     tempReceiptNo,
+    tempLocationCode,
     total,
     notes,
     warehouse: 'انبار مرکزی',
@@ -12056,13 +12117,18 @@ function saveNewPurchaseInvoice() {
     AppState.purchaseInvoices.push(invData);
   }
 
-  // Update product stock
+  // Update product stock and assign stock locations
   currentPurchInvoiceLines.forEach(line => {
     const prod = AppState.products.find(p => p.code === line.prodCode);
-    if (prod) prod.stock += line.qty;
+    if (prod) {
+      prod.stock += line.qty;
+      if (line.locationCode) {
+        prod.locationCode = line.locationCode;
+      }
+    }
   });
 
-  alert(`فاکتور خرید ${id} با موفقیت ثبت و به موجودی انبار اضافه شد.`);
+  alert(`رسید دائم انبار و فاکتور خرید ${id} با موفقیت ثبت شد. تمامی کالاها به جایگاه‌های فیزیکی قطعی مربوطه اختصاص یافتند.`);
   closePurchaseInvoiceRow();
   renderPurchaseInvoicesTable();
 }
