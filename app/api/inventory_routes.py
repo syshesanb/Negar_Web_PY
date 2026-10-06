@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.schemas.schemas import (
@@ -11,6 +11,7 @@ from app.schemas.schemas import (
     ProductUnitCreateDTO,
     WarehouseDTO,
     WarehouseCreateDTO,
+    WarehouseLocationDTO,
     InventoryRecordDTO,
 )
 from app.services.inventory_service import InventoryService
@@ -119,6 +120,27 @@ def delete_warehouse(warehouse_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     return {"message": "Warehouse deleted successfully"}
+
+
+@router.get("/warehouses/{warehouse_id}/locations", response_model=List[WarehouseLocationDTO])
+def get_warehouse_locations(warehouse_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.get_warehouse_locations(warehouse_id)
+
+
+@router.post("/warehouses/locations", response_model=WarehouseLocationDTO)
+def save_warehouse_location(loc: WarehouseLocationDTO, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.save_warehouse_location(loc)
+
+
+@router.delete("/warehouses/locations/{location_id}")
+def delete_warehouse_location(location_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    success = service.delete_warehouse_location(location_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return {"message": "Location deleted successfully"}
 
 
 # -----------------------------------------------------------------------------

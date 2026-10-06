@@ -7097,6 +7097,7 @@ function renderWarehousesTable() {
       <td>${w.location}</td>
       <td>${w.allowNeg ? 'بله' : 'خیر'}</td>
       <td>
+        <button class="btn btn-outline" style="padding:3px 8px; color:var(--accent-color);" onclick="openWarehouseLocationsModal(${w.id})">🏗️ جانمایی فیزیکی</button>
         <button class="btn btn-outline" style="padding:3px 8px;" onclick="editWarehouse(${w.id})">✏️ ویرایش</button>
         <button class="btn btn-outline" style="padding:3px 8px;color:red;" onclick="deleteWarehouse(${w.id})">🗑️</button>
       </td>
@@ -7215,6 +7216,192 @@ function deleteWarehouse(id) {
     AppState.warehouses = AppState.warehouses.filter(x => x.id !== id);
     fetch(`/api/Inventory/warehouses/${id}`, { method: 'DELETE' }).catch(err => console.log('Backend warehouse delete error:', err));
     renderWarehousesTable();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Physical Warehouse Locations (جانمایی فیزیکی انبار: زون، راهرو، قفسه، طبقه، سلول)
+// -----------------------------------------------------------------------------
+let currentWhLocations = [];
+
+function openWarehouseLocationsModal(warehouseId) {
+  const overlay = document.getElementById('warehouseLocationsModalOverlay');
+  if (!overlay) return;
+
+  const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
+  const whName = wh ? `${wh.name} (${wh.code})` : `انبار کد ${warehouseId}`;
+
+  const titleEl = document.getElementById('whLocModalTitle');
+  if (titleEl) titleEl.textContent = `🏗️ مدیریت جانمایی فیزیکی - ${whName}`;
+
+  document.getElementById('currentWhLocWarehouseId').value = warehouseId;
+  document.getElementById('newWhLocZone').value = '';
+  document.getElementById('newWhLocAisle').value = '';
+  document.getElementById('newWhLocRack').value = '';
+  document.getElementById('newWhLocShelf').value = '';
+  document.getElementById('newWhLocBin').value = '';
+  document.getElementById('newWhLocCode').value = '';
+
+  overlay.style.display = 'flex';
+
+  loadWarehouseLocations(warehouseId);
+}
+
+function closeWarehouseLocationsModal() {
+  const overlay = document.getElementById('warehouseLocationsModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function updateAutoLocationCode() {
+  const whId = Number(document.getElementById('currentWhLocWarehouseId')?.value || 0);
+  const wh = (AppState.warehouses || []).find(w => w.id === whId);
+  const whPrefix = wh ? wh.code.replace('-', '') : 'WH';
+
+  const z = document.getElementById('newWhLocZone')?.value?.trim() || '';
+  const a = document.getElementById('newWhLocAisle')?.value?.trim() || '';
+  const r = document.getElementById('newWhLocRack')?.value?.trim() || '';
+  const s = document.getElementById('newWhLocShelf')?.value?.trim() || '';
+  const b = document.getElementById('newWhLocBin')?.value?.trim() || '';
+
+  const parts = [whPrefix];
+  if (z) parts.push(z.toUpperCase().startsWith('Z') ? z : 'Z' + z);
+  if (a) parts.push(a.toUpperCase().startsWith('A') ? a : 'A' + a);
+  if (r) parts.push(r.toUpperCase().startsWith('R') ? r : 'R' + r);
+  if (s) parts.push(s.toUpperCase().startsWith('L') ? s : 'L' + s);
+  if (b) parts.push(b.toUpperCase().startsWith('B') ? b : 'B' + b);
+
+  if (parts.length > 1) {
+    document.getElementById('newWhLocCode').value = parts.join('-');
+  }
+}
+
+function loadWarehouseLocations(warehouseId) {
+  fetch(`/api/Inventory/warehouses/${warehouseId}/locations`)
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        currentWhLocations = data.map(d => ({
+          id: d.LocationID,
+          warehouseId: d.WarehouseID,
+          code: d.LocationCode,
+          zone: d.Zone || '-',
+          aisle: d.Aisle || '-',
+          rack: d.Rack || '-',
+          shelf: d.Shelf || '-',
+          bin: d.Bin || '-'
+        }));
+        renderWarehouseLocationsTable();
+      }
+    })
+    .catch(err => {
+      console.log('Backend locations load fallback:', err);
+      currentWhLocations = (AppState.warehouseLocations || []).filter(l => l.warehouseId === warehouseId);
+      renderWarehouseLocationsTable();
+    });
+}
+
+function renderWarehouseLocationsTable() {
+  const tbody = document.getElementById('whLocationsTableBody');
+  if (!tbody) return;
+
+  if (!currentWhLocations || currentWhLocations.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">هیچ جایگاه فیزیکی ثبت نشده است. از فرم بالا برای تعریف زون، قفسه و جایگاه استفاده کنید.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = currentWhLocations.map(l => `
+    <tr>
+      <td><b style="color:var(--accent-color);">${l.code}</b></td>
+      <td>${l.zone}</td>
+      <td>${l.aisle}</td>
+      <td>${l.rack}</td>
+      <td>${l.shelf}</td>
+      <td>${l.bin}</td>
+      <td>
+        <button class="btn btn-outline" style="padding:2px 6px;color:red;" onclick="deleteWarehouseLocation(${l.id})">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function addWarehouseLocation() {
+  const warehouseId = Number(document.getElementById('currentWhLocWarehouseId')?.value);
+  const code = document.getElementById('newWhLocCode')?.value?.trim();
+  const zone = document.getElementById('newWhLocZone')?.value?.trim() || '-';
+  const aisle = document.getElementById('newWhLocAisle')?.value?.trim() || '-';
+  const rack = document.getElementById('newWhLocRack')?.value?.trim() || '-';
+  const shelf = document.getElementById('newWhLocShelf')?.value?.trim() || '-';
+  const bin = document.getElementById('newWhLocBin')?.value?.trim() || '-';
+
+  if (!warehouseId || !code) {
+    alert('کد ترکیبی آدرس جانمایی الزامی است.');
+    return;
+  }
+
+  // Duplicate check
+  if (currentWhLocations.some(l => l.code === code)) {
+    alert(`کد جانمایی "${code}" قبلاً در این انبار ثبت شده است.`);
+    return;
+  }
+
+  const payload = {
+    LocationID: null,
+    WarehouseID: warehouseId,
+    LocationCode: code,
+    Zone: zone,
+    Aisle: aisle,
+    Rack: rack,
+    Shelf: shelf,
+    Bin: bin
+  };
+
+  fetch('/api/Inventory/warehouses/locations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data && data.LocationID) {
+      currentWhLocations.push({
+        id: data.LocationID,
+        warehouseId,
+        code,
+        zone,
+        aisle,
+        rack,
+        shelf,
+        bin
+      });
+      renderWarehouseLocationsTable();
+    }
+  }).catch(err => {
+    console.log('Backend location save fallback:', err);
+    currentWhLocations.push({
+      id: Date.now(),
+      warehouseId,
+      code,
+      zone,
+      aisle,
+      rack,
+      shelf,
+      bin
+    });
+    renderWarehouseLocationsTable();
+  });
+
+  // Clear inputs
+  document.getElementById('newWhLocZone').value = '';
+  document.getElementById('newWhLocAisle').value = '';
+  document.getElementById('newWhLocRack').value = '';
+  document.getElementById('newWhLocShelf').value = '';
+  document.getElementById('newWhLocBin').value = '';
+  document.getElementById('newWhLocCode').value = '';
+}
+
+function deleteWarehouseLocation(locationId) {
+  if (confirm('آیا از حذف این جایگاه فیزیکی اطمینان دارید؟')) {
+    currentWhLocations = currentWhLocations.filter(l => l.id !== locationId);
+    fetch(`/api/Inventory/warehouses/locations/${locationId}`, { method: 'DELETE' }).catch(err => console.log(err));
+    renderWarehouseLocationsTable();
   }
 }
 

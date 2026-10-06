@@ -297,6 +297,21 @@ class WarehouseDTO(WarehouseBase):
         from_attributes = True
 
 
+class WarehouseLocationDTO(BaseModel):
+    LocationID: Optional[int] = None
+    WarehouseID: int
+    LocationCode: str
+    Zone: Optional[str] = None
+    Aisle: Optional[str] = None
+    Rack: Optional[str] = None
+    Shelf: Optional[str] = None
+    Bin: Optional[str] = None
+    Notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class InventoryRecordDTO(BaseModel):
     InventoryID: int
     ProductID: int

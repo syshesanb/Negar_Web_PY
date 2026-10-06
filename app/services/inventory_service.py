@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from app.domain.models import Product, ProductGroup, ProductUnit, Warehouse, InventoryRecord
-from app.schemas.schemas import ProductCreateDTO, ProductGroupCreateDTO, ProductUnitCreateDTO, WarehouseCreateDTO
+from app.domain.models import Product, ProductGroup, ProductUnit, Warehouse, WarehouseLocation, InventoryRecord
+from app.schemas.schemas import ProductCreateDTO, ProductGroupCreateDTO, ProductUnitCreateDTO, WarehouseCreateDTO, WarehouseLocationDTO
 
 
 class InventoryService:
@@ -283,6 +283,56 @@ class InventoryService:
         wh = self.db.query(Warehouse).filter(Warehouse.WarehouseID == warehouse_id).first()
         if wh:
             self.db.delete(wh)
+            self.db.commit()
+            return True
+        return False
+
+    def get_warehouse_locations(self, warehouse_id: int) -> List[WarehouseLocation]:
+        return (
+            self.db.query(WarehouseLocation)
+            .filter(WarehouseLocation.WarehouseID == warehouse_id)
+            .order_by(WarehouseLocation.LocationCode)
+            .all()
+        )
+
+    def save_warehouse_location(self, dto: WarehouseLocationDTO) -> WarehouseLocation:
+        if dto.LocationID and dto.LocationID > 0:
+            loc = self.db.query(WarehouseLocation).filter(WarehouseLocation.LocationID == dto.LocationID).first()
+            if loc:
+                for field, val in dto.dict(exclude_unset=True).items():
+                    if hasattr(loc, field):
+                        setattr(loc, field, val)
+                self.db.commit()
+                self.db.refresh(loc)
+                return loc
+
+        # Prevent duplicate location codes in same warehouse
+        existing = (
+            self.db.query(WarehouseLocation)
+            .filter(
+                WarehouseLocation.WarehouseID == dto.WarehouseID,
+                WarehouseLocation.LocationCode == dto.LocationCode,
+            )
+            .first()
+        )
+        if existing:
+            for field, val in dto.dict(exclude_unset=True).items():
+                if hasattr(existing, field) and val is not None:
+                    setattr(existing, field, val)
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
+
+        new_loc = WarehouseLocation(**dto.dict(exclude={"LocationID"}))
+        self.db.add(new_loc)
+        self.db.commit()
+        self.db.refresh(new_loc)
+        return new_loc
+
+    def delete_warehouse_location(self, location_id: int) -> bool:
+        loc = self.db.query(WarehouseLocation).filter(WarehouseLocation.LocationID == location_id).first()
+        if loc:
+            self.db.delete(loc)
             self.db.commit()
             return True
         return False

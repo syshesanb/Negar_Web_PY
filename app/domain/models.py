@@ -196,6 +196,20 @@ class Warehouse(Base):
     Description = Column(Text, nullable=True)
 
 
+class WarehouseLocation(Base):
+    __tablename__ = "WarehouseLocations"
+
+    LocationID = Column(Integer, primary_key=True, autoincrement=True)
+    WarehouseID = Column(Integer, ForeignKey("Warehouses.WarehouseID", ondelete="CASCADE"), nullable=False)
+    LocationCode = Column(String(100), nullable=False)
+    Zone = Column(String(50), nullable=True)
+    Aisle = Column(String(50), nullable=True)
+    Rack = Column(String(50), nullable=True)
+    Shelf = Column(String(50), nullable=True)
+    Bin = Column(String(50), nullable=True)
+    Notes = Column(String(250), nullable=True)
+
+
 class InventoryRecord(Base):
     __tablename__ = "Inventory"
 

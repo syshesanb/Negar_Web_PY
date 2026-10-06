@@ -145,6 +145,19 @@ def run_tests():
     saved_wh = wh_res.json()
     print(" -> انبار تعریف شد:", saved_wh["WarehouseName"])
 
+    loc_res = client.post("/api/Inventory/warehouses/locations", json={
+        "WarehouseID": saved_wh["WarehouseID"],
+        "LocationCode": "WH01-ZA-A01-R05-L02-B01",
+        "Zone": "زون A",
+        "Aisle": "01",
+        "Rack": "05",
+        "Shelf": "02",
+        "Bin": "01"
+    })
+    assert loc_res.status_code == 200
+    saved_loc = loc_res.json()
+    print(" -> جایگاه فیزیکی انبار تعریف شد:", saved_loc["LocationCode"])
+
     prod_res = client.post("/api/Inventory/products", json={
         "CompanyID": 1,
         "ProductCode": "PRD-001",
