@@ -7235,12 +7235,16 @@ function openWarehouseLocationsModal(warehouseId) {
   if (titleEl) titleEl.textContent = `🏗️ مدیریت جانمایی فیزیکی - ${whName}`;
 
   document.getElementById('currentWhLocWarehouseId').value = warehouseId;
-  document.getElementById('newWhLocZone').value = '';
-  document.getElementById('newWhLocAisle').value = '';
-  document.getElementById('newWhLocRack').value = '';
-  document.getElementById('newWhLocShelf').value = '';
-  document.getElementById('newWhLocBin').value = '';
-  document.getElementById('newWhLocCode').value = '';
+  
+  // Reset input fields
+  ['Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(lvl => {
+    const abbrEl = document.getElementById(`newWhLoc${lvl}Abbr`);
+    const countEl = document.getElementById(`newWhLoc${lvl}Count`);
+    if (abbrEl) abbrEl.value = '';
+    if (countEl) { countEl.value = ''; countEl.disabled = true; }
+  });
+
+  validateWhLocDependencies();
 
   overlay.style.display = 'flex';
 
@@ -7252,27 +7256,60 @@ function closeWarehouseLocationsModal() {
   if (overlay) overlay.style.display = 'none';
 }
 
-function updateAutoLocationCode() {
-  const whId = Number(document.getElementById('currentWhLocWarehouseId')?.value || 0);
-  const wh = (AppState.warehouses || []).find(w => w.id === whId);
-  const whPrefix = wh ? wh.code.replace('-', '') : 'WH';
+function validateWhLocDependencies() {
+  const zAbbr = document.getElementById('newWhLocZoneAbbr');
+  const zCount = document.getElementById('newWhLocZoneCount');
+  const aAbbr = document.getElementById('newWhLocAisleAbbr');
+  const aCount = document.getElementById('newWhLocAisleCount');
+  const rAbbr = document.getElementById('newWhLocRackAbbr');
+  const rCount = document.getElementById('newWhLocRackCount');
+  const sAbbr = document.getElementById('newWhLocShelfAbbr');
+  const sCount = document.getElementById('newWhLocShelfCount');
+  const bAbbr = document.getElementById('newWhLocBinAbbr');
+  const bCount = document.getElementById('newWhLocBinCount');
 
-  const z = document.getElementById('newWhLocZone')?.value?.trim() || '';
-  const a = document.getElementById('newWhLocAisle')?.value?.trim() || '';
-  const r = document.getElementById('newWhLocRack')?.value?.trim() || '';
-  const s = document.getElementById('newWhLocShelf')?.value?.trim() || '';
-  const b = document.getElementById('newWhLocBin')?.value?.trim() || '';
+  if (!zAbbr || !zCount) return;
 
-  const parts = [whPrefix];
-  if (z) parts.push(z.toUpperCase().startsWith('Z') ? z : 'Z' + z);
-  if (a) parts.push(a.toUpperCase().startsWith('A') ? a : 'A' + a);
-  if (r) parts.push(r.toUpperCase().startsWith('R') ? r : 'R' + r);
-  if (s) parts.push(s.toUpperCase().startsWith('L') ? s : 'L' + s);
-  if (b) parts.push(b.toUpperCase().startsWith('B') ? b : 'B' + b);
+  // Level 1: Zone
+  const hasZAbbr = zAbbr.value.trim().length > 0;
+  zCount.disabled = !hasZAbbr;
+  if (!hasZAbbr) zCount.value = '';
 
-  if (parts.length > 1) {
-    document.getElementById('newWhLocCode').value = parts.join('-');
-  }
+  // Level 2: Aisle
+  const hasZCount = hasZAbbr && Number(zCount.value) > 0;
+  aAbbr.disabled = !hasZCount;
+  if (!hasZCount) { aAbbr.value = ''; aCount.value = ''; aCount.disabled = true; }
+
+  const hasAAbbr = hasZCount && aAbbr.value.trim().length > 0;
+  aCount.disabled = !hasAAbbr;
+  if (!hasAAbbr) aCount.value = '';
+
+  // Level 3: Rack
+  const hasACount = hasAAbbr && Number(aCount.value) > 0;
+  rAbbr.disabled = !hasACount;
+  if (!hasACount) { rAbbr.value = ''; rCount.value = ''; rCount.disabled = true; }
+
+  const hasRAbbr = hasACount && rAbbr.value.trim().length > 0;
+  rCount.disabled = !hasRAbbr;
+  if (!hasRAbbr) rCount.value = '';
+
+  // Level 4: Shelf
+  const hasRCount = hasRAbbr && Number(rCount.value) > 0;
+  sAbbr.disabled = !hasRCount;
+  if (!hasRCount) { sAbbr.value = ''; sCount.value = ''; sCount.disabled = true; }
+
+  const hasSAbbr = hasRCount && sAbbr.value.trim().length > 0;
+  sCount.disabled = !hasSAbbr;
+  if (!hasSAbbr) sCount.value = '';
+
+  // Level 5: Bin
+  const hasSCount = hasSAbbr && Number(sCount.value) > 0;
+  bAbbr.disabled = !hasSCount;
+  if (!hasSCount) { bAbbr.value = ''; bCount.value = ''; bCount.disabled = true; }
+
+  const hasBAbbr = hasSCount && bAbbr.value.trim().length > 0;
+  bCount.disabled = !hasBAbbr;
+  if (!hasBAbbr) bCount.value = '';
 }
 
 function loadWarehouseLocations(warehouseId) {
@@ -7305,7 +7342,7 @@ function renderWarehouseLocationsTable() {
   if (!tbody) return;
 
   if (!currentWhLocations || currentWhLocations.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">هیچ جایگاه فیزیکی ثبت نشده است. از فرم بالا برای تعریف زون، قفسه و جایگاه استفاده کنید.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">هیچ جایگاه فیزیکی ثبت نشده است. از فرم بالا برای تعریف علائم اختصاری و تعداد استفاده کنید.</td></tr>';
     return;
   }
 
@@ -7326,75 +7363,126 @@ function renderWarehouseLocationsTable() {
 
 function addWarehouseLocation() {
   const warehouseId = Number(document.getElementById('currentWhLocWarehouseId')?.value);
-  const code = document.getElementById('newWhLocCode')?.value?.trim();
-  const zone = document.getElementById('newWhLocZone')?.value?.trim() || '-';
-  const aisle = document.getElementById('newWhLocAisle')?.value?.trim() || '-';
-  const rack = document.getElementById('newWhLocRack')?.value?.trim() || '-';
-  const shelf = document.getElementById('newWhLocShelf')?.value?.trim() || '-';
-  const bin = document.getElementById('newWhLocBin')?.value?.trim() || '-';
+  if (!warehouseId) return;
 
-  if (!warehouseId || !code) {
-    alert('کد ترکیبی آدرس جانمایی الزامی است.');
+  const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
+  const whPrefix = wh ? wh.code.replace('-', '') : 'WH';
+
+  const zAbbr = document.getElementById('newWhLocZoneAbbr')?.value?.trim();
+  const zCount = Number(document.getElementById('newWhLocZoneCount')?.value || 0);
+
+  const aAbbr = document.getElementById('newWhLocAisleAbbr')?.value?.trim();
+  const aCount = Number(document.getElementById('newWhLocAisleCount')?.value || 0);
+
+  const rAbbr = document.getElementById('newWhLocRackAbbr')?.value?.trim();
+  const rCount = Number(document.getElementById('newWhLocRackCount')?.value || 0);
+
+  const sAbbr = document.getElementById('newWhLocShelfAbbr')?.value?.trim();
+  const sCount = Number(document.getElementById('newWhLocShelfCount')?.value || 0);
+
+  const bAbbr = document.getElementById('newWhLocBinAbbr')?.value?.trim();
+  const bCount = Number(document.getElementById('newWhLocBinCount')?.value || 0);
+
+  if (!zAbbr || zCount <= 0) {
+    alert('لطفاً حداقل علامت اختصاری و تعداد را برای سالن / زون (بخش اول) وارد نمایید.');
     return;
   }
 
-  // Duplicate check
-  if (currentWhLocations.some(l => l.code === code)) {
-    alert(`کد جانمایی "${code}" قبلاً در این انبار ثبت شده است.`);
-    return;
-  }
-
-  const payload = {
-    LocationID: null,
-    WarehouseID: warehouseId,
-    LocationCode: code,
-    Zone: zone,
-    Aisle: aisle,
-    Rack: rack,
-    Shelf: shelf,
-    Bin: bin
+  const generateLevelArray = (abbr, count) => {
+    if (!abbr || count <= 0) return [null];
+    const arr = [];
+    for (let i = 1; i <= count; i++) {
+      arr.push(`${abbr}${String(i).padStart(2, '0')}`);
+    }
+    return arr;
   };
 
-  fetch('/api/Inventory/warehouses/locations', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).then(res => res.json()).then(data => {
-    if (data && data.LocationID) {
-      currentWhLocations.push({
-        id: data.LocationID,
-        warehouseId,
-        code,
-        zone,
-        aisle,
-        rack,
-        shelf,
-        bin
+  const zones = generateLevelArray(zAbbr, zCount);
+  const aisles = generateLevelArray(aAbbr, aCount);
+  const racks = generateLevelArray(rAbbr, rCount);
+  const shelves = generateLevelArray(sAbbr, sCount);
+  const bins = generateLevelArray(bAbbr, bCount);
+
+  const newLocationsToSave = [];
+  zones.forEach(z => {
+    aisles.forEach(a => {
+      racks.forEach(r => {
+        shelves.forEach(s => {
+          bins.forEach(b => {
+            const parts = [whPrefix, z, a, r, s, b].filter(Boolean);
+            const code = parts.join('-');
+            
+            if (!currentWhLocations.some(l => l.code === code) && !newLocationsToSave.some(l => l.LocationCode === code)) {
+              newLocationsToSave.push({
+                LocationID: null,
+                WarehouseID: warehouseId,
+                LocationCode: code,
+                Zone: z || '-',
+                Aisle: a || '-',
+                Rack: r || '-',
+                Shelf: s || '-',
+                Bin: b || '-'
+              });
+            }
+          });
+        });
       });
-      renderWarehouseLocationsTable();
-    }
-  }).catch(err => {
-    console.log('Backend location save fallback:', err);
-    currentWhLocations.push({
-      id: Date.now(),
-      warehouseId,
-      code,
-      zone,
-      aisle,
-      rack,
-      shelf,
-      bin
     });
-    renderWarehouseLocationsTable();
   });
 
-  // Clear inputs
-  document.getElementById('newWhLocZone').value = '';
-  document.getElementById('newWhLocAisle').value = '';
-  document.getElementById('newWhLocRack').value = '';
-  document.getElementById('newWhLocShelf').value = '';
-  document.getElementById('newWhLocBin').value = '';
-  document.getElementById('newWhLocCode').value = '';
+  if (newLocationsToSave.length === 0) {
+    alert('تمام آدرس‌های ناشی از این ترکیب قبلاً ثبت شده‌اند.');
+    return;
+  }
+
+  let savedCount = 0;
+  const promises = newLocationsToSave.map(payload => {
+    return fetch('/api/Inventory/warehouses/locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      currentWhLocations.push({
+        id: data.LocationID || Date.now() + Math.random(),
+        warehouseId,
+        code: payload.LocationCode,
+        zone: payload.Zone,
+        aisle: payload.Aisle,
+        rack: payload.Rack,
+        shelf: payload.Shelf,
+        bin: payload.Bin
+      });
+      savedCount++;
+    })
+    .catch(() => {
+      currentWhLocations.push({
+        id: Date.now() + Math.random(),
+        warehouseId,
+        code: payload.LocationCode,
+        zone: payload.Zone,
+        aisle: payload.Aisle,
+        rack: payload.Rack,
+        shelf: payload.Shelf,
+        bin: payload.Bin
+      });
+      savedCount++;
+    });
+  });
+
+  Promise.all(promises).then(() => {
+    renderWarehouseLocationsTable();
+    alert(`تعداد ${savedCount} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
+    
+    ['Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(lvl => {
+      const abbrEl = document.getElementById(`newWhLoc${lvl}Abbr`);
+      const countEl = document.getElementById(`newWhLoc${lvl}Count`);
+      if (abbrEl) abbrEl.value = '';
+      if (countEl) { countEl.value = ''; countEl.disabled = true; }
+    });
+    validateWhLocDependencies();
+  });
 }
 
 function deleteWarehouseLocation(locationId) {
