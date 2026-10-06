@@ -158,6 +158,12 @@ def run_tests():
     saved_loc = loc_res.json()
     print(" -> جایگاه فیزیکی انبار تعریف شد:", saved_loc["LocationCode"])
 
+    # Test GET locations
+    get_locs = client.get(f"/api/Inventory/warehouses/{saved_wh['WarehouseID']}/locations")
+    assert get_locs.status_code == 200
+    assert len(get_locs.json()) >= 1
+
+
     prod_res = client.post("/api/Inventory/products", json={
         "CompanyID": 1,
         "ProductCode": "PRD-001",

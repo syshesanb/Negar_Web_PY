@@ -337,6 +337,16 @@ class InventoryService:
             return True
         return False
 
+    def delete_all_warehouse_locations(self, warehouse_id: int) -> int:
+        count = (
+            self.db.query(WarehouseLocation)
+            .filter(WarehouseLocation.WarehouseID == warehouse_id)
+            .delete(synchronize_session=False)
+        )
+        self.db.commit()
+        return count
+
+
     # -------------------------------------------------------------------------
     # Stock / Inventory
     # -------------------------------------------------------------------------

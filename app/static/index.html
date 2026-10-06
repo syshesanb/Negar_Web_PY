@@ -2660,8 +2660,10 @@
 
         <!-- POPUP MODAL: WAREHOUSE LOCATIONS (جانمایی فیزیکی انبار) -->
         <div id="warehouseLocationsModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:3000; align-items:center; justify-content:center;">
-          <div class="card form-card" style="max-width:1150px; width:96%; max-height:92vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
-            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+          <div class="card form-card" style="max-width:1180px; width:96%; height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,0.6); background:var(--bg-card); border:1px solid var(--border-color);">
+            
+            <!-- Modal Header (Fixed) -->
+            <div style="padding:16px 24px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
               <h3 id="whLocModalTitle" style="margin:0; font-size:1.15rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
                 🏗️ مدیریت جانمایی فیزیکی انبار
               </h3>
@@ -2669,64 +2671,74 @@
                 ✖
               </button>
             </div>
-            <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+            
+            <!-- Modal Content (Flex Column layout) -->
+            <div style="padding:20px 24px; display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
               <input type="hidden" id="currentWhLocWarehouseId" value="" />
               
-              <!-- Abbreviation & Count Form Box -->
-              <div style="background:var(--bg-secondary); padding:16px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border-color);">
-                <h4 style="margin:0 0 14px 0; font-size:0.95rem; color:var(--accent-color); font-weight:bold;">🏷️ معرفی علائم اختصاری آدرس فیزیکی برای این انبار</h4>
+              <!-- Fixed Top Abbreviation & Count Form Box -->
+              <div style="background:var(--bg-secondary); padding:16px; border-radius:8px; margin-bottom:16px; border:1px solid var(--border-color); flex-shrink:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                  <h4 style="margin:0; font-size:0.95rem; color:var(--accent-color); font-weight:bold;">🏷️ معرفی علائم اختصاری آدرس فیزیکی برای این انبار</h4>
+                  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-outline" id="btnEditWhLocations" onclick="enableWhLocationEditing()" style="padding:6px 14px; font-size:0.85rem;">✏️ ویرایش جایگاه‌ها</button>
+                    <button type="button" class="btn btn-primary" id="btnAddWhLocations" onclick="saveOrUpdateWarehouseLocations()" style="padding:6px 16px; font-size:0.85rem;">+ افزودن جایگاه به انبار</button>
+                    <button type="button" class="btn btn-danger" id="btnDeleteAllWhLocations" onclick="deleteAllWarehouseLocations()" style="padding:6px 14px; font-size:0.85rem; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444;">🗑️ حذف تمامی جایگاه‌ها</button>
+                  </div>
+
+                </div>
+
                 <div class="form-row" style="display:flex; flex-wrap:wrap; gap:10px;">
                   <!-- Level 1: Zone -->
-                  <div style="flex:1; min-width:185px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="flex:1; min-width:180px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
                     <label class="form-label" style="font-size:0.82rem; font-weight:bold; color:var(--accent-color);">۱. سالن / زون:</label>
                     <div style="display:flex; gap:6px; margin-top:6px;">
-                      <input type="text" id="newWhLocZoneAbbr" class="form-input" placeholder="علامت (مثلاً Z)" style="flex:1;" oninput="validateWhLocDependencies()" />
-                      <input type="number" id="newWhLocZoneCount" class="form-input" placeholder="تعداد" style="width:72px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
+                      <input type="text" id="newWhLocZoneAbbr" class="form-input" placeholder="علامت (مثلاً Z)" style="flex:1;" oninput="validateWhLocDependencies()" disabled />
+                      <input type="number" id="newWhLocZoneCount" class="form-input" placeholder="تعداد" style="width:70px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
                     </div>
                   </div>
                   <!-- Level 2: Aisle -->
-                  <div style="flex:1; min-width:185px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="flex:1; min-width:180px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
                     <label class="form-label" style="font-size:0.82rem; font-weight:bold; color:var(--accent-color);">۲. راهرو (Aisle):</label>
                     <div style="display:flex; gap:6px; margin-top:6px;">
                       <input type="text" id="newWhLocAisleAbbr" class="form-input" placeholder="علامت (مثلاً A)" style="flex:1;" oninput="validateWhLocDependencies()" disabled />
-                      <input type="number" id="newWhLocAisleCount" class="form-input" placeholder="تعداد" style="width:72px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
+                      <input type="number" id="newWhLocAisleCount" class="form-input" placeholder="تعداد" style="width:70px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
                     </div>
                   </div>
                   <!-- Level 3: Rack -->
-                  <div style="flex:1; min-width:185px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="flex:1; min-width:180px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
                     <label class="form-label" style="font-size:0.82rem; font-weight:bold; color:var(--accent-color);">۳. قفسه / رک:</label>
                     <div style="display:flex; gap:6px; margin-top:6px;">
                       <input type="text" id="newWhLocRackAbbr" class="form-input" placeholder="علامت (مثلاً R)" style="flex:1;" oninput="validateWhLocDependencies()" disabled />
-                      <input type="number" id="newWhLocRackCount" class="form-input" placeholder="تعداد" style="width:72px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
+                      <input type="number" id="newWhLocRackCount" class="form-input" placeholder="تعداد" style="width:70px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
                     </div>
                   </div>
                   <!-- Level 4: Shelf -->
-                  <div style="flex:1; min-width:185px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="flex:1; min-width:180px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
                     <label class="form-label" style="font-size:0.82rem; font-weight:bold; color:var(--accent-color);">۴. طبقه / سطح:</label>
                     <div style="display:flex; gap:6px; margin-top:6px;">
                       <input type="text" id="newWhLocShelfAbbr" class="form-input" placeholder="علامت (مثلاً L)" style="flex:1;" oninput="validateWhLocDependencies()" disabled />
-                      <input type="number" id="newWhLocShelfCount" class="form-input" placeholder="تعداد" style="width:72px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
+                      <input type="number" id="newWhLocShelfCount" class="form-input" placeholder="تعداد" style="width:70px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
                     </div>
                   </div>
                   <!-- Level 5: Bin -->
-                  <div style="flex:1; min-width:185px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="flex:1; min-width:180px; background:var(--bg-card); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
                     <label class="form-label" style="font-size:0.82rem; font-weight:bold; color:var(--accent-color);">۵. سلول / پالت:</label>
                     <div style="display:flex; gap:6px; margin-top:6px;">
                       <input type="text" id="newWhLocBinAbbr" class="form-input" placeholder="علامت (مثلاً B)" style="flex:1;" oninput="validateWhLocDependencies()" disabled />
-                      <input type="number" id="newWhLocBinCount" class="form-input" placeholder="تعداد" style="width:72px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
+                      <input type="number" id="newWhLocBinCount" class="form-input" placeholder="تعداد" style="width:70px; text-align:center;" min="1" max="99" maxlength="2" oninput="if(this.value.length>2) this.value=this.value.slice(0,2); validateWhLocDependencies();" disabled />
                     </div>
                   </div>
                 </div>
-                <div style="display:flex; justify-content:flex-end; margin-top:14px;">
-                  <button class="btn btn-primary" onclick="addWarehouseLocation()" style="padding:6px 20px;">+ افزودن جایگاه به انبار</button>
-                </div>
               </div>
 
-              <!-- Defined Locations Table -->
-              <h4 style="margin:0 0 10px 0; font-size:0.95rem; color:var(--text-muted); font-weight:bold;">📋 لیست جایگاه‌ها و آدرس‌های ثبت‌شده در این انبار:</h4>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
+              <!-- Fixed Table Title -->
+              <h4 style="margin:0 0 10px 0; font-size:0.95rem; color:var(--text-muted); font-weight:bold; flex-shrink:0;">📋 لیست جایگاه‌ها و آدرس‌های ثبت‌شده در این انبار:</h4>
+              
+              <!-- DataGrid Section (ONLY THIS SCROLLS VERTICALLY) -->
+              <div class="table-wrapper" style="flex:1; min-height:0; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;">
+                <table style="width:100%; border-collapse:collapse;">
+                  <thead style="position:sticky; top:0; background:var(--bg-secondary); z-index:10; shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <th>کد آدرس جانمایی</th>
                       <th>سالن / زون</th>
@@ -2741,7 +2753,9 @@
                 </table>
               </div>
             </div>
-            <div style="padding:12px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end;">
+            
+            <!-- Modal Footer (Fixed) -->
+            <div style="padding:12px 24px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; flex-shrink:0;">
               <button class="btn btn-outline" onclick="closeWarehouseLocationsModal()">بستن</button>
             </div>
           </div>

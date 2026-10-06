@@ -7223,6 +7223,7 @@ function deleteWarehouse(id) {
 // Physical Warehouse Locations (جانمایی فیزیکی انبار: زون، راهرو، قفسه، طبقه، سلول)
 // -----------------------------------------------------------------------------
 let currentWhLocations = [];
+let isWhLocEditMode = false;
 
 function openWarehouseLocationsModal(warehouseId) {
   const overlay = document.getElementById('warehouseLocationsModalOverlay');
@@ -7235,16 +7236,21 @@ function openWarehouseLocationsModal(warehouseId) {
   if (titleEl) titleEl.textContent = `🏗️ مدیریت جانمایی فیزیکی - ${whName}`;
 
   document.getElementById('currentWhLocWarehouseId').value = warehouseId;
-  
+  isWhLocEditMode = false;
+
+  const editBtn = document.getElementById('btnEditWhLocations');
+  if (editBtn) {
+    editBtn.textContent = '✏️ ویرایش جایگاه‌ها';
+    editBtn.style.color = 'var(--text-color)';
+  }
+
   // Reset input fields
   ['Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(lvl => {
     const abbrEl = document.getElementById(`newWhLoc${lvl}Abbr`);
     const countEl = document.getElementById(`newWhLoc${lvl}Count`);
-    if (abbrEl) abbrEl.value = '';
+    if (abbrEl) { abbrEl.value = ''; abbrEl.disabled = true; }
     if (countEl) { countEl.value = ''; countEl.disabled = true; }
   });
-
-  validateWhLocDependencies();
 
   overlay.style.display = 'flex';
 
@@ -7254,6 +7260,138 @@ function openWarehouseLocationsModal(warehouseId) {
 function closeWarehouseLocationsModal() {
   const overlay = document.getElementById('warehouseLocationsModalOverlay');
   if (overlay) overlay.style.display = 'none';
+}
+
+function enableWhLocationEditing() {
+  const warehouseId = Number(document.getElementById('currentWhLocWarehouseId')?.value || 0);
+  if (!warehouseId) return;
+
+  // Check if any products are assigned to locations in this warehouse
+  const assigned = getAssignedProductsForWarehouse(warehouseId);
+
+  if (assigned.length > 0) {
+    let msg = `⚠️ هشدار مهم: به جایگاه‌های این انبار کالا اختصاص داده شده است:\n\n`;
+    assigned.slice(0, 5).forEach(item => {
+      msg += `• کالای "${item.productName}" در جایگاه [${item.locationCode}]\n`;
+    });
+    if (assigned.length > 5) {
+      msg += `... و ${assigned.length - 5} مورد دیگر\n`;
+    }
+    msg += `\nویرایش علائم اختصاری و تغییر ساختار جایگاه‌ها ممکن است باعث به‌هم‌ریختگی آدرس‌دهی و انطباق کالاهای موجود گردد.\nآیا مطمئن هستید که می‌خواهید حالت ویرایش را فعال کنید؟`;
+
+    if (!confirm(msg)) {
+      return;
+    }
+  }
+
+  isWhLocEditMode = true;
+  const zAbbr = document.getElementById('newWhLocZoneAbbr');
+  if (zAbbr) {
+    zAbbr.disabled = false;
+    zAbbr.focus();
+  }
+  validateWhLocDependencies();
+
+  const editBtn = document.getElementById('btnEditWhLocations');
+  if (editBtn) {
+    editBtn.textContent = '🔓 حالت ویرایش فعال است';
+    editBtn.style.color = '#10b981';
+  }
+}
+
+function getAssignedProductsForWarehouse(warehouseId) {
+  const assigned = [];
+  const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
+
+  (AppState.products || []).forEach(p => {
+    if (p.locationCode || p.locationId) {
+      if (wh && (p.warehouse === wh.name || p.warehouseId === warehouseId)) {
+        assigned.push({ productName: p.name, locationCode: p.locationCode || p.locationId });
+      }
+    }
+  });
+
+  (AppState.inventoryStock || []).forEach(s => {
+    if (s.warehouseId === warehouseId && s.quantity > 0 && s.locationCode) {
+      assigned.push({ productName: s.productName || `کالا ID ${s.productId}`, locationCode: s.locationCode });
+    }
+  });
+
+  return assigned;
+}
+
+function getAssignedProductsForLocation(locationCode) {
+  const assigned = [];
+
+  (AppState.products || []).forEach(p => {
+    if (p.locationCode === locationCode || p.locationId === locationCode) {
+      assigned.push(p.name);
+    }
+  });
+
+  (AppState.inventoryStock || []).forEach(s => {
+    if (s.locationCode === locationCode && s.quantity > 0) {
+      const pName = s.productName || (AppState.products.find(p => p.id === s.productId)?.name || `کالا ID ${s.productId}`);
+      if (!assigned.includes(pName)) assigned.push(pName);
+    }
+  });
+
+  return assigned;
+}
+
+function populateWhLocationAbbrFields() {
+  const levels = [
+    { key: 'zone', abbrId: 'newWhLocZoneAbbr', countId: 'newWhLocZoneCount' },
+    { key: 'aisle', abbrId: 'newWhLocAisleAbbr', countId: 'newWhLocAisleCount' },
+    { key: 'rack', abbrId: 'newWhLocRackAbbr', countId: 'newWhLocRackCount' },
+    { key: 'shelf', abbrId: 'newWhLocShelfAbbr', countId: 'newWhLocShelfCount' },
+    { key: 'bin', abbrId: 'newWhLocBinAbbr', countId: 'newWhLocBinCount' }
+  ];
+
+  if (!currentWhLocations || currentWhLocations.length === 0) {
+    levels.forEach(lvl => {
+      const aEl = document.getElementById(lvl.abbrId);
+      const cEl = document.getElementById(lvl.countId);
+      if (aEl) aEl.value = '';
+      if (cEl) cEl.value = '';
+    });
+    return;
+  }
+
+  levels.forEach(lvl => {
+    const vals = currentWhLocations.map(l => l[lvl.key]).filter(v => v && v !== '-');
+    const aEl = document.getElementById(lvl.abbrId);
+    const cEl = document.getElementById(lvl.countId);
+
+    if (vals.length === 0) {
+      if (aEl) aEl.value = '';
+      if (cEl) cEl.value = '';
+    } else {
+      let detectedAbbr = '';
+      let maxNum = 0;
+      vals.forEach(v => {
+        const m = String(v).match(/^([^\d]+)(\d+)$/);
+        if (m) {
+          if (!detectedAbbr) detectedAbbr = m[1];
+          const n = parseInt(m[2], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      });
+      if (aEl) aEl.value = detectedAbbr;
+      if (cEl) cEl.value = maxNum > 0 ? maxNum : '';
+    }
+  });
+}
+
+function updateWhLocButtonStates() {
+  const btnAdd = document.getElementById('btnAddWhLocations');
+  if (btnAdd) {
+    if (currentWhLocations && currentWhLocations.length > 0) {
+      btnAdd.textContent = '🔄 به روز رسانی جایگاه‌های انبار';
+    } else {
+      btnAdd.textContent = '+ افزودن جایگاه به انبار';
+    }
+  }
 }
 
 function validateWhLocDependencies() {
@@ -7269,6 +7407,21 @@ function validateWhLocDependencies() {
   const bCount = document.getElementById('newWhLocBinCount');
 
   if (!zAbbr || !zCount) return;
+
+  if (!isWhLocEditMode && currentWhLocations.length > 0) {
+    // Readonly mode when locations already exist and edit button hasn't been clicked
+    zAbbr.disabled = true;
+    zCount.disabled = true;
+    aAbbr.disabled = true;
+    aCount.disabled = true;
+    rAbbr.disabled = true;
+    rCount.disabled = true;
+    sAbbr.disabled = true;
+    sCount.disabled = true;
+    bAbbr.disabled = true;
+    bCount.disabled = true;
+    return;
+  }
 
   // Level 1: Zone
   const hasZAbbr = zAbbr.value.trim().length > 0;
@@ -7327,12 +7480,27 @@ function loadWarehouseLocations(warehouseId) {
           shelf: d.Shelf || '-',
           bin: d.Bin || '-'
         }));
+        
+        if (currentWhLocations.length === 0) {
+          isWhLocEditMode = true;
+          const zAbbr = document.getElementById('newWhLocZoneAbbr');
+          if (zAbbr) zAbbr.disabled = false;
+        } else {
+          isWhLocEditMode = false;
+        }
+        populateWhLocationAbbrFields();
+        updateWhLocButtonStates();
+        validateWhLocDependencies();
         renderWarehouseLocationsTable();
       }
     })
     .catch(err => {
       console.log('Backend locations load fallback:', err);
       currentWhLocations = (AppState.warehouseLocations || []).filter(l => l.warehouseId === warehouseId);
+      if (currentWhLocations.length === 0) isWhLocEditMode = true;
+      populateWhLocationAbbrFields();
+      updateWhLocButtonStates();
+      validateWhLocDependencies();
       renderWarehouseLocationsTable();
     });
 }
@@ -7361,9 +7529,14 @@ function renderWarehouseLocationsTable() {
   `).join('');
 }
 
-function addWarehouseLocation() {
+function saveOrUpdateWarehouseLocations() {
   const warehouseId = Number(document.getElementById('currentWhLocWarehouseId')?.value);
   if (!warehouseId) return;
+
+  if (!isWhLocEditMode && currentWhLocations.length > 0) {
+    alert('لطفاً ابتدا روی دکمه "✏️ ویرایش جایگاه‌ها" کلیک کنید تا حالت ویرایش فعال شود.');
+    return;
+  }
 
   const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
   const whPrefix = wh ? wh.code.replace('-', '') : 'WH';
@@ -7403,7 +7576,7 @@ function addWarehouseLocation() {
   const shelves = generateLevelArray(sAbbr, sCount);
   const bins = generateLevelArray(bAbbr, bCount);
 
-  const newLocationsToSave = [];
+  const candidateLocations = [];
   zones.forEach(z => {
     aisles.forEach(a => {
       racks.forEach(r => {
@@ -7412,8 +7585,8 @@ function addWarehouseLocation() {
             const parts = [whPrefix, z, a, r, s, b].filter(Boolean);
             const code = parts.join('-');
             
-            if (!currentWhLocations.some(l => l.code === code) && !newLocationsToSave.some(l => l.LocationCode === code)) {
-              newLocationsToSave.push({
+            if (!candidateLocations.some(l => l.LocationCode === code)) {
+              candidateLocations.push({
                 LocationID: null,
                 WarehouseID: warehouseId,
                 LocationCode: code,
@@ -7430,66 +7603,227 @@ function addWarehouseLocation() {
     });
   });
 
-  if (newLocationsToSave.length === 0) {
-    alert('تمام آدرس‌های ناشی از این ترکیب قبلاً ثبت شده‌اند.');
+  const isUpdateMode = currentWhLocations.length > 0;
+
+  if (isUpdateMode) {
+    const candidateCodes = new Set(candidateLocations.map(c => c.LocationCode));
+    const obsoleteLocations = currentWhLocations.filter(l => !candidateCodes.has(l.code));
+
+    // Check if any obsolete location has assigned products
+    const blockedObsolete = [];
+    obsoleteLocations.forEach(loc => {
+      const assigned = getAssignedProductsForLocation(loc.code);
+      if (assigned.length > 0) {
+        blockedObsolete.push({ code: loc.code, products: assigned });
+      }
+    });
+
+    if (blockedObsolete.length > 0) {
+      let msg = `❌ امکان به‌روزرسانی و حذف برخی جایگاه‌های قبلی وجود ندارد!\n\nزیرا کالا به جایگاه‌های زیر اختصاص داده شده است:\n`;
+      blockedObsolete.slice(0, 5).forEach(b => {
+        msg += `• جایگاه [${b.code}]: کالای "${b.products.join('، ')}"\n`;
+      });
+      if (blockedObsolete.length > 5) msg += `... و ${blockedObsolete.length - 5} مورد دیگر\n`;
+      msg += `\nابتدا کالاها را از این جایگاه‌ها منتقل کنید یا فرمت علائم اختصاری را به‌گونه‌ای تنظیم کنید که شامل این آدرس‌ها باشد.`;
+      alert(msg);
+      return;
+    }
+
+    const newLocationsToSave = candidateLocations.filter(c => !currentWhLocations.some(l => l.code === c.LocationCode));
+
+    if (obsoleteLocations.length === 0 && newLocationsToSave.length === 0) {
+      alert('ساختار جایگاه‌های انبار تغییر نکرده است.');
+      return;
+    }
+
+    // Execute deletions of obsolete locations and POSTs for new locations
+    const deletePromises = obsoleteLocations.map(loc => 
+      fetch(`/api/Inventory/warehouses/locations/${loc.id}`, { method: 'DELETE' }).catch(err => console.log(err))
+    );
+
+    Promise.all(deletePromises).then(() => {
+      // Remove deleted from currentWhLocations
+      const obsoleteIds = new Set(obsoleteLocations.map(l => l.id));
+      currentWhLocations = currentWhLocations.filter(l => !obsoleteIds.has(l.id));
+
+      const postPromises = newLocationsToSave.map(payload => {
+        return fetch('/api/Inventory/warehouses/locations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+          currentWhLocations.push({
+            id: data.LocationID || Date.now() + Math.random(),
+            warehouseId,
+            code: payload.LocationCode,
+            zone: payload.Zone,
+            aisle: payload.Aisle,
+            rack: payload.Rack,
+            shelf: payload.Shelf,
+            bin: payload.Bin
+          });
+        })
+        .catch(() => {
+          currentWhLocations.push({
+            id: Date.now() + Math.random(),
+            warehouseId,
+            code: payload.LocationCode,
+            zone: payload.Zone,
+            aisle: payload.Aisle,
+            rack: payload.Rack,
+            shelf: payload.Shelf,
+            bin: payload.Bin
+          });
+        });
+      });
+
+      Promise.all(postPromises).then(() => {
+        renderWarehouseLocationsTable();
+        alert(`جایگاه‌های انبار با موفقیت به‌روزرسانی شدند.`);
+        
+        isWhLocEditMode = false;
+        populateWhLocationAbbrFields();
+        updateWhLocButtonStates();
+        validateWhLocDependencies();
+
+        const editBtn = document.getElementById('btnEditWhLocations');
+        if (editBtn) {
+          editBtn.textContent = '✏️ ویرایش جایگاه‌ها';
+          editBtn.style.color = 'var(--text-color)';
+        }
+      });
+    });
+
+  } else {
+    // Initial Add Mode
+    let savedCount = 0;
+    const promises = candidateLocations.map(payload => {
+      return fetch('/api/Inventory/warehouses/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        currentWhLocations.push({
+          id: data.LocationID || Date.now() + Math.random(),
+          warehouseId,
+          code: payload.LocationCode,
+          zone: payload.Zone,
+          aisle: payload.Aisle,
+          rack: payload.Rack,
+          shelf: payload.Shelf,
+          bin: payload.Bin
+        });
+        savedCount++;
+      })
+      .catch(() => {
+        currentWhLocations.push({
+          id: Date.now() + Math.random(),
+          warehouseId,
+          code: payload.LocationCode,
+          zone: payload.Zone,
+          aisle: payload.Aisle,
+          rack: payload.Rack,
+          shelf: payload.Shelf,
+          bin: payload.Bin
+        });
+        savedCount++;
+      });
+    });
+
+    Promise.all(promises).then(() => {
+      renderWarehouseLocationsTable();
+      alert(`تعداد ${savedCount} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
+      
+      isWhLocEditMode = false;
+      populateWhLocationAbbrFields();
+      updateWhLocButtonStates();
+      validateWhLocDependencies();
+
+      const editBtn = document.getElementById('btnEditWhLocations');
+      if (editBtn) {
+        editBtn.textContent = '✏️ ویرایش جایگاه‌ها';
+        editBtn.style.color = 'var(--text-color)';
+      }
+    });
+  }
+}
+
+// Backward compatibility alias
+function addWarehouseLocation() {
+  saveOrUpdateWarehouseLocations();
+}
+
+function deleteAllWarehouseLocations() {
+  const warehouseId = Number(document.getElementById('currentWhLocWarehouseId')?.value);
+  if (!warehouseId) return;
+
+  if (!currentWhLocations || currentWhLocations.length === 0) {
+    alert('هیچ جایگاهی برای این انبار ثبت نشده است.');
     return;
   }
 
-  let savedCount = 0;
-  const promises = newLocationsToSave.map(payload => {
-    return fetch('/api/Inventory/warehouses/locations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-      currentWhLocations.push({
-        id: data.LocationID || Date.now() + Math.random(),
-        warehouseId,
-        code: payload.LocationCode,
-        zone: payload.Zone,
-        aisle: payload.Aisle,
-        rack: payload.Rack,
-        shelf: payload.Shelf,
-        bin: payload.Bin
-      });
-      savedCount++;
-    })
-    .catch(() => {
-      currentWhLocations.push({
-        id: Date.now() + Math.random(),
-        warehouseId,
-        code: payload.LocationCode,
-        zone: payload.Zone,
-        aisle: payload.Aisle,
-        rack: payload.Rack,
-        shelf: payload.Shelf,
-        bin: payload.Bin
-      });
-      savedCount++;
-    });
-  });
+  // Check if ANY product is assigned to ANY location in this warehouse
+  const assigned = getAssignedProductsForWarehouse(warehouseId);
 
-  Promise.all(promises).then(() => {
-    renderWarehouseLocationsTable();
-    alert(`تعداد ${savedCount} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
-    
-    ['Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(lvl => {
-      const abbrEl = document.getElementById(`newWhLoc${lvl}Abbr`);
-      const countEl = document.getElementById(`newWhLoc${lvl}Count`);
-      if (abbrEl) abbrEl.value = '';
-      if (countEl) { countEl.value = ''; countEl.disabled = true; }
+  if (assigned.length > 0) {
+    let msg = `❌ امکان حذف تمامی جایگاه‌های این انبار وجود ندارد!\n\nزیرا به جایگاه‌های زیر کالا اختصاص داده شده است:\n`;
+    assigned.slice(0, 5).forEach(item => {
+      msg += `• کالای "${item.productName}" در جایگاه [${item.locationCode}]\n`;
     });
-    validateWhLocDependencies();
-  });
+    if (assigned.length > 5) {
+      msg += `... و ${assigned.length - 5} مورد دیگر\n`;
+    }
+    msg += `\nابتدا باید تمامی کالاها را از جایگاه‌های این انبار بردارید یا منتقل کنید تا اجازه حذف تمامی جایگاه‌ها داده شود.`;
+    alert(msg);
+    return;
+  }
+
+  if (confirm('⚠️ آیا از حذف تمامی جایگاه‌های فیزیکی این انبار اطمینان کامل دارید؟\nاین عملیات تمامی آدرس‌های ثبت‌شده برای این انبار را پاک خواهد کرد.')) {
+    fetch(`/api/Inventory/warehouses/${warehouseId}/locations`, { method: 'DELETE' })
+      .then(() => {
+        currentWhLocations = [];
+        renderWarehouseLocationsTable();
+        isWhLocEditMode = true;
+        populateWhLocationAbbrFields();
+        updateWhLocButtonStates();
+        validateWhLocDependencies();
+        alert('تمامی جایگاه‌های این انبار با موفقیت حذف شدند.');
+      })
+      .catch(err => {
+        console.log('Error deleting all locations:', err);
+        currentWhLocations = [];
+        renderWarehouseLocationsTable();
+        isWhLocEditMode = true;
+        populateWhLocationAbbrFields();
+        updateWhLocButtonStates();
+        validateWhLocDependencies();
+        alert('تمامی جایگاه‌های این انبار حذف شدند.');
+      });
+  }
 }
 
 function deleteWarehouseLocation(locationId) {
-  if (confirm('آیا از حذف این جایگاه فیزیکی اطمینان دارید؟')) {
+  const loc = currentWhLocations.find(l => l.id === locationId);
+  if (!loc) return;
+
+  // Check if any product is assigned to this location
+  const assignedProducts = getAssignedProductsForLocation(loc.code);
+
+  if (assignedProducts.length > 0) {
+    const pNames = assignedProducts.join('، ');
+    alert(`❌ امکان حذف این جایگاه وجود ندارد!\n\nکالای "${pNames}" به این جایگاه [${loc.code}] اختصاص داده شده است.\nابتدا باید کالا را از این جایگاه بردارید یا منتقل کنید تا اجازه حذف جایگاه را داشته باشید.`);
+    return;
+  }
+
+  if (confirm(`آیا از حذف جایگاه فیزیکی [${loc.code}] اطمینان دارید؟`)) {
     currentWhLocations = currentWhLocations.filter(l => l.id !== locationId);
     fetch(`/api/Inventory/warehouses/locations/${locationId}`, { method: 'DELETE' }).catch(err => console.log(err));
     renderWarehouseLocationsTable();
+    updateWhLocButtonStates();
   }
 }
 

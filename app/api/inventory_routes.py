@@ -143,6 +143,14 @@ def delete_warehouse_location(location_id: int, db: Session = Depends(get_db)):
     return {"message": "Location deleted successfully"}
 
 
+@router.delete("/warehouses/{warehouse_id}/locations")
+def delete_all_warehouse_locations(warehouse_id: int, db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    count = service.delete_all_warehouse_locations(warehouse_id)
+    return {"message": f"All {count} locations deleted successfully", "count": count}
+
+
+
 # -----------------------------------------------------------------------------
 # Stock (موجودی انبار)
 # -----------------------------------------------------------------------------
