@@ -7509,18 +7509,34 @@ function enableWhLocationEditing() {
 function getAssignedProductsForWarehouse(warehouseId) {
   const assigned = [];
   const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
+  const whPrefix = wh ? wh.code.replace('-', '') : '';
+  const whLocCodes = new Set((currentWhLocations || []).map(l => l.code));
 
   (AppState.products || []).forEach(p => {
-    if (p.locationCode || p.locationId) {
-      if (wh && (p.warehouse === wh.name || p.warehouseId === warehouseId)) {
-        assigned.push({ productName: p.name, locationCode: p.locationCode || p.locationId });
+    const locCode = p.defaultLocationCode || p.locationCode || p.locationId;
+    if (locCode) {
+      const isAssignedToWh = whLocCodes.has(locCode) || 
+                             (wh && (p.warehouse === wh.name || p.warehouseId === warehouseId)) ||
+                             (whPrefix && locCode.startsWith(whPrefix));
+      if (isAssignedToWh) {
+        if (!assigned.some(a => a.productName === p.name && a.locationCode === locCode)) {
+          assigned.push({ productName: p.name, locationCode: locCode });
+        }
       }
     }
   });
 
   (AppState.inventoryStock || []).forEach(s => {
-    if (s.warehouseId === warehouseId && s.quantity > 0 && s.locationCode) {
-      assigned.push({ productName: s.productName || `کالا ID ${s.productId}`, locationCode: s.locationCode });
+    if (s.locationCode) {
+      const isAssignedToWh = s.warehouseId === warehouseId || 
+                             whLocCodes.has(s.locationCode) ||
+                             (whPrefix && s.locationCode.startsWith(whPrefix));
+      if (isAssignedToWh && s.quantity > 0) {
+        const pName = s.productName || (AppState.products.find(p => p.id === s.productId)?.name || `کالا ID ${s.productId}`);
+        if (!assigned.some(a => a.productName === pName && a.locationCode === s.locationCode)) {
+          assigned.push({ productName: pName, locationCode: s.locationCode });
+        }
+      }
     }
   });
 
@@ -7531,8 +7547,9 @@ function getAssignedProductsForLocation(locationCode) {
   const assigned = [];
 
   (AppState.products || []).forEach(p => {
-    if (p.locationCode === locationCode || p.locationId === locationCode) {
-      assigned.push(p.name);
+    const locCode = p.defaultLocationCode || p.locationCode || p.locationId;
+    if (locCode === locationCode) {
+      if (!assigned.includes(p.name)) assigned.push(p.name);
     }
   });
 
@@ -7545,6 +7562,7 @@ function getAssignedProductsForLocation(locationCode) {
 
   return assigned;
 }
+
 
 function populateWhLocationAbbrFields() {
   const levels = [
