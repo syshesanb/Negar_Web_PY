@@ -7160,7 +7160,7 @@ function openSelectLocationModal() {
         }
       });
 
-      // 3. Fallback default locations if system has no locations yet
+      // 4. Fallback default locations if system has no locations yet
       if (combined.length === 0) {
         const defaultWh = (AppState.warehouses && AppState.warehouses[0]) ? AppState.warehouses[0] : null;
         const defaultWhName = defaultWh ? `${defaultWh.name} (${defaultWh.code})` : 'انبار مرکزی (WH-01)';
@@ -7168,22 +7168,22 @@ function openSelectLocationModal() {
           id: 101,
           warehouseId: defaultWh?.id || 1,
           warehouseName: defaultWhName,
-          code: 'WH01-S01-R01-Q01-T01-P01',
+          code: 'WH01-س01-ر01-ق01-ط01-پ01',
           zone: 'س01',
           aisle: 'ر01',
           rack: 'ق01',
-          shelf: 'ت01',
+          shelf: 'ط01',
           bin: 'پ01'
         });
         combined.push({
           id: 102,
           warehouseId: defaultWh?.id || 1,
           warehouseName: defaultWhName,
-          code: 'WH01-S01-R01-Q01-T01-P02',
+          code: 'WH01-س01-ر01-ق01-ط01-پ02',
           zone: 'س01',
           aisle: 'ر01',
           rack: 'ق01',
-          shelf: 'ت01',
+          shelf: 'ط01',
           bin: 'پ02'
         });
       }
