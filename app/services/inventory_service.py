@@ -230,6 +230,20 @@ class InventoryService:
                 self.db.refresh(product)
                 return product
 
+        # Check if product with this code already exists for the company
+        if dto.ProductCode:
+            existing = self.db.query(Product).filter(
+                Product.CompanyID == dto.CompanyID,
+                Product.ProductCode == dto.ProductCode
+            ).first()
+            if existing:
+                for field, val in dto.dict(exclude_unset=True, exclude={"ProductID"}).items():
+                    if hasattr(existing, field):
+                        setattr(existing, field, val)
+                self.db.commit()
+                self.db.refresh(existing)
+                return existing
+
         new_product = Product(**dto.dict(exclude={"ProductID"}))
         self.db.add(new_product)
         self.db.commit()
@@ -411,7 +425,9 @@ class InventoryService:
             p_loc = p.DefaultLocationCode
             p_loc_clean = p_loc.replace('-', '').upper() if p_loc else ''
             if p_loc in loc_codes or (wh_prefix and p_loc_clean.startswith(wh_prefix)):
-                assigned_items.append(f"• کالای '{p.ProductName}' در جایگاه [{p_loc}]")
+                item_str = f"• کالای '{p.ProductName}' در جایگاه [{p_loc}]"
+                if item_str not in assigned_items:
+                    assigned_items.append(item_str)
 
         # Check inventory records
         stocks = self.db.query(InventoryRecord).filter(
