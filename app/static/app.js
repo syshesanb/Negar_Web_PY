@@ -7067,27 +7067,36 @@ function openSelectLocationModal() {
     if (el) el.value = '';
   });
 
-  const loadWarehousesPromise = (AppState.warehouses && AppState.warehouses.length > 0) 
-    ? Promise.resolve(AppState.warehouses)
-    : fetch('/api/Inventory/warehouses')
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            AppState.warehouses = data.map(d => ({
-              id: d.WarehouseID,
-              code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
-              name: d.WarehouseName,
-              type: d.WarehouseType || 'عمومی',
-              keeper: d.WarehouseKeeper || '-',
-              location: d.Location || '-'
-            }));
-          }
-          return AppState.warehouses || [];
-        })
-        .catch(() => AppState.warehouses || []);
+  const tbody = document.getElementById('selectLocationTableBody');
+  const badge = document.getElementById('selectLocCountBadge');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--accent-color); font-weight:bold;">⌛ در حال بارگذاری جایگاه‌های فیزیکی انبار...</td></tr>';
+  }
+  if (badge) {
+    badge.textContent = 'تعداد جایگاه‌ها: در حال به‌روزرسانی...';
+  }
+
+  overlay.style.display = 'flex';
+
+  const loadWarehousesPromise = fetch('/api/Inventory/warehouses')
+    .then(r => r.ok ? r.json() : [])
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.warehouses = data.map(d => ({
+          id: d.WarehouseID,
+          code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
+          name: d.WarehouseName,
+          type: d.WarehouseType || 'عمومی',
+          keeper: d.WarehouseKeeper || '-',
+          location: d.Location || '-'
+        }));
+      }
+      return AppState.warehouses || [];
+    })
+    .catch(() => AppState.warehouses || []);
 
   const loadLocationsPromise = fetch('/api/Inventory/warehouses/locations')
-    .then(res => res.json())
+    .then(res => res.ok ? res.json() : [])
     .catch(() => []);
 
   Promise.all([loadWarehousesPromise, loadLocationsPromise])
@@ -7098,27 +7107,29 @@ function openSelectLocationModal() {
       // 1. Process DB locations
       if (Array.isArray(dbLocations)) {
         dbLocations.forEach(d => {
-          const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(d.WarehouseID));
-          seenCodes.add(d.LocationCode);
-          const wName = wh ? (wh.name || wh.WarehouseName) : `انبار کد ${d.WarehouseID}`;
-          const wCode = wh ? (wh.code || wh.WarehouseCode || `WH-${d.WarehouseID}`) : `WH-${d.WarehouseID}`;
-          combined.push({
-            id: d.LocationID,
-            warehouseId: d.WarehouseID,
-            warehouseName: `${wName} (${wCode})`,
-            code: d.LocationCode,
-            zone: d.Zone || '-',
-            aisle: d.Aisle || '-',
-            rack: d.Rack || '-',
-            shelf: d.Shelf || '-',
-            bin: d.Bin || '-'
-          });
+          if (d && d.LocationCode) {
+            seenCodes.add(d.LocationCode);
+            const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(d.WarehouseID));
+            const wName = wh ? (wh.name || wh.WarehouseName) : `انبار کد ${d.WarehouseID}`;
+            const wCode = wh ? (wh.code || wh.WarehouseCode || `WH-${d.WarehouseID}`) : `WH-${d.WarehouseID}`;
+            combined.push({
+              id: d.LocationID,
+              warehouseId: d.WarehouseID,
+              warehouseName: `${wName} (${wCode})`,
+              code: d.LocationCode,
+              zone: d.Zone || '-',
+              aisle: d.Aisle || '-',
+              rack: d.Rack || '-',
+              shelf: d.Shelf || '-',
+              bin: d.Bin || '-'
+            });
+          }
         });
       }
 
       // 2. Merge currentWhLocations if active in current session
       (currentWhLocations || []).forEach(l => {
-        if (l.code && !seenCodes.has(l.code)) {
+        if (l && l.code && !seenCodes.has(l.code)) {
           seenCodes.add(l.code);
           const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(l.warehouseId));
           const wName = wh ? (wh.name || wh.WarehouseName) : 'انبار مرکزی';
@@ -7139,7 +7150,7 @@ function openSelectLocationModal() {
 
       // 3. Merge local AppState.warehouseLocations if not in DB
       (AppState.warehouseLocations || []).forEach(l => {
-        const lCode = l.code || l.LocationCode;
+        const lCode = l ? (l.code || l.LocationCode) : null;
         if (lCode && !seenCodes.has(lCode)) {
           seenCodes.add(lCode);
           const wId = l.warehouseId || l.WarehouseID;
@@ -7162,9 +7173,11 @@ function openSelectLocationModal() {
 
       allWarehouseLocationsList = combined;
       renderSelectLocationTable(allWarehouseLocationsList);
+    })
+    .catch(err => {
+      console.error('Error loading locations for selection:', err);
+      renderSelectLocationTable([]);
     });
-
-  overlay.style.display = 'flex';
 }
 
 
@@ -7187,7 +7200,7 @@ function refreshSelectLocationModal() {
       btn.disabled = false;
       btn.innerHTML = '🔄 به روز رسانی اطلاعات';
     }
-  }, 300);
+  }, 500);
 }
 
 function renderSelectLocationTable(locationsList) {
