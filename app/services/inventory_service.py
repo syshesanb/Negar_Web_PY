@@ -339,13 +339,68 @@ class InventoryService:
 
     def delete_warehouse_location(self, location_id: int) -> bool:
         loc = self.db.query(WarehouseLocation).filter(WarehouseLocation.LocationID == location_id).first()
-        if loc:
-            self.db.delete(loc)
-            self.db.commit()
-            return True
-        return False
+        if not loc:
+            return False
+
+        # Check if location is assigned to any product
+        assigned_prod = self.db.query(Product).filter(Product.DefaultLocationCode == loc.LocationCode).first()
+        if assigned_prod:
+            raise ValueError(f"کالای '{assigned_prod.ProductName}' به جایگاه [{loc.LocationCode}] اختصاص داده شده است.")
+
+        # Check if location is assigned in inventory stock
+        assigned_stock = self.db.query(InventoryRecord).filter(
+            InventoryRecord.LocationCode == loc.LocationCode,
+            InventoryRecord.Quantity > 0
+        ).first()
+        if assigned_stock:
+            prod_name = assigned_stock.Product.ProductName if assigned_stock.Product else f"کالا ID {assigned_stock.ProductID}"
+            raise ValueError(f"کالای '{prod_name}' در جایگاه [{loc.LocationCode}] دارای موجودی است.")
+
+        self.db.delete(loc)
+        self.db.commit()
+        return True
 
     def delete_all_warehouse_locations(self, warehouse_id: int) -> int:
+        locs = self.db.query(WarehouseLocation).filter(WarehouseLocation.WarehouseID == warehouse_id).all()
+        if not locs:
+            return 0
+
+        loc_codes = set(l.LocationCode for l in locs if l.LocationCode)
+
+        # Get warehouse
+        wh = self.db.query(Warehouse).filter(Warehouse.WarehouseID == warehouse_id).first()
+        wh_code = getattr(wh, 'WarehouseCode', None) or getattr(wh, 'code', '') or ''
+        wh_prefix = wh_code.replace('-', '').upper() if wh_code else ''
+
+        assigned_items = []
+
+        # Check products
+        products = self.db.query(Product).filter(Product.DefaultLocationCode.isnot(None)).all()
+        for p in products:
+            p_loc = p.DefaultLocationCode
+            p_loc_clean = p_loc.replace('-', '').upper() if p_loc else ''
+            if p_loc in loc_codes or (wh_prefix and p_loc_clean.startswith(wh_prefix)):
+                assigned_items.append(f"• کالای '{p.ProductName}' در جایگاه [{p_loc}]")
+
+        # Check inventory records
+        stocks = self.db.query(InventoryRecord).filter(
+            InventoryRecord.WarehouseID == warehouse_id,
+            InventoryRecord.LocationCode.isnot(None),
+            InventoryRecord.Quantity > 0
+        ).all()
+        for s in stocks:
+            p_name = s.Product.ProductName if s.Product else f"کالا ID {s.ProductID}"
+            item_str = f"• کالای '{p_name}' در جایگاه [{s.LocationCode}]"
+            if item_str not in assigned_items:
+                assigned_items.append(item_str)
+
+        if assigned_items:
+            detail_msg = "امکان حذف تمامی جایگاه‌های این انبار وجود ندارد زیرا به جایگاه‌های زیر کالا اختصاص داده شده است:\n\n" + "\n".join(assigned_items[:5])
+            if len(assigned_items) > 5:
+                detail_msg += f"\n... و {len(assigned_items) - 5} مورد دیگر"
+            detail_msg += "\n\nابتدا باید تمامی کالاها را از جایگاه‌های این انبار بردارید یا منتقل کنید تا اجازه حذف داده شود."
+            raise ValueError(detail_msg)
+
         count = (
             self.db.query(WarehouseLocation)
             .filter(WarehouseLocation.WarehouseID == warehouse_id)

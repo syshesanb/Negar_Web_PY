@@ -175,12 +175,23 @@ def run_tests():
         "ProductCode": "PRD-001",
         "ProductName": "لپ‌تاپ گیمینگ ایسوس",
         "Unit": "دستگاه",
+        "DefaultLocationCode": saved_loc["LocationCode"],
         "DefaultPrice": 75000000.0,
         "PurchasePrice": 65000000.0,
     })
     assert prod_res.status_code == 200
     saved_prod = prod_res.json()
     print(" -> کالا تعریف شد:", saved_prod["ProductName"])
+
+    # Test safety guard: deleting all locations when location is assigned should fail (400 Bad Request)
+    del_all_fail = client.delete(f"/api/Inventory/warehouses/{saved_wh['WarehouseID']}/locations")
+    assert del_all_fail.status_code == 400, f"Expected 400 when deleting assigned locations, got: {del_all_fail.status_code}"
+    print(" -> تست ایمنی حذف تمامی جایگاه‌ها با موفقیت تأیید شد (توقیف حذف با پیام مناسب).")
+
+    # Test safety guard: deleting single assigned location should fail (400 Bad Request)
+    del_single_fail = client.delete(f"/api/Inventory/warehouses/locations/{saved_loc['LocationID']}")
+    assert del_single_fail.status_code == 400, f"Expected 400 when deleting single assigned location, got: {del_single_fail.status_code}"
+    print(" -> تست ایمنی حذف تک جایگاه اختصاص‌یافته با موفقیت تأیید شد.")
 
     # 5. Test Dashboard Summary
     print("\n5. تست خلاصه داشبورد...")

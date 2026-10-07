@@ -7508,36 +7508,80 @@ function enableWhLocationEditing() {
 
 function getAssignedProductsForWarehouse(warehouseId) {
   const assigned = [];
-  const wh = (AppState.warehouses || []).find(w => w.id === warehouseId);
-  const whPrefix = wh ? wh.code.replace('-', '') : '';
-  const whLocCodes = new Set((currentWhLocations || []).map(l => l.code));
+  const wh = (AppState.warehouses || []).find(w => w.id === warehouseId || w.WarehouseID === warehouseId);
+  const whCodeClean = wh ? (wh.code || wh.WarehouseCode || '').replace(/[-\s]/g, '').toUpperCase() : '';
+  const whName = wh ? (wh.name || wh.WarehouseName) : '';
 
+  const whLocCodes = new Set();
+  const whLocCodesClean = new Set();
+
+  (currentWhLocations || []).forEach(l => {
+    if (l.code) {
+      whLocCodes.add(l.code);
+      whLocCodesClean.add(l.code.replace(/[-\s]/g, '').toUpperCase());
+    }
+  });
+
+  (AppState.warehouseLocations || []).forEach(l => {
+    if ((l.warehouseId === warehouseId || l.WarehouseID === warehouseId) && l.code) {
+      whLocCodes.add(l.code);
+      whLocCodesClean.add(l.code.replace(/[-\s]/g, '').toUpperCase());
+    }
+  });
+
+  const isLocInWh = (locCode, itemWhId, itemWhName) => {
+    if (!locCode) return false;
+    const locClean = String(locCode).replace(/[-\s]/g, '').toUpperCase();
+    if (whLocCodes.has(locCode) || whLocCodesClean.has(locClean)) return true;
+    if (itemWhId && Number(itemWhId) === Number(warehouseId)) return true;
+    if (itemWhName && whName && String(itemWhName).trim() === String(whName).trim()) return true;
+    if (whCodeClean && locClean.startsWith(whCodeClean)) return true;
+    return false;
+  };
+
+  // 1. Check AppState.products
   (AppState.products || []).forEach(p => {
-    const locCode = p.defaultLocationCode || p.locationCode || p.locationId;
+    const locCode = p.defaultLocationCode || p.locationCode || p.locationId || p.DefaultLocationCode || p.LocationCode || p.Location;
     if (locCode) {
-      const isAssignedToWh = whLocCodes.has(locCode) || 
-                             (wh && (p.warehouse === wh.name || p.warehouseId === warehouseId)) ||
-                             (whPrefix && locCode.startsWith(whPrefix));
-      if (isAssignedToWh) {
-        if (!assigned.some(a => a.productName === p.name && a.locationCode === locCode)) {
-          assigned.push({ productName: p.name, locationCode: locCode });
+      const pWhId = p.warehouseId || p.WarehouseID;
+      const pWhName = p.warehouse || p.WarehouseName;
+      if (isLocInWh(locCode, pWhId, pWhName)) {
+        const pName = p.name || p.ProductName || p.code || p.ProductCode || 'کالا';
+        if (!assigned.some(a => a.productName === pName && a.locationCode === locCode)) {
+          assigned.push({ productName: pName, locationCode: locCode });
         }
       }
     }
   });
 
+  // 2. Check AppState.inventoryStock
   (AppState.inventoryStock || []).forEach(s => {
-    if (s.locationCode) {
-      const isAssignedToWh = s.warehouseId === warehouseId || 
-                             whLocCodes.has(s.locationCode) ||
-                             (whPrefix && s.locationCode.startsWith(whPrefix));
-      if (isAssignedToWh && s.quantity > 0) {
-        const pName = s.productName || (AppState.products.find(p => p.id === s.productId)?.name || `کالا ID ${s.productId}`);
-        if (!assigned.some(a => a.productName === pName && a.locationCode === s.locationCode)) {
-          assigned.push({ productName: pName, locationCode: s.locationCode });
+    const locCode = s.locationCode || s.LocationCode;
+    if (locCode) {
+      const sWhId = s.warehouseId || s.WarehouseID;
+      const sWhName = s.warehouse || s.WarehouseName;
+      if (isLocInWh(locCode, sWhId, sWhName) && (s.quantity === undefined || s.quantity > 0 || s.Quantity > 0)) {
+        const pName = s.productName || s.ProductName || (AppState.products.find(p => p.id === (s.productId || s.ProductID))?.name) || `کالا ID ${s.productId || s.ProductID}`;
+        if (!assigned.some(a => a.productName === pName && a.locationCode === locCode)) {
+          assigned.push({ productName: pName, locationCode: locCode });
         }
       }
     }
+  });
+
+  // 3. Check AppState.purchaseInvoices
+  (AppState.purchaseInvoices || []).forEach(inv => {
+    const invWhId = inv.warehouseId || inv.WarehouseID;
+    const invWhName = inv.warehouse || inv.WarehouseName;
+    (inv.lines || inv.details || inv.Details || []).forEach(line => {
+      const locCode = line.locationCode || line.LocationCode;
+      if (locCode && isLocInWh(locCode, invWhId, invWhName)) {
+        const pName = line.productName || line.ProductName || (AppState.products.find(p => p.code === line.prodCode || p.id === line.productId)?.name) || 'کالای رسید/فاکتور';
+        if (!assigned.some(a => a.productName === pName && a.locationCode === locCode)) {
+          assigned.push({ productName: pName, locationCode: locCode });
+        }
+      }
+    });
   });
 
   return assigned;
@@ -7545,19 +7589,33 @@ function getAssignedProductsForWarehouse(warehouseId) {
 
 function getAssignedProductsForLocation(locationCode) {
   const assigned = [];
+  if (!locationCode) return assigned;
+  const locClean = String(locationCode).replace(/[-\s]/g, '').toUpperCase();
 
   (AppState.products || []).forEach(p => {
-    const locCode = p.defaultLocationCode || p.locationCode || p.locationId;
-    if (locCode === locationCode) {
-      if (!assigned.includes(p.name)) assigned.push(p.name);
+    const pLoc = p.defaultLocationCode || p.locationCode || p.locationId || p.DefaultLocationCode || p.LocationCode || p.Location;
+    if (pLoc && String(pLoc).replace(/[-\s]/g, '').toUpperCase() === locClean) {
+      const name = p.name || p.ProductName || p.code || p.ProductCode;
+      if (!assigned.includes(name)) assigned.push(name);
     }
   });
 
   (AppState.inventoryStock || []).forEach(s => {
-    if (s.locationCode === locationCode && s.quantity > 0) {
-      const pName = s.productName || (AppState.products.find(p => p.id === s.productId)?.name || `کالا ID ${s.productId}`);
+    const sLoc = s.locationCode || s.LocationCode;
+    if (sLoc && String(sLoc).replace(/[-\s]/g, '').toUpperCase() === locClean && (s.quantity === undefined || s.quantity > 0 || s.Quantity > 0)) {
+      const pName = s.productName || s.ProductName || (AppState.products.find(p => p.id === (s.productId || s.ProductID))?.name) || `کالا ID ${s.productId || s.ProductID}`;
       if (!assigned.includes(pName)) assigned.push(pName);
     }
+  });
+
+  (AppState.purchaseInvoices || []).forEach(inv => {
+    (inv.lines || inv.details || inv.Details || []).forEach(line => {
+      const lLoc = line.locationCode || line.LocationCode;
+      if (lLoc && String(lLoc).replace(/[-\s]/g, '').toUpperCase() === locClean) {
+        const pName = line.productName || line.ProductName || (AppState.products.find(p => p.code === line.prodCode || p.id === line.productId)?.name) || 'کالای رسید/فاکتور';
+        if (!assigned.includes(pName)) assigned.push(pName);
+      }
+    });
   });
 
   return assigned;
@@ -8009,6 +8067,12 @@ function deleteAllWarehouseLocations() {
 
   if (confirm('⚠️ آیا از حذف تمامی جایگاه‌های فیزیکی این انبار اطمینان کامل دارید؟\nاین عملیات تمامی آدرس‌های ثبت‌شده برای این انبار را پاک خواهد کرد.')) {
     fetch(`/api/Inventory/warehouses/${warehouseId}/locations`, { method: 'DELETE' })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.detail || 'خطا در حذف جایگاه‌ها'); });
+        }
+        return res.json();
+      })
       .then(() => {
         currentWhLocations = [];
         renderWarehouseLocationsTable();
@@ -8020,13 +8084,7 @@ function deleteAllWarehouseLocations() {
       })
       .catch(err => {
         console.log('Error deleting all locations:', err);
-        currentWhLocations = [];
-        renderWarehouseLocationsTable();
-        isWhLocEditMode = true;
-        populateWhLocationAbbrFields();
-        updateWhLocButtonStates();
-        validateWhLocDependencies();
-        alert('تمامی جایگاه‌های این انبار حذف شدند.');
+        alert(err.message || 'امکان حذف جایگاه‌های این انبار وجود ندارد.');
       });
   }
 }
@@ -8045,10 +8103,18 @@ function deleteWarehouseLocation(locationId) {
   }
 
   if (confirm(`آیا از حذف جایگاه فیزیکی [${loc.code}] اطمینان دارید؟`)) {
-    currentWhLocations = currentWhLocations.filter(l => l.id !== locationId);
-    fetch(`/api/Inventory/warehouses/locations/${locationId}`, { method: 'DELETE' }).catch(err => console.log(err));
-    renderWarehouseLocationsTable();
-    updateWhLocButtonStates();
+    fetch(`/api/Inventory/warehouses/locations/${locationId}`, { method: 'DELETE' })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.detail || 'خطا در حذف جایگاه'); });
+        }
+        currentWhLocations = currentWhLocations.filter(l => l.id !== locationId);
+        renderWarehouseLocationsTable();
+        updateWhLocButtonStates();
+      })
+      .catch(err => {
+        alert(err.message || 'امکان حذف جایگاه وجود ندارد.');
+      });
   }
 }
 

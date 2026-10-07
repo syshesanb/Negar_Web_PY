@@ -144,17 +144,23 @@ def save_warehouse_location(loc: WarehouseLocationDTO, db: Session = Depends(get
 @router.delete("/warehouses/locations/{location_id}")
 def delete_warehouse_location(location_id: int, db: Session = Depends(get_db)):
     service = InventoryService(db)
-    success = service.delete_warehouse_location(location_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Location not found")
-    return {"message": "Location deleted successfully"}
+    try:
+        success = service.delete_warehouse_location(location_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="جایگاه مورد نظر یافت نشد.")
+        return {"message": "جایگاه با موفقیت حذف شد."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/warehouses/{warehouse_id}/locations")
 def delete_all_warehouse_locations(warehouse_id: int, db: Session = Depends(get_db)):
     service = InventoryService(db)
-    count = service.delete_all_warehouse_locations(warehouse_id)
-    return {"message": f"All {count} locations deleted successfully", "count": count}
+    try:
+        count = service.delete_all_warehouse_locations(warehouse_id)
+        return {"message": f"تمامی {count} جایگاه با موفقیت حذف شدند.", "count": count}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 
