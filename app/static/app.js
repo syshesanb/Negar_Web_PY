@@ -7509,7 +7509,6 @@ function deleteWarehouse(id) {
 // -----------------------------------------------------------------------------
 // Physical Warehouse Locations (جانمایی فیزیکی انبار: زون، راهرو، قفسه، طبقه، سلول)
 // -----------------------------------------------------------------------------
-let currentWhLocations = [];
 let isWhLocEditMode = false;
 
 function openWarehouseLocationsModal(warehouseId) {
@@ -9732,11 +9731,7 @@ function deleteFiscalYear(fyId) {
 // SWITCH COMPANY / FISCAL YEAR
 // ============================
 
-// Current session state
-const SessionState = {
-  company: null,   // currently active company object
-  year:    null    // currently active year string
-};
+// Current session state is declared at top of script
 
 let selectedCompanyCodeForSwitch = null;
 let selectedYearForSwitch = null;
