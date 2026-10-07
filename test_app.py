@@ -163,10 +163,27 @@ def run_tests():
     assert get_locs.status_code == 200
     assert len(get_locs.json()) >= 1
 
+    # Test bulk POST locations
+    bulk_res = client.post("/api/Inventory/warehouses/locations/bulk", json=[
+        {
+            "WarehouseID": saved_wh["WarehouseID"],
+            "LocationCode": "WH01-S01-R01-G01-T01-P01",
+            "Zone": "S01", "Aisle": "R01", "Rack": "G01", "Shelf": "T01", "Bin": "P01"
+        },
+        {
+            "WarehouseID": saved_wh["WarehouseID"],
+            "LocationCode": "WH01-S01-R01-G01-T01-P02",
+            "Zone": "S01", "Aisle": "R01", "Rack": "G01", "Shelf": "T01", "Bin": "P02"
+        }
+    ])
+    assert bulk_res.status_code == 200
+    assert len(bulk_res.json()) == 2
+    print(" -> ثبت گروهی (Bulk) جایگاه‌ها با موفقیت آدرس‌های جدید را ذخیره کرد.")
+
     # Test GET all locations
     get_all_locs = client.get("/api/Inventory/warehouses/locations")
     assert get_all_locs.status_code == 200
-    assert len(get_all_locs.json()) >= 1
+    assert len(get_all_locs.json()) >= 3
 
 
 

@@ -7114,9 +7114,9 @@ function openSelectLocationModal() {
         });
       }
 
-      // 2. Merge local AppState.warehouseLocations if not in DB
-      (AppState.warehouseLocations || []).forEach(l => {
-        if (!seenCodes.has(l.code)) {
+      // 2. Merge currentWhLocations if active in current session
+      (currentWhLocations || []).forEach(l => {
+        if (l.code && !seenCodes.has(l.code)) {
           seenCodes.add(l.code);
           const wh = (AppState.warehouses || []).find(w => w.id === l.warehouseId);
           combined.push({
@@ -7129,6 +7129,27 @@ function openSelectLocationModal() {
             rack: l.rack || '-',
             shelf: l.shelf || '-',
             bin: l.bin || '-'
+          });
+        }
+      });
+
+      // 3. Merge local AppState.warehouseLocations if not in DB
+      (AppState.warehouseLocations || []).forEach(l => {
+        const lCode = l.code || l.LocationCode;
+        if (lCode && !seenCodes.has(lCode)) {
+          seenCodes.add(lCode);
+          const wId = l.warehouseId || l.WarehouseID;
+          const wh = (AppState.warehouses || []).find(w => w.id === wId);
+          combined.push({
+            id: l.id || l.LocationID || Date.now(),
+            warehouseId: wId,
+            warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
+            code: lCode,
+            zone: l.zone || l.Zone || '-',
+            aisle: l.aisle || l.Aisle || '-',
+            rack: l.rack || l.Rack || '-',
+            shelf: l.shelf || l.Shelf || '-',
+            bin: l.bin || l.Bin || '-'
           });
         }
       });
@@ -7748,6 +7769,27 @@ function validateWhLocDependencies() {
   if (!hasBAbbr) bCount.value = '';
 }
 
+function syncAppStateWarehouseLocations(warehouseId, locations) {
+  if (!AppState.warehouseLocations) AppState.warehouseLocations = [];
+
+  // Remove existing locations for this warehouse
+  AppState.warehouseLocations = AppState.warehouseLocations.filter(l => Number(l.warehouseId || l.WarehouseID) !== Number(warehouseId));
+
+  // Add updated locations
+  (locations || []).forEach(loc => {
+    AppState.warehouseLocations.push({
+      id: loc.id || loc.LocationID || Date.now() + Math.random(),
+      warehouseId: loc.warehouseId || loc.WarehouseID || warehouseId,
+      code: loc.code || loc.LocationCode,
+      zone: loc.zone || loc.Zone || '-',
+      aisle: loc.aisle || loc.Aisle || '-',
+      rack: loc.rack || loc.Rack || '-',
+      shelf: loc.shelf || loc.Shelf || '-',
+      bin: loc.bin || loc.Bin || '-'
+    });
+  });
+}
+
 function loadWarehouseLocations(warehouseId) {
   fetch(`/api/Inventory/warehouses/${warehouseId}/locations`)
     .then(res => res.json())
@@ -7764,6 +7806,8 @@ function loadWarehouseLocations(warehouseId) {
           bin: d.Bin || '-'
         }));
         
+        syncAppStateWarehouseLocations(warehouseId, currentWhLocations);
+
         if (currentWhLocations.length === 0) {
           isWhLocEditMode = true;
           const zAbbr = document.getElementById('newWhLocZoneAbbr');
@@ -7779,7 +7823,7 @@ function loadWarehouseLocations(warehouseId) {
     })
     .catch(err => {
       console.log('Backend locations load fallback:', err);
-      currentWhLocations = (AppState.warehouseLocations || []).filter(l => l.warehouseId === warehouseId);
+      currentWhLocations = (AppState.warehouseLocations || []).filter(l => (l.warehouseId || l.WarehouseID) === warehouseId);
       if (currentWhLocations.length === 0) isWhLocEditMode = true;
       populateWhLocationAbbrFields();
       updateWhLocButtonStates();
@@ -7919,50 +7963,59 @@ function saveOrUpdateWarehouseLocations() {
       return;
     }
 
-    // Execute deletions of obsolete locations and POSTs for new locations
     const deletePromises = obsoleteLocations.map(loc => 
       fetch(`/api/Inventory/warehouses/locations/${loc.id}`, { method: 'DELETE' }).catch(err => console.log(err))
     );
 
     Promise.all(deletePromises).then(() => {
-      // Remove deleted from currentWhLocations
       const obsoleteIds = new Set(obsoleteLocations.map(l => l.id));
       currentWhLocations = currentWhLocations.filter(l => !obsoleteIds.has(l.id));
 
-      const postPromises = newLocationsToSave.map(payload => {
-        return fetch('/api/Inventory/warehouses/locations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(data => {
-          currentWhLocations.push({
-            id: data.LocationID || Date.now() + Math.random(),
-            warehouseId,
-            code: payload.LocationCode,
-            zone: payload.Zone,
-            aisle: payload.Aisle,
-            rack: payload.Rack,
-            shelf: payload.Shelf,
-            bin: payload.Bin
-          });
-        })
-        .catch(() => {
-          currentWhLocations.push({
-            id: Date.now() + Math.random(),
-            warehouseId,
-            code: payload.LocationCode,
-            zone: payload.Zone,
-            aisle: payload.Aisle,
-            rack: payload.Rack,
-            shelf: payload.Shelf,
-            bin: payload.Bin
-          });
-        });
-      });
+      const postPromise = newLocationsToSave.length > 0
+        ? fetch('/api/Inventory/warehouses/locations/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newLocationsToSave)
+          })
+          .then(res => res.json())
+          .then(savedList => {
+            if (Array.isArray(savedList)) {
+              savedList.forEach(d => {
+                if (!currentWhLocations.some(l => l.code === d.LocationCode)) {
+                  currentWhLocations.push({
+                    id: d.LocationID,
+                    warehouseId,
+                    code: d.LocationCode,
+                    zone: d.Zone || '-',
+                    aisle: d.Aisle || '-',
+                    rack: d.Rack || '-',
+                    shelf: d.Shelf || '-',
+                    bin: d.Bin || '-'
+                  });
+                }
+              });
+            }
+          })
+          .catch(() => {
+            newLocationsToSave.forEach(payload => {
+              if (!currentWhLocations.some(l => l.code === payload.LocationCode)) {
+                currentWhLocations.push({
+                  id: Date.now() + Math.random(),
+                  warehouseId,
+                  code: payload.LocationCode,
+                  zone: payload.Zone,
+                  aisle: payload.Aisle,
+                  rack: payload.Rack,
+                  shelf: payload.Shelf,
+                  bin: payload.Bin
+                });
+              }
+            });
+          })
+        : Promise.resolve();
 
-      Promise.all(postPromises).then(() => {
+      postPromise.then(() => {
+        syncAppStateWarehouseLocations(warehouseId, currentWhLocations);
         renderWarehouseLocationsTable();
         alert(`جایگاه‌های انبار با موفقیت به‌روزرسانی شدند.`);
         
@@ -7980,46 +8033,55 @@ function saveOrUpdateWarehouseLocations() {
     });
 
   } else {
-    // Initial Add Mode
-    let savedCount = 0;
-    const promises = candidateLocations.map(payload => {
-      return fetch('/api/Inventory/warehouses/locations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        currentWhLocations.push({
-          id: data.LocationID || Date.now() + Math.random(),
-          warehouseId,
-          code: payload.LocationCode,
-          zone: payload.Zone,
-          aisle: payload.Aisle,
-          rack: payload.Rack,
-          shelf: payload.Shelf,
-          bin: payload.Bin
-        });
-        savedCount++;
-      })
-      .catch(() => {
-        currentWhLocations.push({
-          id: Date.now() + Math.random(),
-          warehouseId,
-          code: payload.LocationCode,
-          zone: payload.Zone,
-          aisle: payload.Aisle,
-          rack: payload.Rack,
-          shelf: payload.Shelf,
-          bin: payload.Bin
-        });
-        savedCount++;
-      });
-    });
-
-    Promise.all(promises).then(() => {
+    // Initial Add Mode using Bulk Endpoint
+    fetch('/api/Inventory/warehouses/locations/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(candidateLocations)
+    })
+    .then(res => res.json())
+    .then(savedList => {
+      if (Array.isArray(savedList)) {
+        currentWhLocations = savedList.map(d => ({
+          id: d.LocationID,
+          warehouseId: d.WarehouseID,
+          code: d.LocationCode,
+          zone: d.Zone || '-',
+          aisle: d.Aisle || '-',
+          rack: d.Rack || '-',
+          shelf: d.Shelf || '-',
+          bin: d.Bin || '-'
+        }));
+      }
+      syncAppStateWarehouseLocations(warehouseId, currentWhLocations);
       renderWarehouseLocationsTable();
-      alert(`تعداد ${savedCount} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
+      alert(`تعداد ${currentWhLocations.length} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
+      
+      isWhLocEditMode = false;
+      populateWhLocationAbbrFields();
+      updateWhLocButtonStates();
+      validateWhLocDependencies();
+
+      const editBtn = document.getElementById('btnEditWhLocations');
+      if (editBtn) {
+        editBtn.textContent = '✏️ ویرایش جایگاه‌ها';
+        editBtn.style.color = 'var(--text-color)';
+      }
+    })
+    .catch(() => {
+      currentWhLocations = candidateLocations.map(payload => ({
+        id: Date.now() + Math.random(),
+        warehouseId,
+        code: payload.LocationCode,
+        zone: payload.Zone,
+        aisle: payload.Aisle,
+        rack: payload.Rack,
+        shelf: payload.Shelf,
+        bin: payload.Bin
+      }));
+      syncAppStateWarehouseLocations(warehouseId, currentWhLocations);
+      renderWarehouseLocationsTable();
+      alert(`تعداد ${currentWhLocations.length} آدرس فیزیکی جدید با موفقیت ایجاد و به انبار اضافه شد.`);
       
       isWhLocEditMode = false;
       populateWhLocationAbbrFields();

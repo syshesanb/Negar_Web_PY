@@ -141,6 +141,12 @@ def save_warehouse_location(loc: WarehouseLocationDTO, db: Session = Depends(get
     return service.save_warehouse_location(loc)
 
 
+@router.post("/warehouses/locations/bulk", response_model=List[WarehouseLocationDTO])
+def bulk_save_warehouse_locations(dtos: List[WarehouseLocationDTO], db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.bulk_save_warehouse_locations(dtos)
+
+
 @router.delete("/warehouses/locations/{location_id}")
 def delete_warehouse_location(location_id: int, db: Session = Depends(get_db)):
     service = InventoryService(db)

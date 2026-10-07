@@ -337,6 +337,37 @@ class InventoryService:
         self.db.refresh(new_loc)
         return new_loc
 
+    def bulk_save_warehouse_locations(self, dtos: List[WarehouseLocationDTO]) -> List[WarehouseLocation]:
+        if not dtos:
+            return []
+
+        warehouse_ids = set(d.WarehouseID for d in dtos)
+        result = []
+
+        for wh_id in warehouse_ids:
+            wh_dtos = [d for d in dtos if d.WarehouseID == wh_id]
+            existing_map = {
+                l.LocationCode: l
+                for l in self.db.query(WarehouseLocation).filter(WarehouseLocation.WarehouseID == wh_id).all()
+            }
+
+            for dto in wh_dtos:
+                if dto.LocationCode in existing_map:
+                    loc = existing_map[dto.LocationCode]
+                    for field, val in dto.dict(exclude={"LocationID"}, exclude_unset=True).items():
+                        if hasattr(loc, field) and val is not None:
+                            setattr(loc, field, val)
+                    result.append(loc)
+                else:
+                    new_loc = WarehouseLocation(**dto.dict(exclude={"LocationID"}))
+                    self.db.add(new_loc)
+                    result.append(new_loc)
+
+        self.db.commit()
+        for loc in result:
+            self.db.refresh(loc)
+        return result
+
     def delete_warehouse_location(self, location_id: int) -> bool:
         loc = self.db.query(WarehouseLocation).filter(WarehouseLocation.LocationID == location_id).first()
         if not loc:
