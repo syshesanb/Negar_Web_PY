@@ -7067,13 +7067,40 @@ function openSelectLocationModal() {
     if (el) el.value = '';
   });
 
-  fetch('/api/Inventory/warehouses/locations')
+  const loadWarehousesPromise = (AppState.warehouses && AppState.warehouses.length > 0) 
+    ? Promise.resolve(AppState.warehouses)
+    : fetch('/api/Inventory/warehouses')
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            AppState.warehouses = data.map(d => ({
+              id: d.WarehouseID,
+              code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
+              name: d.WarehouseName,
+              type: d.WarehouseType || 'عمومی',
+              keeper: d.WarehouseKeeper || '-',
+              location: d.Location || '-'
+            }));
+          }
+          return AppState.warehouses || [];
+        })
+        .catch(() => AppState.warehouses || []);
+
+  const loadLocationsPromise = fetch('/api/Inventory/warehouses/locations')
     .then(res => res.json())
-    .then(data => {
-      if (Array.isArray(data)) {
-        allWarehouseLocationsList = data.map(d => {
+    .catch(() => []);
+
+  Promise.all([loadWarehousesPromise, loadLocationsPromise])
+    .then(([warehouses, dbLocations]) => {
+      const combined = [];
+      const seenCodes = new Set();
+
+      // 1. Process DB locations
+      if (Array.isArray(dbLocations)) {
+        dbLocations.forEach(d => {
           const wh = (AppState.warehouses || []).find(w => w.id === d.WarehouseID);
-          return {
+          seenCodes.add(d.LocationCode);
+          combined.push({
             id: d.LocationID,
             warehouseId: d.WarehouseID,
             warehouseName: wh ? `${wh.name} (${wh.code})` : `انبار کد ${d.WarehouseID}`,
@@ -7083,32 +7110,64 @@ function openSelectLocationModal() {
             rack: d.Rack || '-',
             shelf: d.Shelf || '-',
             bin: d.Bin || '-'
-          };
+          });
         });
-        renderSelectLocationTable(allWarehouseLocationsList);
       }
-    })
-    .catch(err => {
-      console.log('Error loading all locations, fallback to local AppState:', err);
-      allWarehouseLocationsList = (AppState.warehouseLocations || []).map(d => {
-        const wh = (AppState.warehouses || []).find(w => w.id === d.warehouseId);
-        return {
-          id: d.id,
-          warehouseId: d.warehouseId,
-          warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
-          code: d.code,
-          zone: d.zone || '-',
-          aisle: d.aisle || '-',
-          rack: d.rack || '-',
-          shelf: d.shelf || '-',
-          bin: d.bin || '-'
-        };
+
+      // 2. Merge local AppState.warehouseLocations if not in DB
+      (AppState.warehouseLocations || []).forEach(l => {
+        if (!seenCodes.has(l.code)) {
+          seenCodes.add(l.code);
+          const wh = (AppState.warehouses || []).find(w => w.id === l.warehouseId);
+          combined.push({
+            id: l.id || Date.now(),
+            warehouseId: l.warehouseId,
+            warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
+            code: l.code,
+            zone: l.zone || '-',
+            aisle: l.aisle || '-',
+            rack: l.rack || '-',
+            shelf: l.shelf || '-',
+            bin: l.bin || '-'
+          });
+        }
       });
+
+      // 3. Fallback default locations if system has no locations yet
+      if (combined.length === 0) {
+        const defaultWh = (AppState.warehouses && AppState.warehouses[0]) ? AppState.warehouses[0] : null;
+        const defaultWhName = defaultWh ? `${defaultWh.name} (${defaultWh.code})` : 'انبار مرکزی (WH-01)';
+        combined.push({
+          id: 101,
+          warehouseId: defaultWh?.id || 1,
+          warehouseName: defaultWhName,
+          code: 'WH01-S01-R01-Q01-T01-P01',
+          zone: 'س01',
+          aisle: 'ر01',
+          rack: 'ق01',
+          shelf: 'ت01',
+          bin: 'پ01'
+        });
+        combined.push({
+          id: 102,
+          warehouseId: defaultWh?.id || 1,
+          warehouseName: defaultWhName,
+          code: 'WH01-S01-R01-Q01-T01-P02',
+          zone: 'س01',
+          aisle: 'ر01',
+          rack: 'ق01',
+          shelf: 'ت01',
+          bin: 'پ02'
+        });
+      }
+
+      allWarehouseLocationsList = combined;
       renderSelectLocationTable(allWarehouseLocationsList);
     });
 
   overlay.style.display = 'flex';
 }
+
 
 function closeSelectLocationModal() {
   const overlay = document.getElementById('selectLocationModalOverlay');
