@@ -6994,7 +6994,10 @@ function openAddProductRow(editData = null) {
   const locVal = editData ? (editData.defaultLocationCode || editData.locationCode || '') : '';
   const lblLoc = document.getElementById('lblProdDefaultLocation');
   const inputLoc = document.getElementById('newProdDefaultLocation');
-  if (lblLoc) lblLoc.textContent = locVal || '-- بدون جایگاه پیش‌فرض --';
+  if (lblLoc) {
+    lblLoc.textContent = locVal || '-- بدون جایگاه پیش‌فرض --';
+    lblLoc.style.color = locVal ? 'var(--accent-color)' : '';
+  }
   if (inputLoc) inputLoc.value = locVal;
 
   if (editData) {
@@ -7319,10 +7322,24 @@ function selectLocationForProduct(locationCode) {
   const lbl = document.getElementById('lblProdDefaultLocation');
   const input = document.getElementById('newProdDefaultLocation');
   
-  if (lbl) lbl.textContent = locationCode || '-- بدون جایگاه پیش‌فرض --';
+  if (lbl) {
+    lbl.textContent = locationCode || '-- بدون جایگاه پیش‌فرض --';
+    lbl.style.color = locationCode ? 'var(--accent-color)' : '';
+  }
   if (input) input.value = locationCode || '';
 
   closeSelectLocationModal();
+}
+
+function clearProductDefaultLocation() {
+  const lbl = document.getElementById('lblProdDefaultLocation');
+  const input = document.getElementById('newProdDefaultLocation');
+  
+  if (lbl) {
+    lbl.textContent = '-- بدون جایگاه پیش‌فرض --';
+    lbl.style.color = '';
+  }
+  if (input) input.value = '';
 }
 
 
