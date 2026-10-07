@@ -7098,12 +7098,14 @@ function openSelectLocationModal() {
       // 1. Process DB locations
       if (Array.isArray(dbLocations)) {
         dbLocations.forEach(d => {
-          const wh = (AppState.warehouses || []).find(w => w.id === d.WarehouseID);
+          const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(d.WarehouseID));
           seenCodes.add(d.LocationCode);
+          const wName = wh ? (wh.name || wh.WarehouseName) : `انبار کد ${d.WarehouseID}`;
+          const wCode = wh ? (wh.code || wh.WarehouseCode || `WH-${d.WarehouseID}`) : `WH-${d.WarehouseID}`;
           combined.push({
             id: d.LocationID,
             warehouseId: d.WarehouseID,
-            warehouseName: wh ? `${wh.name} (${wh.code})` : `انبار کد ${d.WarehouseID}`,
+            warehouseName: `${wName} (${wCode})`,
             code: d.LocationCode,
             zone: d.Zone || '-',
             aisle: d.Aisle || '-',
@@ -7118,11 +7120,13 @@ function openSelectLocationModal() {
       (currentWhLocations || []).forEach(l => {
         if (l.code && !seenCodes.has(l.code)) {
           seenCodes.add(l.code);
-          const wh = (AppState.warehouses || []).find(w => w.id === l.warehouseId);
+          const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(l.warehouseId));
+          const wName = wh ? (wh.name || wh.WarehouseName) : 'انبار مرکزی';
+          const wCode = wh ? (wh.code || wh.WarehouseCode || 'WH-01') : 'WH-01';
           combined.push({
             id: l.id || Date.now(),
             warehouseId: l.warehouseId,
-            warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
+            warehouseName: `${wName} (${wCode})`,
             code: l.code,
             zone: l.zone || '-',
             aisle: l.aisle || '-',
@@ -7139,11 +7143,13 @@ function openSelectLocationModal() {
         if (lCode && !seenCodes.has(lCode)) {
           seenCodes.add(lCode);
           const wId = l.warehouseId || l.WarehouseID;
-          const wh = (AppState.warehouses || []).find(w => w.id === wId);
+          const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(wId));
+          const wName = wh ? (wh.name || wh.WarehouseName) : 'انبار مرکزی';
+          const wCode = wh ? (wh.code || wh.WarehouseCode || 'WH-01') : 'WH-01';
           combined.push({
             id: l.id || l.LocationID || Date.now(),
             warehouseId: wId,
-            warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
+            warehouseName: `${wName} (${wCode})`,
             code: lCode,
             zone: l.zone || l.Zone || '-',
             aisle: l.aisle || l.Aisle || '-',
