@@ -234,6 +234,11 @@ function doLogin() {
       } catch(e) {}
       if (errorEl) errorEl.style.display = 'none';
 
+      // Ensure active company & fiscal year are initialized
+      if (!SessionState.company && AppState.companies && AppState.companies.length > 0) {
+        switchActiveCompany(AppState.companies[0]);
+      }
+
       // Update header info
       const headerUser = document.getElementById('headerUsername');
       if (headerUser) headerUser.textContent = found.fullName + (found.jobTitle ? ` (${found.jobTitle})` : '') + ' [' + found.username + ']';
@@ -242,20 +247,31 @@ function doLogin() {
       const overlay  = document.getElementById('loginOverlay');
       const mainApp  = document.getElementById('mainApp');
 
-      overlay.classList.add('login-fade-out');
+      if (overlay) overlay.classList.add('login-fade-out');
       setTimeout(() => {
-        overlay.style.display = 'none';
-        mainApp.style.display = 'flex';
-        mainApp.style.flexDirection = 'column';
-        mainApp.style.width = '100%';
-        mainApp.classList.add('app-fade-in');
+        if (overlay) overlay.style.display = 'none';
+        if (mainApp) {
+          mainApp.style.display = 'flex';
+          mainApp.style.flexDirection = 'column';
+          mainApp.style.width = '100%';
+          mainApp.classList.add('app-fade-in');
+        }
 
-        // Update header info (Username/Role)
+        // Reset login button state
+        if (btnText)    btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
+        if (loginBtn)   loginBtn.disabled = false;
+
+        // Update header bar info (Username/Role/Company)
         updateHeaderBar();
 
-        // Show "Switch Company / Fiscal Year" form so user explicitly selects company and year
-        showForm('form-switch-company');
-      }, 400);
+        // Show main dashboard tiles view
+        if (typeof showTiles === 'function') {
+          showTiles('system');
+        } else if (typeof showForm === 'function') {
+          showForm('form-switch-company');
+        }
+      }, 300);
 
     } else {
       // ❌ Wrong credentials
@@ -9964,8 +9980,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.history.replaceState({}, document.title, cleanUrl);
     // Focus on username field for smooth UX
     setTimeout(() => { document.getElementById('loginUsername')?.focus(); }, 300);
-    // Stop further initialization — the user must log in first
-    return;
   }
 
   // Schedule timed layout snapshots to capture what changes "after a few moments"
