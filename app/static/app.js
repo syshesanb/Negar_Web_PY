@@ -7201,6 +7201,23 @@ function closeSelectLocationModal() {
   if (overlay) overlay.style.display = 'none';
 }
 
+function refreshSelectLocationModal() {
+  const btn = document.getElementById('btnRefreshSelectLocation');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⌛ در حال به‌روزرسانی...';
+  }
+  
+  openSelectLocationModal();
+
+  setTimeout(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 به روز رسانی اطلاعات';
+    }
+  }, 300);
+}
+
 function renderSelectLocationTable(locationsList) {
   const tbody = document.getElementById('selectLocationTableBody');
   const badge = document.getElementById('selectLocCountBadge');

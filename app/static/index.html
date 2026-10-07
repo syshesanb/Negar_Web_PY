@@ -2624,9 +2624,14 @@
               <h3 style="margin:0; font-size:1.1rem; color:var(--accent-color); font-weight:bold; display:flex; align-items:center; gap:8px;">
                 🔍 انتخاب جایگاه فیزیکی انبار (پیش‌فرض کالا)
               </h3>
-              <button type="button" onclick="closeSelectLocationModal()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'">
-                ✖
-              </button>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button type="button" id="btnRefreshSelectLocation" onclick="refreshSelectLocationModal()" class="btn btn-outline" style="padding:4px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px; color:var(--accent-color); border-color:var(--accent-color); font-weight:bold;" title="به‌روزرسانی اطلاعات دیتاگرید">
+                  🔄 به روز رسانی اطلاعات
+                </button>
+                <button type="button" onclick="closeSelectLocationModal()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='var(--danger-color)'" onmouseout="this.style.color='var(--text-muted)'" title="بستن پنجره">
+                  ✖
+                </button>
+              </div>
             </div>
             
             <!-- Modal Content Body -->
