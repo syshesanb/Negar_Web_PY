@@ -6962,19 +6962,11 @@ function openAddProductRow(editData = null) {
     secUnitSelect.innerHTML = opts;
   }
 
-  const defaultLocSelect = document.getElementById('newProdDefaultLocation');
-  if (defaultLocSelect) {
-    let locOpts = '<option value="">-- بدون جایگاه پیش‌فرض --</option>';
-    const allLocations = AppState.warehouseLocations || [];
-    if (allLocations.length === 0) {
-      locOpts += '<option value="WH01-S01-R01-Q01-T01-P01">WH01-S01-R01-Q01-T01-P01 (انبار مرکزی)</option>';
-    } else {
-      allLocations.forEach(loc => {
-        locOpts += `<option value="${loc.code}">${loc.code} (${loc.zone || ''})</option>`;
-      });
-    }
-    defaultLocSelect.innerHTML = locOpts;
-  }
+  const locVal = editData ? (editData.defaultLocationCode || editData.locationCode || '') : '';
+  const lblLoc = document.getElementById('lblProdDefaultLocation');
+  const inputLoc = document.getElementById('newProdDefaultLocation');
+  if (lblLoc) lblLoc.textContent = locVal || '-- بدون جایگاه پیش‌فرض --';
+  if (inputLoc) inputLoc.value = locVal;
 
   if (editData) {
     document.getElementById('editProductId').value = editData.id;
@@ -6985,7 +6977,6 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdSecondaryRatio').value = editData.secondaryRatio || 1.0;
     document.getElementById('newProdPrice').value = editData.price || 0;
     document.getElementById('newProdStock').value = editData.stock || 0;
-    if (defaultLocSelect) defaultLocSelect.value = editData.defaultLocationCode || editData.locationCode || '';
   } else {
     document.getElementById('editProductId').value = '';
     document.getElementById('newProdCode').value = getNextProductCode();
@@ -6995,7 +6986,6 @@ function openAddProductRow(editData = null) {
     document.getElementById('newProdSecondaryRatio').value = 1.0;
     document.getElementById('newProdPrice').value = '';
     document.getElementById('newProdStock').value = '0';
-    if (defaultLocSelect) defaultLocSelect.value = '';
   }
 
   overlay.style.display = 'flex';
@@ -7061,6 +7051,141 @@ function saveNewProduct() {
   renderProductsTable();
   alert(`کالای دو واحدی "${name}" با موفقیت ذخیره شد.`);
 }
+
+// -----------------------------------------------------------------------------
+// Select Default Warehouse Location Modal & Filtering
+// -----------------------------------------------------------------------------
+let allWarehouseLocationsList = [];
+
+function openSelectLocationModal() {
+  const overlay = document.getElementById('selectLocationModalOverlay');
+  if (!overlay) return;
+
+  // Clear search filter textboxes
+  ['Code', 'Warehouse', 'Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(f => {
+    const el = document.getElementById(`filterLoc${f}`);
+    if (el) el.value = '';
+  });
+
+  fetch('/api/Inventory/warehouses/locations')
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        allWarehouseLocationsList = data.map(d => {
+          const wh = (AppState.warehouses || []).find(w => w.id === d.WarehouseID);
+          return {
+            id: d.LocationID,
+            warehouseId: d.WarehouseID,
+            warehouseName: wh ? `${wh.name} (${wh.code})` : `انبار کد ${d.WarehouseID}`,
+            code: d.LocationCode,
+            zone: d.Zone || '-',
+            aisle: d.Aisle || '-',
+            rack: d.Rack || '-',
+            shelf: d.Shelf || '-',
+            bin: d.Bin || '-'
+          };
+        });
+        renderSelectLocationTable(allWarehouseLocationsList);
+      }
+    })
+    .catch(err => {
+      console.log('Error loading all locations, fallback to local AppState:', err);
+      allWarehouseLocationsList = (AppState.warehouseLocations || []).map(d => {
+        const wh = (AppState.warehouses || []).find(w => w.id === d.warehouseId);
+        return {
+          id: d.id,
+          warehouseId: d.warehouseId,
+          warehouseName: wh ? `${wh.name} (${wh.code})` : 'انبار مرکزی',
+          code: d.code,
+          zone: d.zone || '-',
+          aisle: d.aisle || '-',
+          rack: d.rack || '-',
+          shelf: d.shelf || '-',
+          bin: d.bin || '-'
+        };
+      });
+      renderSelectLocationTable(allWarehouseLocationsList);
+    });
+
+  overlay.style.display = 'flex';
+}
+
+function closeSelectLocationModal() {
+  const overlay = document.getElementById('selectLocationModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function renderSelectLocationTable(locationsList) {
+  const tbody = document.getElementById('selectLocationTableBody');
+  const badge = document.getElementById('selectLocCountBadge');
+  if (!tbody) return;
+
+  if (badge) badge.textContent = `تعداد جایگاه‌ها: ${locationsList.length}`;
+
+  if (!locationsList || locationsList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px; color:#888;">هیچ جایگاه فیزیکی یا نتیجه‌ای برای فیلترهای وارد شده پیدا نشد.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = locationsList.map(loc => `
+    <tr>
+      <td><b style="color:var(--accent-color);">${loc.code}</b></td>
+      <td><span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:bold;">${loc.warehouseName}</span></td>
+      <td>${loc.zone}</td>
+      <td>${loc.aisle}</td>
+      <td>${loc.rack}</td>
+      <td>${loc.shelf}</td>
+      <td>${loc.bin}</td>
+      <td style="text-align:center;">
+        <button type="button" class="btn btn-primary" style="padding:3px 10px; font-size:0.8rem; background:#10b981; border-color:#10b981;" onclick="selectLocationForProduct('${loc.code}')">
+          ✅ انتخاب
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterSelectLocationTable() {
+  const code = (document.getElementById('filterLocCode')?.value || '').trim().toLowerCase();
+  const wh = (document.getElementById('filterLocWarehouse')?.value || '').trim().toLowerCase();
+  const zone = (document.getElementById('filterLocZone')?.value || '').trim().toLowerCase();
+  const aisle = (document.getElementById('filterLocAisle')?.value || '').trim().toLowerCase();
+  const rack = (document.getElementById('filterLocRack')?.value || '').trim().toLowerCase();
+  const shelf = (document.getElementById('filterLocShelf')?.value || '').trim().toLowerCase();
+  const bin = (document.getElementById('filterLocBin')?.value || '').trim().toLowerCase();
+
+  const filtered = (allWarehouseLocationsList || []).filter(l => {
+    if (code && !l.code.toLowerCase().includes(code)) return false;
+    if (wh && !l.warehouseName.toLowerCase().includes(wh)) return false;
+    if (zone && !l.zone.toLowerCase().includes(zone)) return false;
+    if (aisle && !l.aisle.toLowerCase().includes(aisle)) return false;
+    if (rack && !l.rack.toLowerCase().includes(rack)) return false;
+    if (shelf && !l.shelf.toLowerCase().includes(shelf)) return false;
+    if (bin && !l.bin.toLowerCase().includes(bin)) return false;
+    return true;
+  });
+
+  renderSelectLocationTable(filtered);
+}
+
+function clearSelectLocationFilters() {
+  ['Code', 'Warehouse', 'Zone', 'Aisle', 'Rack', 'Shelf', 'Bin'].forEach(f => {
+    const el = document.getElementById(`filterLoc${f}`);
+    if (el) el.value = '';
+  });
+  filterSelectLocationTable();
+}
+
+function selectLocationForProduct(locationCode) {
+  const lbl = document.getElementById('lblProdDefaultLocation');
+  const input = document.getElementById('newProdDefaultLocation');
+  
+  if (lbl) lbl.textContent = locationCode || '-- بدون جایگاه پیش‌فرض --';
+  if (input) input.value = locationCode || '';
+
+  closeSelectLocationModal();
+}
+
 
 
 function editProduct(id) {

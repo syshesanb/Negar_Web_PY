@@ -287,6 +287,13 @@ class InventoryService:
             return True
         return False
 
+    def get_all_warehouse_locations(self) -> List[WarehouseLocation]:
+        return (
+            self.db.query(WarehouseLocation)
+            .order_by(WarehouseLocation.LocationCode)
+            .all()
+        )
+
     def get_warehouse_locations(self, warehouse_id: int) -> List[WarehouseLocation]:
         return (
             self.db.query(WarehouseLocation)
@@ -294,6 +301,7 @@ class InventoryService:
             .order_by(WarehouseLocation.LocationCode)
             .all()
         )
+
 
     def save_warehouse_location(self, dto: WarehouseLocationDTO) -> WarehouseLocation:
         if dto.LocationID and dto.LocationID > 0:

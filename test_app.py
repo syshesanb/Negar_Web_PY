@@ -163,6 +163,12 @@ def run_tests():
     assert get_locs.status_code == 200
     assert len(get_locs.json()) >= 1
 
+    # Test GET all locations
+    get_all_locs = client.get("/api/Inventory/warehouses/locations")
+    assert get_all_locs.status_code == 200
+    assert len(get_all_locs.json()) >= 1
+
+
 
     prod_res = client.post("/api/Inventory/products", json={
         "CompanyID": 1,

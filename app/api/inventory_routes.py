@@ -122,10 +122,17 @@ def delete_warehouse(warehouse_id: int, db: Session = Depends(get_db)):
     return {"message": "Warehouse deleted successfully"}
 
 
+@router.get("/warehouses/locations", response_model=List[WarehouseLocationDTO])
+def get_all_warehouse_locations(db: Session = Depends(get_db)):
+    service = InventoryService(db)
+    return service.get_all_warehouse_locations()
+
+
 @router.get("/warehouses/{warehouse_id}/locations", response_model=List[WarehouseLocationDTO])
 def get_warehouse_locations(warehouse_id: int, db: Session = Depends(get_db)):
     service = InventoryService(db)
     return service.get_warehouse_locations(warehouse_id)
+
 
 
 @router.post("/warehouses/locations", response_model=WarehouseLocationDTO)
