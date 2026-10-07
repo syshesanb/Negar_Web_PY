@@ -271,12 +271,8 @@ function doLogin() {
           // Update header bar info (Username/Role/Company)
           updateHeaderBar();
 
-          // Show main dashboard tiles view
-          if (typeof showTiles === 'function') {
-            showTiles('system');
-          } else if (typeof showForm === 'function') {
-            showForm('form-switch-company');
-          }
+          // Show "Switch Company / Fiscal Year" form so user explicitly selects company and year
+          showForm('form-switch-company');
         }, 300);
 
       } else {
