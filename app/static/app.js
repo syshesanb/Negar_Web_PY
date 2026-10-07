@@ -191,6 +191,7 @@ const CREDENTIALS = [
 ];
 
 let currentUser = null;  // will be set after successful login
+const SessionState = { company: null, year: '1403', fiscalYear: '1403' };
 
 function doLogin() {
   const usernameEl = document.getElementById('loginUsername');
@@ -222,67 +223,79 @@ function doLogin() {
 
   // Simulate a short delay (like a real server call)
   setTimeout(() => {
-    const found = CREDENTIALS.find(
-      c => c.username === username && c.password === password
-    );
+    try {
+      const found = CREDENTIALS.find(
+        c => c.username.toLowerCase() === username.toLowerCase() && c.password === password
+      );
 
-    if (found) {
-      // ✅ Success
-      currentUser = found;
-      try {
-        localStorage.setItem('negar_logged_in', 'true');
-      } catch(e) {}
-      if (errorEl) errorEl.style.display = 'none';
+      if (found) {
+        // ✅ Success
+        currentUser = found;
+        try {
+          localStorage.setItem('negar_logged_in', 'true');
+        } catch(e) {}
+        if (errorEl) errorEl.style.display = 'none';
 
-      // Ensure active company & fiscal year are initialized
-      if (!SessionState.company && AppState.companies && AppState.companies.length > 0) {
-        switchActiveCompany(AppState.companies[0]);
-      }
-
-      // Update header info
-      const headerUser = document.getElementById('headerUsername');
-      if (headerUser) headerUser.textContent = found.fullName + (found.jobTitle ? ` (${found.jobTitle})` : '') + ' [' + found.username + ']';
-
-      // Animate out login, animate in app
-      const overlay  = document.getElementById('loginOverlay');
-      const mainApp  = document.getElementById('mainApp');
-
-      if (overlay) overlay.classList.add('login-fade-out');
-      setTimeout(() => {
-        if (overlay) overlay.style.display = 'none';
-        if (mainApp) {
-          mainApp.style.display = 'flex';
-          mainApp.style.flexDirection = 'column';
-          mainApp.style.width = '100%';
-          mainApp.classList.add('app-fade-in');
+        // Ensure active company & fiscal year are initialized
+        if (!SessionState.company && AppState.companies && AppState.companies.length > 0) {
+          switchActiveCompany(AppState.companies[0]);
+        }
+        if (!SessionState.year) {
+          SessionState.year = '1403';
+          SessionState.fiscalYear = '1403';
         }
 
-        // Reset login button state
+        // Update header info
+        const headerUser = document.getElementById('headerUsername');
+        if (headerUser) headerUser.textContent = found.fullName + (found.jobTitle ? ` (${found.jobTitle})` : '') + ' [' + found.username + ']';
+
+        // Animate out login, animate in app
+        const overlay  = document.getElementById('loginOverlay');
+        const mainApp  = document.getElementById('mainApp');
+
+        if (overlay) overlay.classList.add('login-fade-out');
+        setTimeout(() => {
+          if (overlay) overlay.style.display = 'none';
+          if (mainApp) {
+            mainApp.style.display = 'flex';
+            mainApp.style.flexDirection = 'column';
+            mainApp.style.width = '100%';
+            mainApp.classList.add('app-fade-in');
+          }
+
+          // Reset login button state
+          if (btnText)    btnText.style.display = 'inline';
+          if (btnSpinner) btnSpinner.style.display = 'none';
+          if (loginBtn)   loginBtn.disabled = false;
+
+          // Update header bar info (Username/Role/Company)
+          updateHeaderBar();
+
+          // Show main dashboard tiles view
+          if (typeof showTiles === 'function') {
+            showTiles('system');
+          } else if (typeof showForm === 'function') {
+            showForm('form-switch-company');
+          }
+        }, 300);
+
+      } else {
+        // ❌ Wrong credentials
+        showLoginError('نام کاربری یا رمز عبور اشتباه است. لطفاً دوباره تلاش کنید.');
+        if (passwordEl) { passwordEl.value = ''; passwordEl.focus(); }
+        // Reset button
         if (btnText)    btnText.style.display = 'inline';
         if (btnSpinner) btnSpinner.style.display = 'none';
         if (loginBtn)   loginBtn.disabled = false;
-
-        // Update header bar info (Username/Role/Company)
-        updateHeaderBar();
-
-        // Show main dashboard tiles view
-        if (typeof showTiles === 'function') {
-          showTiles('system');
-        } else if (typeof showForm === 'function') {
-          showForm('form-switch-company');
-        }
-      }, 300);
-
-    } else {
-      // ❌ Wrong credentials
-      showLoginError('نام کاربری یا رمز عبور اشتباه است. لطفاً دوباره تلاش کنید.');
-      if (passwordEl) { passwordEl.value = ''; passwordEl.focus(); }
-      // Reset button
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      showLoginError('خطا در فرایند ورود: ' + err.message);
       if (btnText)    btnText.style.display = 'inline';
       if (btnSpinner) btnSpinner.style.display = 'none';
       if (loginBtn)   loginBtn.disabled = false;
     }
-  }, 700);
+  }, 300);
 }
 
 function showLoginError(msg) {
