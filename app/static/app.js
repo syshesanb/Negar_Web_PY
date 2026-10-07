@@ -7056,6 +7056,7 @@ function saveNewProduct() {
 // Select Default Warehouse Location Modal & Filtering
 // -----------------------------------------------------------------------------
 let allWarehouseLocationsList = [];
+let currentWhLocations = [];
 
 function openSelectLocationModal() {
   const overlay = document.getElementById('selectLocationModalOverlay');
@@ -7078,11 +7079,12 @@ function openSelectLocationModal() {
 
   overlay.style.display = 'flex';
 
-  const loadWarehousesPromise = fetch('/api/Inventory/warehouses')
+  // 1. Fetch Warehouses first
+  fetch('/api/Inventory/warehouses')
     .then(r => r.ok ? r.json() : [])
-    .then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        AppState.warehouses = data.map(d => ({
+    .then(whData => {
+      if (Array.isArray(whData) && whData.length > 0) {
+        AppState.warehouses = whData.map(d => ({
           id: d.WarehouseID,
           code: d.WarehouseCode || ('WH-' + String(d.WarehouseID).padStart(2, '0')),
           name: d.WarehouseName,
@@ -7093,42 +7095,62 @@ function openSelectLocationModal() {
       }
       return AppState.warehouses || [];
     })
-    .catch(() => AppState.warehouses || []);
-
-  const loadLocationsPromise = fetch('/api/Inventory/warehouses/locations')
-    .then(res => res.ok ? res.json() : [])
-    .catch(() => []);
-
-  Promise.all([loadWarehousesPromise, loadLocationsPromise])
-    .then(([warehouses, dbLocations]) => {
+    .catch(() => AppState.warehouses || [])
+    .then(warehouses => {
+      // 2. Fetch All Locations (Try bulk endpoint first, fallback to per-warehouse endpoints)
+      return fetch('/api/Inventory/warehouses/locations')
+        .then(r => r.ok ? r.json() : null)
+        .then(async (dbLocations) => {
+          if (Array.isArray(dbLocations) && dbLocations.length > 0) {
+            return dbLocations;
+          }
+          // Fallback: fetch locations per warehouse if bulk route returned empty or null
+          const perWhPromises = (warehouses || []).map(w => 
+            fetch(`/api/Inventory/warehouses/${w.id || w.WarehouseID}/locations`)
+              .then(r => r.ok ? r.json() : [])
+              .catch(() => [])
+          );
+          const perWhResults = await Promise.all(perWhPromises);
+          const merged = [];
+          perWhResults.forEach(list => {
+            if (Array.isArray(list)) merged.push(...list);
+          });
+          return merged;
+        })
+        .catch(() => []);
+    })
+    .then(dbLocations => {
       const combined = [];
       const seenCodes = new Set();
 
       // 1. Process DB locations
       if (Array.isArray(dbLocations)) {
         dbLocations.forEach(d => {
-          if (d && d.LocationCode) {
-            seenCodes.add(d.LocationCode);
-            const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(d.WarehouseID));
-            const wName = wh ? (wh.name || wh.WarehouseName) : `انبار کد ${d.WarehouseID}`;
-            const wCode = wh ? (wh.code || wh.WarehouseCode || `WH-${d.WarehouseID}`) : `WH-${d.WarehouseID}`;
+          const locCode = d ? (d.LocationCode || d.code) : null;
+          if (locCode) {
+            seenCodes.add(locCode);
+            const wId = d.WarehouseID || d.warehouseId;
+            const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(wId));
+            const wName = wh ? (wh.name || wh.WarehouseName) : `انبار کد ${wId}`;
+            const wCode = wh ? (wh.code || wh.WarehouseCode || `WH-${wId}`) : `WH-${wId}`;
             combined.push({
-              id: d.LocationID,
-              warehouseId: d.WarehouseID,
+              id: d.LocationID || d.id,
+              warehouseId: wId,
               warehouseName: `${wName} (${wCode})`,
-              code: d.LocationCode,
-              zone: d.Zone || '-',
-              aisle: d.Aisle || '-',
-              rack: d.Rack || '-',
-              shelf: d.Shelf || '-',
-              bin: d.Bin || '-'
+              code: locCode,
+              zone: d.Zone || d.zone || '-',
+              aisle: d.Aisle || d.aisle || '-',
+              rack: d.Rack || d.rack || '-',
+              shelf: d.Shelf || d.shelf || '-',
+              bin: d.Bin || d.bin || '-'
             });
           }
         });
       }
 
       // 2. Merge currentWhLocations if active in current session
-      (currentWhLocations || []).forEach(l => {
+      const sessionLocs = (typeof currentWhLocations !== 'undefined' && Array.isArray(currentWhLocations)) ? currentWhLocations : [];
+      sessionLocs.forEach(l => {
         if (l && l.code && !seenCodes.has(l.code)) {
           seenCodes.add(l.code);
           const wh = (AppState.warehouses || []).find(w => Number(w.id || w.WarehouseID) === Number(l.warehouseId));

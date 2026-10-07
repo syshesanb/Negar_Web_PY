@@ -125,7 +125,8 @@ def delete_warehouse(warehouse_id: int, db: Session = Depends(get_db)):
 @router.get("/warehouses/locations", response_model=List[WarehouseLocationDTO])
 def get_all_warehouse_locations(db: Session = Depends(get_db)):
     service = InventoryService(db)
-    return service.get_all_warehouse_locations()
+    res = service.get_all_warehouse_locations()
+    return res if res is not None else []
 
 
 @router.get("/warehouses/{warehouse_id}/locations", response_model=List[WarehouseLocationDTO])
