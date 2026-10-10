@@ -1422,8 +1422,9 @@
               شرکت و سال مالی جاری سیستم را انتخاب کنید — تمام گزارشات و اسناد در دوره انتخابی تهیه خواهد شد.
             </p>
 
+
             <!-- Side-by-Side DataGrids Container -->
-            <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+            <div style="display:flex; gap:16px; margin-bottom:0; flex-wrap:wrap;">
               
               <!-- Right Side: Company Selection Grid -->
               <div style="flex:1; min-width:320px;">
@@ -1465,12 +1466,30 @@
 
             </div>
 
-            <!-- Action Button -->
-            <div class="form-actions" style="justify-content:flex-end;">
-              <button class="btn btn-primary" onclick="applyCompanySwitch()" style="padding:8px 26px; font-weight:bold; font-size:0.9rem;">☑️ انتخاب</button>
+            <!-- Action Panel -->
+            <div style="display:flex; gap:16px; margin-top:12px; flex-wrap:wrap; padding:12px 16px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:8px; align-items:center; justify-content:space-between;">
+              <!-- Button below companies grid -->
+              <div style="flex:1; min-width:200px;">
+                <button class="btn btn-outline" onclick="openCompanyForm(null)" style="width:100%; font-size:0.85rem; padding:7px 12px;">
+                  🏢 شرکت جدید
+                </button>
+              </div>
+
+              <!-- انتخاب button in center -->
+              <div style="flex:0 0 auto;">
+                <button class="btn btn-primary" onclick="applyCompanySwitch()" style="padding:8px 26px; font-weight:bold; font-size:0.9rem;">☑️ انتخاب</button>
+              </div>
+
+              <!-- Button below fiscal years grid -->
+              <div style="flex:1; min-width:200px; text-align:left; direction:ltr;">
+                <button id="btnNewFiscalYear" class="btn btn-outline" onclick="openFiscalYearForm(null)" style="width:100%; font-size:0.85rem; padding:7px 12px; direction:rtl;">
+                  📅 سال مالی جدید
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
 
         <div id="form-switch-year" class="form-section">
           <h2 class="form-heading">📅 تغییر سال مالی فعال</h2>
@@ -3802,7 +3821,7 @@
   </div>
 
   <script src="persian-calendar.js"></script>
-  <script src="app.js?v=1.1.0"></script>
+  <script src="app.js?v=1.1.1"></script>
   </div><!-- end mainApp -->
   <!-- Attachments Lightbox Viewer -->
   <div id="attachmentsViewerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; direction:rtl;">

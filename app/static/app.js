@@ -9718,10 +9718,11 @@ function openFiscalYearForm(fiscalYearId) {
   const title = document.getElementById('fiscalYearFormTitle');
   if (!modal) return;
 
-  // Refresh company dropdown from AppState
+  // Refresh company dropdown - only show companies visible to current user
   const select = document.getElementById('fyCompany');
   if (select) {
-    select.innerHTML = AppState.companies.map(c =>
+    const visibleComps = getVisibleCompanies();
+    select.innerHTML = visibleComps.map(c =>
       `<option value="${c.code}">${c.name} (${c.code})</option>`
     ).join('');
   }
@@ -9737,8 +9738,10 @@ function openFiscalYearForm(fiscalYearId) {
     document.getElementById('fyEndDate').value = '';
     document.getElementById('fyNotes').value = '';
     if (document.getElementById('fyStatus')) document.getElementById('fyStatus').value = 'فعال';
-    if (select && AppState.companies.length > 0) {
-      select.value = AppState.companies[0].code;
+    // Pre-select the company currently selected in switch form (if any), otherwise first visible company
+    if (select) {
+      const preSelectCode = selectedCompanyCodeForSwitch || (getVisibleCompanies()[0]?.code || '');
+      if (preSelectCode) select.value = preSelectCode;
     }
   } else {
     // EDIT mode
@@ -9855,6 +9858,20 @@ function renderSwitchCompanyForm() {
         </tr>
       `;
     }).join('');
+  }
+
+  // Enable/disable "سال مالی جدید" button based on whether user has any companies
+  const btnNewFY = document.getElementById('btnNewFiscalYear');
+  if (btnNewFY) {
+    if (visibleCompanies.length > 0) {
+      btnNewFY.disabled = false;
+      btnNewFY.style.opacity = '1';
+      btnNewFY.style.cursor = 'pointer';
+    } else {
+      btnNewFY.disabled = true;
+      btnNewFY.style.opacity = '0.45';
+      btnNewFY.style.cursor = 'not-allowed';
+    }
   }
 
   // Render Left Side DataGrid: Fiscal Years for selected company
