@@ -266,13 +266,14 @@ function doLogin() {
         } catch(e) {}
         if (errorEl) errorEl.style.display = 'none';
 
-        // Ensure active company & fiscal year are initialized
-        if (!SessionState.company && AppState.companies && AppState.companies.length > 0) {
-          switchActiveCompany(AppState.companies[0]);
-        }
-        if (!SessionState.year) {
-          SessionState.year = '1403';
-          SessionState.fiscalYear = '1403';
+        // Ensure active company & fiscal year are initialized per current user's visible companies
+        const visibleComps = getVisibleCompanies();
+        if (visibleComps && visibleComps.length > 0) {
+          switchActiveCompany(visibleComps[0]);
+          SessionState.year = visibleComps[0].activeYear || '1403';
+          SessionState.fiscalYear = SessionState.year;
+        } else {
+          SessionState.company = null;
         }
 
         // Update header info
@@ -8462,23 +8463,56 @@ function getVisibleCompanies() {
   if (!currentUser) return AppState.companies;
 
   const role = currentUser.role || currentUser.userType;
+  const isSuperAdmin = role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
 
-  if (role === 'SuperAdmin') {
+  if (isSuperAdmin) {
     return AppState.companies;
   }
 
   if (role === 'Manager') {
-    return AppState.companies.filter(c => c.ownerUserId === currentUser.id);
+    // If there are companies created without ownerUserId or with legacy admin owner (except default company 1001),
+    // associate them with the active manager who created them
+    let updated = false;
+    AppState.companies.forEach(c => {
+      if (c.code !== '1001') {
+        const matchesOwner = (c.ownerUserId != null && String(c.ownerUserId) === String(currentUser.id)) ||
+                             (c.ownerUsername && currentUser.username && c.ownerUsername.toLowerCase() === currentUser.username.toLowerCase());
+        if (!matchesOwner && (c.ownerUserId == null || c.ownerUserId === 1 || !c.ownerUsername || c.ownerUsername === 'admin')) {
+          c.ownerUserId = currentUser.id;
+          c.ownerUsername = currentUser.username;
+          updated = true;
+        }
+      }
+    });
+    if (updated) {
+      try {
+        localStorage.setItem('negar_companies', JSON.stringify(AppState.companies));
+      } catch(e) {}
+    }
+
+    return AppState.companies.filter(c => {
+      if (c.code === '1001') return false; // Default sample company belongs only to SuperAdmin
+      return (c.ownerUserId != null && String(c.ownerUserId) === String(currentUser.id)) ||
+             (c.ownerUsername && currentUser.username && c.ownerUsername.toLowerCase() === currentUser.username.toLowerCase());
+    });
   }
 
   // Regular User: see companies belonging to their manager
-  const parentMgr = AppState.users.find(u => u.id === currentUser.parentUserId);
+  const parentMgr = AppState.users.find(u => 
+    (currentUser.parentUserId && String(u.id) === String(currentUser.parentUserId)) ||
+    (!currentUser.parentUserId && (u.userType === 'Manager' || u.role === 'Manager'))
+  );
   if (parentMgr) {
-    return AppState.companies.filter(c => c.ownerUserId === parentMgr.id);
+    return AppState.companies.filter(c => {
+      if (c.code === '1001') return false;
+      return (c.ownerUserId != null && String(c.ownerUserId) === String(parentMgr.id)) ||
+             (c.ownerUsername && parentMgr.username && c.ownerUsername.toLowerCase() === parentMgr.username.toLowerCase());
+    });
   }
 
-  return AppState.companies;
+  return [];
 }
+
 
 function renderCompaniesTable() {
   const tbody = document.getElementById('companiesTableBody');
@@ -9085,16 +9119,37 @@ function saveCompany() {
       document.getElementById('compCode').focus();
       return;
     }
-    // CREATE new company — stamp with ownerUserId so visibility filtering works
+    // CREATE new company — stamp with ownerUserId and ownerUsername so visibility filtering works
     const newId = Date.now();
     const ownerUserId = currentUser ? currentUser.id : 1;
+    const ownerUsername = currentUser ? currentUser.username : 'admin';
     AppState.companies.push({
       id: newId,
       ownerUserId,
+      ownerUsername,
       ...newCompanyData
     });
     // بارگذاری کدینگ پیش‌فرض برای شرکت جدید
     initializeCompanyAccounts(code);
+
+    // ایجاد سال مالی اولیه برای شرکت جدید
+    if (activeYear) {
+      if (!AppState.fiscalYears.some(fy => fy.company === code && fy.year === activeYear)) {
+        AppState.fiscalYears.push({
+          id: Date.now() + 1,
+          year: activeYear,
+          startDate: `${activeYear}/01/01`,
+          endDate: `${activeYear}/12/29`,
+          company: code,
+          notes: `سال مالی اولیه شرکت ${name}`,
+          status: 'فعال'
+        });
+        try {
+          localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+        } catch(e) {}
+      }
+    }
+
     alert(`شرکت جدید "${name}" با موفقیت ثبت شد.`);
   }
 
@@ -9106,7 +9161,7 @@ function saveCompany() {
   renderCompaniesTable();
   // Refresh switch-company datagrid immediately if it's open
   if (typeof renderSwitchCompanyForm === 'function') {
-    selectedCompanyCodeForSwitch = null;
+    selectedCompanyCodeForSwitch = code; // Auto-select the newly created company
     renderSwitchCompanyForm();
   }
 }
@@ -9810,13 +9865,18 @@ function saveFiscalYear() {
       id: Date.now(),
       year, startDate, endDate, company, notes, status
     });
-    alert(`سال مالی \${year} با موفقیت تعریف شد.`);
+    alert(`سال مالی ${year} با موفقیت تعریف شد.`);
   }
+
+  try {
+    localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+  } catch(e) {}
 
   closeFiscalYearForm();
   renderFiscalYearsTable();
   // Refresh switch-company fiscal year datagrid immediately if it's open
   if (typeof renderSwitchCompanyForm === 'function') {
+    selectedYearForSwitch = year; // Auto-select the newly saved fiscal year
     renderSwitchCompanyForm();
   }
 }
@@ -9830,8 +9890,14 @@ function deleteFiscalYear(fyId) {
   }
   if (confirm(`آیا از حذف سال مالی "${fy.year}" اطمینان دارید؟`)) {
     AppState.fiscalYears = AppState.fiscalYears.filter(f => f.id !== fyId);
+    try {
+      localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+    } catch(e) {}
     renderFiscalYearsTable();
     alert(`سال مالی ${fy.year} با موفقیت حذف شد.`);
+    if (typeof renderSwitchCompanyForm === 'function') {
+      renderSwitchCompanyForm();
+    }
   }
 }
 
@@ -9851,9 +9917,34 @@ function renderSwitchCompanyForm() {
   // Get only companies visible to the current user
   const visibleCompanies = getVisibleCompanies();
 
-  // Default to currently active company or first available company
-  if (!selectedCompanyCodeForSwitch) {
-    selectedCompanyCodeForSwitch = SessionState.company ? SessionState.company.code : (visibleCompanies[0]?.code || '');
+  // Ensure selectedCompanyCodeForSwitch is among visible companies
+  const isSelectedVisible = visibleCompanies.some(c => c.code === selectedCompanyCodeForSwitch);
+  if (!isSelectedVisible) {
+    const isSessionVisible = SessionState.company && visibleCompanies.some(c => c.code === SessionState.company.code);
+    selectedCompanyCodeForSwitch = isSessionVisible ? SessionState.company.code : (visibleCompanies[0]?.code || '');
+  }
+
+  // Ensure all visible companies have at least one fiscal year record
+  let fyAdded = false;
+  visibleCompanies.forEach(c => {
+    if (!AppState.fiscalYears.some(fy => fy.company === c.code)) {
+      const year = c.activeYear || '1403';
+      AppState.fiscalYears.push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        year: year,
+        startDate: `${year}/01/01`,
+        endDate: `${year}/12/29`,
+        company: c.code,
+        notes: `سال مالی اولیه شرکت ${c.name}`,
+        status: 'فعال'
+      });
+      fyAdded = true;
+    }
+  });
+  if (fyAdded) {
+    try {
+      localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+    } catch(e) {}
   }
 
   // Render Right Side DataGrid: Companies (only visible ones)
@@ -10181,6 +10272,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const parsed = JSON.parse(savedUsers);
       if (Array.isArray(parsed) && parsed.length > 0) {
         AppState.users = parsed;
+      }
+    }
+  } catch(e) {}
+
+  // Load fiscal years list from localStorage if updated previously
+  try {
+    const savedFY = localStorage.getItem('negar_fiscal_years');
+    if (savedFY) {
+      const parsed = JSON.parse(savedFY);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        AppState.fiscalYears = parsed;
       }
     }
   } catch(e) {}
