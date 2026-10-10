@@ -8769,6 +8769,11 @@ function saveCompany() {
 
   closeCompanyForm();
   renderCompaniesTable();
+  // Refresh switch-company datagrid immediately if it's open
+  if (typeof renderSwitchCompanyForm === 'function') {
+    selectedCompanyCodeForSwitch = null;
+    renderSwitchCompanyForm();
+  }
 }
 
 function deleteCompany(companyId) {
@@ -9097,8 +9102,12 @@ function saveCompany() {
 
   closeCompanyForm();
   renderCompaniesTable();
+  // Refresh switch-company datagrid immediately if it's open
+  if (typeof renderSwitchCompanyForm === 'function') {
+    selectedCompanyCodeForSwitch = null;
+    renderSwitchCompanyForm();
+  }
 }
-
 function deleteCompany(companyId) {
   const company = AppState.companies.find(c => c.id === companyId);
   if (!company) return;
@@ -9804,6 +9813,10 @@ function saveFiscalYear() {
 
   closeFiscalYearForm();
   renderFiscalYearsTable();
+  // Refresh switch-company fiscal year datagrid immediately if it's open
+  if (typeof renderSwitchCompanyForm === 'function') {
+    renderSwitchCompanyForm();
+  }
 }
 
 function deleteFiscalYear(fyId) {
