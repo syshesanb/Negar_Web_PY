@@ -351,6 +351,12 @@ function togglePasswordVisibility() {
 
 function logout() {
   currentUser = null;
+  try {
+    localStorage.removeItem('negar_logged_in');
+    localStorage.removeItem('negar_active_company');
+    localStorage.removeItem('negar_active_year');
+  } catch(e) {}
+  if (typeof closeModuleFlyoutPanel === 'function') closeModuleFlyoutPanel();
   // Clear fields
   const u = document.getElementById('loginUsername');
   const p = document.getElementById('loginPassword');
@@ -376,6 +382,10 @@ function logout() {
   if (overlay)  { overlay.style.display = 'flex'; overlay.classList.remove('login-fade-out'); }
   // Focus username field
   setTimeout(() => { if (u) u.focus(); }, 100);
+}
+
+function switchUser() {
+  logout();
 }
 
 let dbAccounts = [];
@@ -944,6 +954,10 @@ function openPageTab(url, formKey) {
 
 function executeCardInNewTab(onclickAttr) {
   closeModuleFlyoutPanel();
+  if (onclickAttr.includes('logout') || onclickAttr.includes('switchUser')) {
+    logout();
+    return;
+  }
   if (onclickAttr.includes('openHesabdariMain')) {
     const match = onclickAttr.match(/openHesabdariMain\(['"]([^'"]+)['"]\)/);
     const mode = match ? match[1] : 'coding';
@@ -954,7 +968,11 @@ function executeCardInNewTab(onclickAttr) {
       openPageTab(`index.html?form=${match[1]}`, match[1]);
     }
   } else {
-    showTiles('system');
+    try {
+      new Function(onclickAttr)();
+    } catch(e) {
+      showTiles('system');
+    }
   }
 }
 
