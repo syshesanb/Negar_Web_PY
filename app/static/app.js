@@ -9888,6 +9888,21 @@ function renderSwitchYearGrid() {
   const yearGridBody = document.getElementById('switchYearGridBody');
   if (!yearGridBody) return;
 
+  // Helper: update انتخاب button state
+  function updateApplyBtnState(hasYears) {
+    const btn = document.getElementById('btnApplyCompanySwitch');
+    if (!btn) return;
+    if (hasYears) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    } else {
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+      btn.style.cursor = 'not-allowed';
+    }
+  }
+
   // If no company is selected (e.g. user has no companies), show empty message
   const visibleCompanies = getVisibleCompanies();
   if (visibleCompanies.length === 0 || !selectedCompanyCodeForSwitch) {
@@ -9899,6 +9914,7 @@ function renderSwitchYearGrid() {
       </tr>
     `;
     selectedYearForSwitch = null;
+    updateApplyBtnState(false);
     return;
   }
 
@@ -9915,6 +9931,7 @@ function renderSwitchYearGrid() {
       </tr>
     `;
     selectedYearForSwitch = null;
+    updateApplyBtnState(false);
     return;
   }
 
@@ -9936,6 +9953,8 @@ function renderSwitchYearGrid() {
       </tr>
     `;
   }).join('');
+
+  updateApplyBtnState(true);
 }
 
 function selectYearForSwitch(year) {
