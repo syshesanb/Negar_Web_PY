@@ -263,6 +263,7 @@ function doLogin() {
         currentUser = found;
         try {
           localStorage.setItem('negar_logged_in', 'true');
+          localStorage.setItem('negar_current_user', JSON.stringify(currentUser));
         } catch(e) {}
         if (errorEl) errorEl.style.display = 'none';
 
@@ -354,6 +355,7 @@ function logout() {
   currentUser = null;
   try {
     localStorage.removeItem('negar_logged_in');
+    localStorage.removeItem('negar_current_user');
     localStorage.removeItem('negar_active_company');
     localStorage.removeItem('negar_active_year');
   } catch(e) {}
@@ -9754,8 +9756,26 @@ function renderFiscalYearsTable() {
   const tbody = document.getElementById('fiscalYearsTableBody');
   if (!tbody) return;
 
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
+  let visibleYears = AppState.fiscalYears;
+  if (!isSuperAdmin) {
+    const visibleCompanies = getVisibleCompanies();
+    const visibleCodes = new Set(visibleCompanies.map(c => c.code));
+    visibleYears = AppState.fiscalYears.filter(fy => visibleCodes.has(fy.company));
+  }
+
   // Sort by year descending (newest first)
-  const sorted = [...AppState.fiscalYears].sort((a, b) => Number(b.year) - Number(a.year));
+  const sorted = [...visibleYears].sort((a, b) => Number(b.year) - Number(a.year));
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = `
+      <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
+        هیچ سال مالی برای شرکت‌های شما تعریف نشده است. ابتدا سال مالی جدید تعریف نمایید.
+      </td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = sorted.map(fy => {
     const companyName = AppState.companies.find(c => c.code === fy.company)?.name || fy.company;
@@ -10181,11 +10201,17 @@ function updateHeaderBar() {
   const company = SessionState.company;
   const year    = SessionState.year;
 
+  // Header user info
+  const headerUser = document.getElementById('headerUsername');
+  if (headerUser && currentUser) {
+    headerUser.textContent = currentUser.fullName + (currentUser.jobTitle ? ` (${currentUser.jobTitle})` : '') + ' [' + currentUser.username + ']';
+  }
+
   // Header title bar
   const headerComp = document.getElementById('headerCompany');
   const headerYear = document.getElementById('headerYear');
-  if (headerComp && company) headerComp.textContent = company.name;
-  if (headerYear && year)    headerYear.textContent  = 'سال مالی: ' + year;
+  if (headerComp) headerComp.textContent = company ? company.name : '---';
+  if (headerYear) headerYear.textContent  = year ? ('سال مالی: ' + year) : '---';
 
   const subComp = document.getElementById('hesabdariCompany');
   const subYear = document.getElementById('hesabdariYear');
@@ -10320,22 +10346,33 @@ document.addEventListener('DOMContentLoaded', () => {
       desktopHeader.style.display = 'block';
     }
 
-    // 4. Set current user to admin (session bypass)
-    currentUser = CREDENTIALS[0]; // admin
+    // 4. Set current user from localStorage session or fallback
+    let sessionUser = null;
+    try {
+      const savedUserStr = localStorage.getItem('negar_current_user');
+      if (savedUserStr) {
+        sessionUser = JSON.parse(savedUserStr);
+      }
+    } catch(e) {}
+    currentUser = sessionUser || CREDENTIALS[0];
+
     const headerUser = document.getElementById('headerUsername');
     if (headerUser) headerUser.textContent = currentUser.fullName + (currentUser.jobTitle ? ` (${currentUser.jobTitle})` : '') + ' [' + currentUser.username + ']';
 
-    if (savedCompCode && AppState.companies.some(c => c.code === savedCompCode)) {
-      const comp = AppState.companies.find(c => c.code === savedCompCode);
+    const visibleComps = getVisibleCompanies();
+    if (savedCompCode && visibleComps.some(c => c.code === savedCompCode)) {
+      const comp = visibleComps.find(c => c.code === savedCompCode);
       switchActiveCompany(comp);
       SessionState.year = savedYear || comp.activeYear || '1403';
-    } else if (AppState.companies.length > 0) {
-      switchActiveCompany(AppState.companies[0]);
+    } else if (visibleComps.length > 0) {
+      switchActiveCompany(visibleComps[0]);
       const activeYears = AppState.fiscalYears
-        .filter(fy => fy.company === SessionState.company.code)
+        .filter(fy => fy.company === visibleComps[0].code)
         .sort((a, b) => Number(b.year) - Number(a.year));
       const activeOne = activeYears.find(fy => fy.status === 'فعال') || activeYears[0];
       if (activeOne) SessionState.year = activeOne.year;
+    } else {
+      SessionState.company = null;
     }
     updateHeaderBar();
 
