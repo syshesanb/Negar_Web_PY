@@ -9830,22 +9830,32 @@ function renderSwitchCompanyForm() {
   const companyGridBody = document.getElementById('switchCompanyGridBody');
   if (!companyGridBody) return;
 
+  // Get only companies visible to the current user
+  const visibleCompanies = getVisibleCompanies();
+
   // Default to currently active company or first available company
   if (!selectedCompanyCodeForSwitch) {
-    selectedCompanyCodeForSwitch = SessionState.company ? SessionState.company.code : (AppState.companies[0]?.code || '');
+    selectedCompanyCodeForSwitch = SessionState.company ? SessionState.company.code : (visibleCompanies[0]?.code || '');
   }
 
-  // Render Right Side DataGrid: Companies
-  companyGridBody.innerHTML = AppState.companies.map(c => {
-    const isSelected = c.code === selectedCompanyCodeForSwitch;
-    const activeStyle = isSelected ? 'background:rgba(2, 132, 199, 0.3); font-weight:bold; border-right:4px solid var(--accent-color);' : '';
-    return `
-      <tr style="cursor:pointer; ${activeStyle}" onclick="selectCompanyForSwitch('${c.code}')">
-        <td style="text-align:center;">${c.code}</td>
-        <td>${c.name}</td>
-      </tr>
-    `;
-  }).join('');
+  // Render Right Side DataGrid: Companies (only visible ones)
+  if (visibleCompanies.length === 0) {
+    companyGridBody.innerHTML = `
+      <tr><td colspan="2" style="text-align:center; color:var(--text-muted); padding:20px;">
+        -- هنوز هیچ شرکتی تعریف نشده است. لطفاً ابتدا شرکت جدید ثبت نمایید. --
+      </td></tr>`;
+  } else {
+    companyGridBody.innerHTML = visibleCompanies.map(c => {
+      const isSelected = c.code === selectedCompanyCodeForSwitch;
+      const activeStyle = isSelected ? 'background:rgba(2, 132, 199, 0.3); font-weight:bold; border-right:4px solid var(--accent-color);' : '';
+      return `
+        <tr style="cursor:pointer; ${activeStyle}" onclick="selectCompanyForSwitch('${c.code}')">
+          <td style="text-align:center;">${c.code}</td>
+          <td>${c.name}</td>
+        </tr>
+      `;
+    }).join('');
+  }
 
   // Render Left Side DataGrid: Fiscal Years for selected company
   renderSwitchYearGrid();
