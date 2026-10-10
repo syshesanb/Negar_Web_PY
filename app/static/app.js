@@ -9085,10 +9085,12 @@ function saveCompany() {
       document.getElementById('compCode').focus();
       return;
     }
-    // CREATE new company
+    // CREATE new company — stamp with ownerUserId so visibility filtering works
     const newId = Date.now();
+    const ownerUserId = currentUser ? currentUser.id : 1;
     AppState.companies.push({
       id: newId,
+      ownerUserId,
       ...newCompanyData
     });
     // بارگذاری کدینگ پیش‌فرض برای شرکت جدید
