@@ -224,9 +224,39 @@ function doLogin() {
   // Simulate a short delay (like a real server call)
   setTimeout(() => {
     try {
-      const found = CREDENTIALS.find(
-        c => c.username.toLowerCase() === username.toLowerCase() && c.password === password
+      const userFromAppState = (AppState.users || []).find(
+        u => u.username && u.username.toLowerCase() === username.toLowerCase() && u.password === password
       );
+
+      let found = null;
+      if (userFromAppState) {
+        if (userFromAppState.isActive === false) {
+          showLoginError('حساب کاربری شما غیرفعال شده است. لطفاً با مدیر سیستم تماس بگیرید.');
+          if (btnText)    btnText.style.display = 'inline';
+          if (btnSpinner) btnSpinner.style.display = 'none';
+          if (loginBtn)   loginBtn.disabled = false;
+          return;
+        }
+        found = {
+          id: userFromAppState.id,
+          username: userFromAppState.username,
+          password: userFromAppState.password,
+          fullName: userFromAppState.fullName,
+          jobTitle: userFromAppState.jobTitle,
+          role: userFromAppState.userType || 'User',
+          userType: userFromAppState.userType || 'User',
+          parentUserId: userFromAppState.parentUserId,
+          maxCompanies: userFromAppState.maxCompanies,
+          maxUsers: userFromAppState.maxUsers,
+          deploymentType: userFromAppState.deploymentType,
+          allowedModules: userFromAppState.allowedModules,
+          ip: userFromAppState.ip
+        };
+      } else {
+        found = CREDENTIALS.find(
+          c => c.username.toLowerCase() === username.toLowerCase() && c.password === password
+        );
+      }
 
       if (found) {
         // ✅ Success
@@ -435,59 +465,75 @@ const AppState = {
     { id: 3, year: '1401', startDate: '1401/01/01', endDate: '1401/12/29', company: '1001', notes: 'سال مالی ۱۴۰۱', status: 'بسته' },
     { id: 4, year: '1400', startDate: '1400/01/01', endDate: '1400/12/29', company: '1001', notes: 'سال مالی اولیه تاسیس', status: 'بسته' }
   ],
-  users: [
-    {
-      id: 1,
-      username: 'admin',
-      fullName: 'ابر مدیر سیستم',
-      jobTitle: 'مدیر ارشد فناوری و زیرساخت',
-      userType: 'SuperAdmin',
-      isActive: true,
-      ip: '*',
-      maxCompanies: 99,
-      maxUsers: 99,
-      deploymentType: 'Cloud',
-      allowedModules: ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan', 'assets', 'automation', 'crm'],
-      permissionsTree: []
-    },
-    {
-      id: 2,
-      username: 'manager_tehran',
-      fullName: 'مهندس حسینی (مدیر شعبه تهران)',
-      jobTitle: 'مدیر میانی و سرپرست مالی',
-      userType: 'Manager',
-      isActive: true,
-      ip: '*',
-      maxCompanies: 2,
-      maxUsers: 5,
-      deploymentType: 'Cloud',
-      allowedModules: ['accounting', 'inventory', 'sales', 'payroll'],
-      permissionsTree: [],
-      parentUserId: 1
-    },
-    {
-      id: 3,
-      username: 'accountant1',
-      fullName: 'علی رضایی',
-      jobTitle: 'سرپرست امور مالی و حسابداری',
-      userType: 'User',
-      isActive: true,
-      ip: '*',
-      parentUserId: 2,
-      permissionsTree: []
-    },
-    {
-      id: 4,
-      username: 'storekeeper',
-      fullName: 'رضا حسینی',
-      jobTitle: 'سرپرست انبار مرکزی',
-      userType: 'User',
-      isActive: true,
-      ip: '*',
-      parentUserId: 2,
-      permissionsTree: []
-    }
-  ],
+  users: (() => {
+    const defaultUsers = [
+      {
+        id: 1,
+        username: 'admin',
+        password: 'admin123',
+        fullName: 'ابر مدیر سیستم',
+        jobTitle: 'مدیر ارشد فناوری و زیرساخت',
+        userType: 'SuperAdmin',
+        isActive: true,
+        ip: '*',
+        maxCompanies: 99,
+        maxUsers: 99,
+        deploymentType: 'Cloud',
+        allowedModules: ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan', 'assets', 'automation', 'crm'],
+        permissionsTree: []
+      },
+      {
+        id: 2,
+        username: 'manager_tehran',
+        password: 'manager123',
+        fullName: 'مهندس حسینی (مدیر شعبه تهران)',
+        jobTitle: 'مدیر میانی و سرپرست مالی',
+        userType: 'Manager',
+        isActive: true,
+        ip: '*',
+        maxCompanies: 2,
+        maxUsers: 5,
+        deploymentType: 'Cloud',
+        allowedModules: ['accounting', 'inventory', 'sales', 'payroll'],
+        permissionsTree: [],
+        parentUserId: 1
+      },
+      {
+        id: 3,
+        username: 'accountant1',
+        password: 'acc2024',
+        fullName: 'علی رضایی',
+        jobTitle: 'سرپرست امور مالی و حسابداری',
+        userType: 'User',
+        isActive: true,
+        ip: '*',
+        parentUserId: 2,
+        permissionsTree: []
+      },
+      {
+        id: 4,
+        username: 'storekeeper',
+        password: 'store2024',
+        fullName: 'رضا حسینی',
+        jobTitle: 'سرپرست انبار مرکزی',
+        userType: 'User',
+        isActive: true,
+        ip: '*',
+        parentUserId: 2,
+        permissionsTree: []
+      }
+    ];
+    try {
+      const saved = localStorage.getItem('negar_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch(e) {}
+    return defaultUsers;
+  })(),
   accounts: [
     { id: 1, code: '11', name: 'دارائیهای جاری', type: 'گروه', nature: 'بدهکار', parentId: null },
     { id: 2, code: '12', name: 'دارائیهای غیرجاری', type: 'گروه', nature: 'بدهکار', parentId: null },
@@ -2094,6 +2140,10 @@ function saveNewUser() {
     alert(`کاربر جدید "${username}" با نقش "${userType}" با موفقیت ایجاد گردید.`);
   }
 
+  try {
+    localStorage.setItem('negar_users', JSON.stringify(AppState.users));
+  } catch (e) {}
+
   closeUserModal();
   renderUsersTable();
   if (document.getElementById('form-permissions-matrix')?.style.display !== 'none') {
@@ -2105,6 +2155,9 @@ function toggleUserStatus(userId) {
   const user = AppState.users.find(u => u.id === userId);
   if (user) {
     user.isActive = !user.isActive;
+    try {
+      localStorage.setItem('negar_users', JSON.stringify(AppState.users));
+    } catch (e) {}
     renderUsersTable();
   }
 }
@@ -2118,6 +2171,9 @@ function deleteUser(userId) {
   const name = user ? user.fullName : 'این کاربر';
   if (confirm(`آیا از حذف کاربر «${name}» اطمینان دارید؟`)) {
     AppState.users = AppState.users.filter(u => u.id !== userId);
+    try {
+      localStorage.setItem('negar_users', JSON.stringify(AppState.users));
+    } catch (e) {}
     renderUsersTable();
   }
 }
@@ -2340,6 +2396,9 @@ function saveUserPermissionsTree() {
   });
 
   user.permissionsTree = checkedKeys;
+  try {
+    localStorage.setItem('negar_users', JSON.stringify(AppState.users));
+  } catch (e) {}
   alert(`✅ درختواره سطوح دسترسی برای کاربر «${user.fullName}» (${checkedKeys.length} آیتم دسترسی فعال) با موفقیت ذخیره گردید.`);
 }
 
@@ -10018,6 +10077,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const parsed = JSON.parse(savedCompanies);
       if (Array.isArray(parsed) && parsed.length > 0) {
         AppState.companies = parsed;
+      }
+    }
+  } catch(e) {}
+
+  // Load users list from localStorage if updated previously
+  try {
+    const savedUsers = localStorage.getItem('negar_users');
+    if (savedUsers) {
+      const parsed = JSON.parse(savedUsers);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        AppState.users = parsed;
       }
     }
   } catch(e) {}
