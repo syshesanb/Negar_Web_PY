@@ -9871,6 +9871,20 @@ function renderSwitchYearGrid() {
   const yearGridBody = document.getElementById('switchYearGridBody');
   if (!yearGridBody) return;
 
+  // If no company is selected (e.g. user has no companies), show empty message
+  const visibleCompanies = getVisibleCompanies();
+  if (visibleCompanies.length === 0 || !selectedCompanyCodeForSwitch) {
+    yearGridBody.innerHTML = `
+      <tr>
+        <td colspan="2" style="text-align:center; color:var(--text-muted); padding:16px;">
+          -- ابتدا شرکت را تعریف و انتخاب نمایید --
+        </td>
+      </tr>
+    `;
+    selectedYearForSwitch = null;
+    return;
+  }
+
   const years = AppState.fiscalYears
     .filter(fy => fy.company === selectedCompanyCodeForSwitch)
     .sort((a, b) => Number(b.year) - Number(a.year));
