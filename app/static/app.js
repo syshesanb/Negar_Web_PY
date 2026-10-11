@@ -8862,21 +8862,58 @@ function deleteCompany(companyId) {
   const company = AppState.companies.find(c => c.id === companyId);
   if (!company) return;
 
-  // Manager can only delete their own companies
   const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
-  if (role === 'Manager' && company.ownerUserId !== currentUser.id) {
-    alert('شما مجاز به حذف شرکت‌های سایر مدیران نمی‌باشید.');
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
+  // Manager can only delete their own companies
+  if (!isSuperAdmin && company.ownerUserId && currentUser && String(company.ownerUserId) !== String(currentUser.id)) {
+    alert('شما مجاز به حذف شرکت‌های سایر کاربران نمی‌باشید.');
     return;
   }
 
   const visible = getVisibleCompanies();
-  if (visible.length === 1 && role !== 'SuperAdmin') {
-    alert('حداقل یک شرکت باید در سیستم تعریف شده باشد. امکان حذف آخرین شرکت وجود ندارد.');
+  if (visible.length === 1 && !isSuperAdmin) {
+    alert('حداقل یک شرکت باید در سیستم برای شما فعال باشد. امکان حذف آخرین شرکت وجود ندارد.');
     return;
   }
+
   if (confirm(`آیا از حذف شرکت "${company.name}" (کد: ${company.code}) اطمینان دارید؟`)) {
+    const deletedCode = company.code;
     AppState.companies = AppState.companies.filter(c => c.id !== companyId);
+    try {
+      localStorage.setItem('negar_companies', JSON.stringify(AppState.companies));
+    } catch(e) {}
+
+    // Clean up fiscal years for the deleted company
+    AppState.fiscalYears = AppState.fiscalYears.filter(fy => fy.company !== deletedCode);
+    try {
+      localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+    } catch(e) {}
+
+    // If active session company was the deleted one, switch to another visible company
+    if (SessionState.company && SessionState.company.code === deletedCode) {
+      const remaining = getVisibleCompanies();
+      if (remaining.length > 0) {
+        switchActiveCompany(remaining[0]);
+        SessionState.year = remaining[0].activeYear || '1403';
+        try {
+          localStorage.setItem('negar_active_company', remaining[0].code);
+          localStorage.setItem('negar_active_year', SessionState.year);
+        } catch(e) {}
+      } else {
+        SessionState.company = null;
+        try {
+          localStorage.removeItem('negar_active_company');
+          localStorage.removeItem('negar_active_year');
+        } catch(e) {}
+      }
+      updateHeaderBar();
+    }
+
     renderCompaniesTable();
+    if (typeof renderSwitchCompanyForm === 'function') {
+      renderSwitchCompanyForm();
+    }
     alert(`شرکت "${company.name}" با موفقیت حذف شد.`);
   }
 }
@@ -9242,13 +9279,59 @@ function saveCompany() {
 function deleteCompany(companyId) {
   const company = AppState.companies.find(c => c.id === companyId);
   if (!company) return;
-  if (AppState.companies.length === 1) {
-    alert('حداقل یک شرکت باید در سیستم تعریف شده باشد. امکان حذف آخرین شرکت وجود ندارد.');
+
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
+  // Manager can only delete their own companies
+  if (!isSuperAdmin && company.ownerUserId && currentUser && String(company.ownerUserId) !== String(currentUser.id)) {
+    alert('شما مجاز به حذف شرکت‌های سایر کاربران نمی‌باشید.');
     return;
   }
+
+  const visible = getVisibleCompanies();
+  if (visible.length === 1 && !isSuperAdmin) {
+    alert('حداقل یک شرکت باید در سیستم برای شما فعال باشد. امکان حذف آخرین شرکت وجود ندارد.');
+    return;
+  }
+
   if (confirm(`آیا از حذف شرکت "${company.name}" (کد: ${company.code}) اطمینان دارید؟`)) {
+    const deletedCode = company.code;
     AppState.companies = AppState.companies.filter(c => c.id !== companyId);
+    try {
+      localStorage.setItem('negar_companies', JSON.stringify(AppState.companies));
+    } catch(e) {}
+
+    // Clean up fiscal years for the deleted company
+    AppState.fiscalYears = AppState.fiscalYears.filter(fy => fy.company !== deletedCode);
+    try {
+      localStorage.setItem('negar_fiscal_years', JSON.stringify(AppState.fiscalYears));
+    } catch(e) {}
+
+    // If active session company was the deleted one, switch to another visible company
+    if (SessionState.company && SessionState.company.code === deletedCode) {
+      const remaining = getVisibleCompanies();
+      if (remaining.length > 0) {
+        switchActiveCompany(remaining[0]);
+        SessionState.year = remaining[0].activeYear || '1403';
+        try {
+          localStorage.setItem('negar_active_company', remaining[0].code);
+          localStorage.setItem('negar_active_year', SessionState.year);
+        } catch(e) {}
+      } else {
+        SessionState.company = null;
+        try {
+          localStorage.removeItem('negar_active_company');
+          localStorage.removeItem('negar_active_year');
+        } catch(e) {}
+      }
+      updateHeaderBar();
+    }
+
     renderCompaniesTable();
+    if (typeof renderSwitchCompanyForm === 'function') {
+      renderSwitchCompanyForm();
+    }
     alert(`شرکت "${company.name}" با موفقیت حذف شد.`);
   }
 }
