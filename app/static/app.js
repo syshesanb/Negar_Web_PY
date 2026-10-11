@@ -9762,17 +9762,26 @@ function renderFiscalYearsTable() {
   let visibleYears = AppState.fiscalYears;
   if (!isSuperAdmin) {
     const visibleCompanies = getVisibleCompanies();
-    const visibleCodes = new Set(visibleCompanies.map(c => c.code));
-    visibleYears = AppState.fiscalYears.filter(fy => visibleCodes.has(fy.company));
+    const activeCompanyCode = SessionState.company ? SessionState.company.code : null;
+
+    if (activeCompanyCode && visibleCompanies.some(c => c.code === activeCompanyCode)) {
+      // Filter strictly by the current active company of the manager
+      visibleYears = AppState.fiscalYears.filter(fy => fy.company === activeCompanyCode);
+    } else {
+      // Fallback if no specific company is active: filter by all companies accessible to the manager
+      const visibleCodes = new Set(visibleCompanies.map(c => c.code));
+      visibleYears = AppState.fiscalYears.filter(fy => visibleCodes.has(fy.company));
+    }
   }
 
   // Sort by year descending (newest first)
   const sorted = [...visibleYears].sort((a, b) => Number(b.year) - Number(a.year));
 
   if (sorted.length === 0) {
+    const compName = (!isSuperAdmin && SessionState.company) ? ` برای شرکت "${SessionState.company.name}"` : '';
     tbody.innerHTML = `
       <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
-        هیچ سال مالی برای شرکت‌های شما تعریف نشده است. ابتدا سال مالی جدید تعریف نمایید.
+        هیچ سال مالی${compName} تعریف نشده است. ابتدا سال مالی جدید تعریف نمایید.
       </td></tr>`;
     return;
   }
@@ -9824,9 +9833,10 @@ function openFiscalYearForm(fiscalYearId) {
     document.getElementById('fyEndDate').value = '';
     document.getElementById('fyNotes').value = '';
     if (document.getElementById('fyStatus')) document.getElementById('fyStatus').value = 'فعال';
-    // Pre-select the company currently selected in switch form (if any), otherwise first visible company
+    // Pre-select the company currently selected in switch form or current active company
     if (select) {
-      const preSelectCode = selectedCompanyCodeForSwitch || (getVisibleCompanies()[0]?.code || '');
+      const activeCode = SessionState.company ? SessionState.company.code : null;
+      const preSelectCode = selectedCompanyCodeForSwitch || activeCode || (getVisibleCompanies()[0]?.code || '');
       if (preSelectCode) select.value = preSelectCode;
     }
   } else {
