@@ -8461,6 +8461,23 @@ function lockApp() {
  * - Manager     → sees only companies where ownerUserId === currentUser.id
  * - User        → sees only companies owned by their parent Manager
  */
+function getCurrentUserMaxCompanies() {
+  if (!currentUser) return 999;
+  const role = currentUser.role || currentUser.userType;
+  if (role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin')) {
+    return 999;
+  }
+  // Lookup fresh from AppState.users by id or username
+  const userInState = (AppState.users || []).find(u => 
+    (currentUser.id && String(u.id) === String(currentUser.id)) || 
+    (u.username && currentUser.username && u.username.toLowerCase() === currentUser.username.toLowerCase())
+  );
+  if (userInState && userInState.maxCompanies !== undefined) {
+    return Number(userInState.maxCompanies) || 1;
+  }
+  return Number(currentUser.maxCompanies) || 1;
+}
+
 function getVisibleCompanies() {
   if (!currentUser) return AppState.companies;
 
@@ -8527,7 +8544,7 @@ function renderCompaniesTable() {
   const isManager = role === 'Manager';
   let quotaHtml = '';
   if (isManager) {
-    const max = currentUser.maxCompanies || 1;
+    const max = getCurrentUserMaxCompanies();
     const used = visible.length;
     const pct = Math.min(100, Math.round((used / max) * 100));
     const barColor = used >= max ? '#ef4444' : (used >= max * 0.8 ? '#f59e0b' : '#22c55e');
@@ -8545,6 +8562,22 @@ function renderCompaniesTable() {
         </td>
       </tr>
     `;
+
+    // Disable button if capacity reached
+    const addCompBtn = document.getElementById('btnAddNewCompany');
+    if (addCompBtn) {
+      if (used >= max) {
+        addCompBtn.disabled = true;
+        addCompBtn.style.opacity = '0.5';
+        addCompBtn.style.cursor = 'not-allowed';
+        addCompBtn.title = `سقف مجاز ایجاد شرکت برای شما (${max} شرکت) پر شده است`;
+      } else {
+        addCompBtn.disabled = false;
+        addCompBtn.style.opacity = '1';
+        addCompBtn.style.cursor = 'pointer';
+        addCompBtn.title = '';
+      }
+    }
   }
 
   if (visible.length === 0) {
@@ -8584,9 +8617,10 @@ function openCompanyForm(companyId) {
   // Manager quota check before adding a new company
   if (companyId === null) {
     const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
-    if (role === 'Manager') {
-      const owned = AppState.companies.filter(c => c.ownerUserId === currentUser.id).length;
-      const max = currentUser.maxCompanies || 1;
+    const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+    if (!isSuperAdmin) {
+      const max = getCurrentUserMaxCompanies();
+      const owned = getVisibleCompanies().length;
       if (owned >= max) {
         alert(`⚠️ سقف ایجاد شرکت برای شما (${max} شرکت) به پایان رسیده است.\nجهت افزایش سقف با ابر مدیر سیستم تماس بگیرید.`);
         return;
@@ -8780,6 +8814,18 @@ function saveCompany() {
       alert(`شرکت "${name}" با موفقیت بروزرسانی شد.`);
     }
   } else {
+    // Check manager company quota
+    const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+    const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+    if (!isSuperAdmin) {
+      const max = getCurrentUserMaxCompanies();
+      const owned = getVisibleCompanies().length;
+      if (owned >= max) {
+        alert(`⚠️ سقف ایجاد شرکت برای شما (${max} شرکت) به پایان رسیده است.\nامکان ثبت شرکت جدید وجود ندارد.`);
+        return;
+      }
+    }
+
     // CHECK duplicate code
     if (AppState.companies.find(c => c.code === code)) {
       alert(`کد شرکت "${code}" قبلاً ثبت شده است. لطفاً کد منحصربفرد وارد کنید.`);
@@ -8932,6 +8978,20 @@ function openCompanyForm(companyId) {
   const modal = document.getElementById('companyModalOverlay');
   const title = document.getElementById('companyFormTitle');
   if (!modal) return;
+
+  // Manager quota check before adding a new company
+  if (companyId === null) {
+    const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+    const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+    if (!isSuperAdmin) {
+      const max = getCurrentUserMaxCompanies();
+      const owned = getVisibleCompanies().length;
+      if (owned >= max) {
+        alert(`⚠️ سقف ایجاد شرکت برای شما (${max} شرکت) به پایان رسیده است.\nجهت افزایش سقف با ابر مدیر سیستم (SuperAdmin) تماس بگیرید.`);
+        return;
+      }
+    }
+  }
 
   modal.style.display = 'flex';
 
@@ -9115,6 +9175,18 @@ function saveCompany() {
       alert(`شرکت "${name}" با موفقیت بروزرسانی شد.`);
     }
   } else {
+    // Check manager company quota
+    const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+    const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+    if (!isSuperAdmin) {
+      const max = getCurrentUserMaxCompanies();
+      const owned = getVisibleCompanies().length;
+      if (owned >= max) {
+        alert(`⚠️ سقف ایجاد شرکت برای شما (${max} شرکت) به پایان رسیده است.\nامکان ثبت شرکت جدید وجود ندارد.`);
+        return;
+      }
+    }
+
     // CHECK duplicate code
     if (AppState.companies.find(c => c.code === code)) {
       alert(`کد شرکت "${code}" قبلاً ثبت شده است. لطفاً کد منحصربفرد وارد کنید.`);
@@ -10007,6 +10079,25 @@ function renderSwitchCompanyForm() {
       btnNewFY.disabled = true;
       btnNewFY.style.opacity = '0.45';
       btnNewFY.style.cursor = 'not-allowed';
+    }
+  }
+
+  // Enable/disable "شرکت جدید" button based on manager quota
+  const switchNewCompBtn = document.getElementById('btnSwitchNewCompany');
+  if (switchNewCompBtn) {
+    const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+    const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+    const max = getCurrentUserMaxCompanies();
+    if (!isSuperAdmin && visibleCompanies.length >= max) {
+      switchNewCompBtn.disabled = true;
+      switchNewCompBtn.style.opacity = '0.45';
+      switchNewCompBtn.style.cursor = 'not-allowed';
+      switchNewCompBtn.title = `سقف مجاز ایجاد شرکت برای شما (${max} شرکت) پر شده است`;
+    } else {
+      switchNewCompBtn.disabled = false;
+      switchNewCompBtn.style.opacity = '1';
+      switchNewCompBtn.style.cursor = 'pointer';
+      switchNewCompBtn.title = '';
     }
   }
 
