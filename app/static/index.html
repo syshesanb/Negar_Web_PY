@@ -826,7 +826,13 @@
                     <input type="number" id="newMgrMaxCompanies" class="form-input" min="1" max="99" value="1" style="height:38px; font-weight:bold;" title="حداکثر تعداد شرکتی که این مدیر میانی می‌تواند تعریف کند" />
                   </div>
 
-                  <!-- 3. سقف کاربران یوزر مجاز (استفاده همزمان) -->
+                  <!-- 3. سقف سال‌های مالی برای هر شرکت -->
+                  <div class="form-group" style="flex:1;">
+                    <label class="form-label" style="font-size:0.84rem; font-weight:bold; color:var(--text-main);">📅 سقف سال‌های مالی برای هر شرکت:</label>
+                    <input type="number" id="newMgrMaxFiscalYears" class="form-input" min="1" max="99" value="1" style="height:38px; font-weight:bold;" title="حداکثر تعداد سال مالی که این مدیر میانی مجاز است برای هر شرکت تعریف کند" />
+                  </div>
+
+                  <!-- 4. سقف کاربران یوزر مجاز (استفاده همزمان) -->
                   <div class="form-group" style="flex:1;">
                     <label class="form-label" style="font-size:0.84rem; font-weight:bold; color:var(--text-main);">👥 سقف یوزرهای همزمان:</label>
                     <input type="number" id="newMgrMaxUsers" class="form-input" min="1" max="99" value="5" style="height:38px; font-weight:bold;" title="حداکثر تعداد کاربر یوزری که این مدیر میانی می‌تواند برای استفاده همزمان ایجاد کند" />
@@ -1317,7 +1323,7 @@
           <h2 class="form-heading">📅 مدیریت سال‌های مالی (FiscalYearForm)</h2>
           <div class="card form-card">
             <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-              <button class="btn btn-primary" onclick="openFiscalYearForm(null)">+ تعریف سال مالی جدید</button>
+              <button id="btnAddNewFiscalYear" class="btn btn-primary" onclick="openFiscalYearForm(null)">+ تعریف سال مالی جدید</button>
             </div>
             <div class="table-wrapper">
               <table>

@@ -247,6 +247,7 @@ function doLogin() {
           userType: userFromAppState.userType || 'User',
           parentUserId: userFromAppState.parentUserId,
           maxCompanies: userFromAppState.maxCompanies,
+          maxFiscalYears: userFromAppState.maxFiscalYears,
           maxUsers: userFromAppState.maxUsers,
           deploymentType: userFromAppState.deploymentType,
           allowedModules: userFromAppState.allowedModules,
@@ -480,6 +481,7 @@ const AppState = {
         isActive: true,
         ip: '*',
         maxCompanies: 99,
+        maxFiscalYears: 99,
         maxUsers: 99,
         deploymentType: 'Cloud',
         allowedModules: ['accounting', 'inventory', 'sales', 'treasury', 'payroll', 'currencies', 'modyan', 'assets', 'automation', 'crm'],
@@ -495,6 +497,7 @@ const AppState = {
         isActive: true,
         ip: '*',
         maxCompanies: 2,
+        maxFiscalYears: 2,
         maxUsers: 5,
         deploymentType: 'Cloud',
         allowedModules: ['accounting', 'inventory', 'sales', 'payroll'],
@@ -2022,6 +2025,7 @@ function openAddUserModal(userId = null) {
     // Manager special fields
     if (document.getElementById('newMgrDeploymentType')) document.getElementById('newMgrDeploymentType').value = user.deploymentType || 'Cloud';
     if (document.getElementById('newMgrMaxCompanies')) document.getElementById('newMgrMaxCompanies').value = user.maxCompanies || 1;
+    if (document.getElementById('newMgrMaxFiscalYears')) document.getElementById('newMgrMaxFiscalYears').value = user.maxFiscalYears || 1;
     if (document.getElementById('newMgrMaxUsers')) document.getElementById('newMgrMaxUsers').value = user.maxUsers || 5;
     
     // Checkboxes
@@ -2045,6 +2049,7 @@ function openAddUserModal(userId = null) {
 
     if (document.getElementById('newMgrDeploymentType')) document.getElementById('newMgrDeploymentType').value = 'Cloud';
     if (document.getElementById('newMgrMaxCompanies')) document.getElementById('newMgrMaxCompanies').value = 1;
+    if (document.getElementById('newMgrMaxFiscalYears')) document.getElementById('newMgrMaxFiscalYears').value = 1;
     if (document.getElementById('newMgrMaxUsers')) document.getElementById('newMgrMaxUsers').value = 5;
 
     const cbs = document.querySelectorAll('#mgrModulesCheckboxes input[type="checkbox"]');
@@ -2086,6 +2091,7 @@ function saveNewUser() {
 
   const deploymentType = document.getElementById('newMgrDeploymentType')?.value || 'Cloud';
   const maxCompanies = parseInt(document.getElementById('newMgrMaxCompanies')?.value || '1');
+  const maxFiscalYears = parseInt(document.getElementById('newMgrMaxFiscalYears')?.value || '1');
   const maxUsers = parseInt(document.getElementById('newMgrMaxUsers')?.value || '5');
 
   const selectedModules = [];
@@ -2117,6 +2123,7 @@ function saveNewUser() {
       if (userType === 'Manager' && !isManager) {
         user.deploymentType = deploymentType;
         user.maxCompanies = maxCompanies;
+        user.maxFiscalYears = maxFiscalYears;
         user.maxUsers = maxUsers;
         user.allowedModules = selectedModules;
       }
@@ -2142,6 +2149,7 @@ function saveNewUser() {
       parentUserId: currentUserId,
       deploymentType: userType === 'Manager' ? deploymentType : 'Cloud',
       maxCompanies: userType === 'Manager' ? maxCompanies : 1,
+      maxFiscalYears: userType === 'Manager' ? maxFiscalYears : 1,
       maxUsers: userType === 'Manager' ? maxUsers : 0,
       allowedModules: userType === 'Manager' ? selectedModules : [],
       permissionsTree: []
@@ -8468,6 +8476,62 @@ function getCurrentUserMaxCompanies() {
   return Number(currentUser.maxCompanies) || 1;
 }
 
+function getCurrentUserMaxFiscalYears() {
+  if (!currentUser) return 999;
+  const role = currentUser.role || currentUser.userType;
+  if (role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin')) {
+    return 999;
+  }
+  const userInState = (AppState.users || []).find(u => 
+    (currentUser.id && String(u.id) === String(currentUser.id)) || 
+    (u.username && currentUser.username && u.username.toLowerCase() === currentUser.username.toLowerCase())
+  );
+  if (userInState && userInState.maxFiscalYears !== undefined) {
+    return Number(userInState.maxFiscalYears) || 1;
+  }
+  return Number(currentUser.maxFiscalYears) || 1;
+}
+
+function getMaxFiscalYearsForCompany(companyCode) {
+  if (!companyCode) return 999;
+  const comp = (AppState.companies || []).find(c => c.code === companyCode);
+  if (!comp) return 999;
+
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
+  // If default sample company 1001 and SuperAdmin
+  if (comp.code === '1001' && isSuperAdmin) {
+    return 999;
+  }
+
+  // Find owner of the company
+  let owner = null;
+  if (comp.ownerUserId) {
+    owner = (AppState.users || []).find(u => String(u.id) === String(comp.ownerUserId));
+  }
+  if (!owner && comp.ownerUsername) {
+    owner = (AppState.users || []).find(u => u.username && u.username.toLowerCase() === comp.ownerUsername.toLowerCase());
+  }
+
+  if (owner) {
+    const ownerRole = owner.userType || owner.role;
+    if (ownerRole === 'SuperAdmin' || (owner.username && owner.username.toLowerCase() === 'admin')) {
+      return 999;
+    }
+    if (owner.maxFiscalYears !== undefined) {
+      return Number(owner.maxFiscalYears) || 1;
+    }
+  }
+
+  // If active user is Manager
+  if (!isSuperAdmin) {
+    return getCurrentUserMaxFiscalYears();
+  }
+
+  return 999;
+}
+
 function getVisibleCompanies() {
   if (!currentUser) return AppState.companies;
 
@@ -9919,19 +9983,60 @@ function renderFiscalYearsTable() {
     }
   }
 
+  // Quota banner for manager
+  let quotaHtml = '';
+  if (!isSuperAdmin && SessionState.company) {
+    const activeCode = SessionState.company.code;
+    const maxFY = getMaxFiscalYearsForCompany(activeCode);
+    const usedFY = AppState.fiscalYears.filter(fy => fy.company === activeCode).length;
+    const pct = Math.min(100, Math.round((usedFY / maxFY) * 100));
+    const barColor = usedFY >= maxFY ? '#ef4444' : (usedFY >= maxFY * 0.8 ? '#f59e0b' : '#22c55e');
+
+    quotaHtml = `
+      <tr>
+        <td colspan="7" style="padding:8px 12px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color);">
+          <div style="display:flex; align-items:center; gap:10px; font-size:0.82rem;">
+            <span style="font-weight:bold;">📅 سقف سال‌های مالی برای شرکت "${SessionState.company.name}":</span>
+            <div style="flex:1; max-width:200px; background:var(--border-color); border-radius:4px; height:8px; overflow:hidden;">
+              <div style="width:${pct}%; background:${barColor}; height:100%; border-radius:4px; transition:width 0.3s;"></div>
+            </div>
+            <span style="font-weight:bold; color:${barColor};">${usedFY} از ${maxFY} سال مالی استفاده شده</span>
+            ${usedFY >= maxFY ? '<span style="color:#ef4444; font-weight:bold;">⚠️ ظرفیت پر شده</span>' : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+
+    // Disable button if capacity reached
+    const addFyBtn = document.getElementById('btnAddNewFiscalYear');
+    if (addFyBtn) {
+      if (usedFY >= maxFY) {
+        addFyBtn.disabled = true;
+        addFyBtn.style.opacity = '0.5';
+        addFyBtn.style.cursor = 'not-allowed';
+        addFyBtn.title = `سقف مجاز ایجاد سال مالی برای این شرکت (${maxFY} سال مالی) پر شده است`;
+      } else {
+        addFyBtn.disabled = false;
+        addFyBtn.style.opacity = '1';
+        addFyBtn.style.cursor = 'pointer';
+        addFyBtn.title = '';
+      }
+    }
+  }
+
   // Sort by year descending (newest first)
   const sorted = [...visibleYears].sort((a, b) => Number(b.year) - Number(a.year));
 
   if (sorted.length === 0) {
     const compName = (!isSuperAdmin && SessionState.company) ? ` برای شرکت "${SessionState.company.name}"` : '';
-    tbody.innerHTML = `
+    tbody.innerHTML = quotaHtml + `
       <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
         هیچ سال مالی${compName} تعریف نشده است. ابتدا سال مالی جدید تعریف نمایید.
       </td></tr>`;
     return;
   }
 
-  tbody.innerHTML = sorted.map(fy => {
+  tbody.innerHTML = quotaHtml + sorted.map(fy => {
     const companyName = AppState.companies.find(c => c.code === fy.company)?.name || fy.company;
     const statusBadge = fy.status === 'فعال'
       ? '<span class="badge badge-success">فعال ✅</span>'
@@ -9958,13 +10063,40 @@ function openFiscalYearForm(fiscalYearId) {
   const title = document.getElementById('fiscalYearFormTitle');
   if (!modal) return;
 
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
+  // Check quota before opening new fiscal year form
+  if (fiscalYearId === null && !isSuperAdmin) {
+    const visibleComps = getVisibleCompanies();
+    if (visibleComps.length === 0) {
+      alert('⚠️ ابتدا باید حداقل یک شرکت تعریف نمایید.');
+      return;
+    }
+    const canCreateInAny = visibleComps.some(c => {
+      const cnt = AppState.fiscalYears.filter(fy => fy.company === c.code).length;
+      const max = getMaxFiscalYearsForCompany(c.code);
+      return cnt < max;
+    });
+    if (!canCreateInAny) {
+      const activeCode = SessionState.company ? SessionState.company.code : (visibleComps[0]?.code);
+      const maxLimit = getMaxFiscalYearsForCompany(activeCode);
+      alert(`⚠️ سقف ایجاد سال مالی برای شرکت‌های شما (${maxLimit} سال مالی به ازای هر شرکت) به پایان رسیده است.\nجهت افزایش سقف با ابر مدیر سیستم تماس بگیرید.`);
+      return;
+    }
+  }
+
   // Refresh company dropdown - only show companies visible to current user
   const select = document.getElementById('fyCompany');
   if (select) {
     const visibleComps = getVisibleCompanies();
-    select.innerHTML = visibleComps.map(c =>
-      `<option value="${c.code}">${c.name} (${c.code})</option>`
-    ).join('');
+    select.innerHTML = visibleComps.map(c => {
+      const cnt = AppState.fiscalYears.filter(fy => fy.company === c.code).length;
+      const max = getMaxFiscalYearsForCompany(c.code);
+      const isFull = !isSuperAdmin && cnt >= max;
+      const fullLabel = isFull ? ' [تکمیل ظرفیت]' : '';
+      return `<option value="${c.code}" ${isFull && fiscalYearId === null ? 'disabled' : ''}>${c.name} (${c.code})${fullLabel}</option>`;
+    }).join('');
   }
 
   modal.style.display = 'flex';
@@ -9978,11 +10110,23 @@ function openFiscalYearForm(fiscalYearId) {
     document.getElementById('fyEndDate').value = '';
     document.getElementById('fyNotes').value = '';
     if (document.getElementById('fyStatus')) document.getElementById('fyStatus').value = 'فعال';
-    // Pre-select the company currently selected in switch form or current active company
+
+    // Pre-select company that is available and not full
     if (select) {
+      const visibleComps = getVisibleCompanies();
       const activeCode = SessionState.company ? SessionState.company.code : null;
-      const preSelectCode = selectedCompanyCodeForSwitch || activeCode || (getVisibleCompanies()[0]?.code || '');
-      if (preSelectCode) select.value = preSelectCode;
+      const preSelectCode = selectedCompanyCodeForSwitch || activeCode || (visibleComps[0]?.code || '');
+      const preSelectUsed = AppState.fiscalYears.filter(fy => fy.company === preSelectCode).length;
+      const preSelectMax = getMaxFiscalYearsForCompany(preSelectCode);
+
+      if (isSuperAdmin || preSelectUsed < preSelectMax) {
+        select.value = preSelectCode;
+      } else {
+        const available = visibleComps.find(c => {
+          return AppState.fiscalYears.filter(fy => fy.company === c.code).length < getMaxFiscalYearsForCompany(c.code);
+        });
+        if (available) select.value = available.code;
+      }
     }
   } else {
     // EDIT mode
@@ -10021,17 +10165,32 @@ function saveFiscalYear() {
   if (!startDate) { alert('تاریخ شروع الزامی است.'); document.getElementById('fyStartDate').focus(); return; }
   if (!endDate) { alert('تاریخ پایان الزامی است.'); document.getElementById('fyEndDate').focus(); return; }
 
+  const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+  const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+
   if (editingId) {
     // UPDATE
     const idx = AppState.fiscalYears.findIndex(f => f.id === Number(editingId));
     if (idx !== -1) {
       AppState.fiscalYears[idx] = { ...AppState.fiscalYears[idx], year, startDate, endDate, company, notes, status };
-      alert(`سال مالی \${year} با موفقیت بروزرسانی شد.`);
+      alert(`سال مالی ${year} با موفقیت بروزرسانی شد.`);
     }
   } else {
+    // Check quota for the target company
+    if (!isSuperAdmin) {
+      const maxFY = getMaxFiscalYearsForCompany(company);
+      const existingCount = AppState.fiscalYears.filter(f => f.company === company).length;
+      if (existingCount >= maxFY) {
+        const compObj = AppState.companies.find(c => c.code === company);
+        const compName = compObj ? compObj.name : company;
+        alert(`⚠️ سقف ایجاد سال مالی برای شرکت "${compName}" (${maxFY} سال مالی) به پایان رسیده است.\nجهت افزایش سقف با ابر مدیر سیستم تماس بگیرید.`);
+        return;
+      }
+    }
+
     // Check duplicate year for same company
     if (AppState.fiscalYears.find(f => f.year === year && f.company === company)) {
-      alert(`سال مالی "\${year}" قبلاً برای این شرکت تعریف شده است.`);
+      alert(`سال مالی "${year}" قبلاً برای این شرکت تعریف شده است.`);
       document.getElementById('fyYear').focus();
       return;
     }
@@ -10141,17 +10300,32 @@ function renderSwitchCompanyForm() {
     }).join('');
   }
 
-  // Enable/disable "سال مالی جدید" button based on whether user has any companies
+  // Enable/disable "سال مالی جدید" button based on whether user has any companies and quota for selected company
   const btnNewFY = document.getElementById('btnNewFiscalYear');
   if (btnNewFY) {
     if (visibleCompanies.length > 0) {
-      btnNewFY.disabled = false;
-      btnNewFY.style.opacity = '1';
-      btnNewFY.style.cursor = 'pointer';
+      const targetCompCode = selectedCompanyCodeForSwitch || (visibleCompanies[0] && visibleCompanies[0].code);
+      const role = currentUser ? (currentUser.role || currentUser.userType) : 'SuperAdmin';
+      const isSuperAdmin = !currentUser || role === 'SuperAdmin' || (currentUser.username && currentUser.username.toLowerCase() === 'admin');
+      const maxFY = getMaxFiscalYearsForCompany(targetCompCode);
+      const usedFY = AppState.fiscalYears.filter(fy => fy.company === targetCompCode).length;
+
+      if (!isSuperAdmin && usedFY >= maxFY) {
+        btnNewFY.disabled = true;
+        btnNewFY.style.opacity = '0.45';
+        btnNewFY.style.cursor = 'not-allowed';
+        btnNewFY.title = `سقف مجاز ایجاد سال مالی برای این شرکت (${maxFY} سال مالی) پر شده است`;
+      } else {
+        btnNewFY.disabled = false;
+        btnNewFY.style.opacity = '1';
+        btnNewFY.style.cursor = 'pointer';
+        btnNewFY.title = '';
+      }
     } else {
       btnNewFY.disabled = true;
       btnNewFY.style.opacity = '0.45';
       btnNewFY.style.cursor = 'not-allowed';
+      btnNewFY.title = 'ابتدا یک شرکت تعریف نمایید';
     }
   }
 
