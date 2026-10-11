@@ -360,31 +360,21 @@ function logout() {
     localStorage.removeItem('negar_active_year');
   } catch(e) {}
   if (typeof closeModuleFlyoutPanel === 'function') closeModuleFlyoutPanel();
-  // Clear fields
-  const u = document.getElementById('loginUsername');
-  const p = document.getElementById('loginPassword');
-  if (u) u.value = '';
-  if (p) { p.value = ''; p.type = 'password'; }
-  const btn = document.querySelector('.login-eye-btn');
-  if (btn) btn.textContent = '👁';
-  // Hide error
-  const err = document.getElementById('loginError');
-  if (err) err.style.display = 'none';
-  // Reset button state
-  const btnText    = document.getElementById('loginBtnText');
-  const btnSpinner = document.getElementById('loginBtnSpinner');
-  const loginBtn   = document.getElementById('loginBtn');
-  if (btnText)    { btnText.style.display = 'inline'; }
-  if (btnSpinner) { btnSpinner.style.display = 'none'; }
-  if (loginBtn)   { loginBtn.disabled = false; }
 
-  // Show login, hide app
+  // Remove any early injected style blocking loginOverlay
+  document.querySelectorAll('style').forEach(s => {
+    if (s.textContent && s.textContent.includes('loginOverlay') && s.textContent.includes('display:none !important')) {
+      s.remove();
+    }
+  });
+
   const overlay = document.getElementById('loginOverlay');
   const mainApp = document.getElementById('mainApp');
-  if (mainApp)  { mainApp.style.display = 'none'; mainApp.classList.remove('app-fade-in'); }
-  if (overlay)  { overlay.style.display = 'flex'; overlay.classList.remove('login-fade-out'); }
-  // Focus username field
-  setTimeout(() => { if (u) u.focus(); }, 100);
+  if (mainApp)  { mainApp.style.setProperty('display', 'none', 'important'); }
+  if (overlay)  { overlay.style.setProperty('display', 'flex', 'important'); }
+
+  // Cleanly navigate to login page
+  window.location.href = 'index.html?logout=1';
 }
 
 function switchUser() {
